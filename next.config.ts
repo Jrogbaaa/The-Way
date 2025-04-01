@@ -47,6 +47,14 @@ const nextConfig: NextConfig = {
     // Warning: only disable this in special cases like deployment
     ignoreBuildErrors: true,
   },
+  
+  // Disable static generation
+  staticPageGenerationTimeout: 1000,
+  experimental: {
+    // This forces no static generation
+    workerThreads: false,
+    cpus: 1
+  }
 };
 
 export default nextConfig;

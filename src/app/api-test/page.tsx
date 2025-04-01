@@ -4,12 +4,22 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { runCristinaModel } from '@/lib/api/replicate';
-import { supabase } from '@/lib/supabase';
 import { generateContent } from '@/lib/api/gemini';
 import visionAPI from '@/lib/api/vision';
 
-// Mark this page as dynamic to prevent static generation during build
+// Force dynamic rendering and disable static generation
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
+// Prevent client initialization of supabase at build time
+let supabase: any;
+if (typeof window !== 'undefined') {
+  // Only import supabase on the client side
+  import('@/lib/supabase').then((module) => {
+    supabase = module.supabase;
+  });
+}
 
 export default function ApiTestPage() {
   const [results, setResults] = useState<Record<string, any>>({});
@@ -22,6 +32,9 @@ export default function ApiTestPage() {
     setError(prev => ({ ...prev, supabase: null }));
     
     try {
+      if (!supabase) {
+        throw new Error('Supabase client not initialized yet');
+      }
       // Just check if we can connect to Supabase by testing the auth endpoint
       const { data, error } = await supabase.auth.getSession();
       
