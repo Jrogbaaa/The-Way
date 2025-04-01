@@ -38,9 +38,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   
-  // For better performance with Vercel deployment
-  swcMinify: true,
-  
   // Override to prevent static generation of certain pages
   generateBuildId: async () => {
     return 'build-' + new Date().getTime();
