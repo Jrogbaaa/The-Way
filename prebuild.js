@@ -47,8 +47,6 @@ module.exports = {
     cpus: 1
   },
   staticPageGenerationTimeout: 1,
-  // Skip certain pages during static generation
-  excludeDefaultMomentLocales: true,
   // Generate a unique build ID to prevent caching issues
   generateBuildId: () => 'build-' + Date.now()
 };
