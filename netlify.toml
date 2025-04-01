@@ -1,0 +1,32 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Handle SPA redirects
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# For Next.js API routes
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/nextjs-api/:splat"
+  status = 200
+
+# For Next.js SSR
+[[redirects]]
+  from = "/_next/data/*"
+  to = "/.netlify/functions/nextjs-server"
+  status = 200
+
+[functions]
+  directory = ".netlify/functions"
+
+[dev]
+  command = "npm run dev"
+  port = 3000
+  framework = "nextjs" 

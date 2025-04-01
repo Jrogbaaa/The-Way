@@ -1,0 +1,9 @@
+# Netlify redirects file
+# Redirect all routes to index.html for client-side routing
+/*    /index.html   200
+
+# Maintain query parameters on redirect
+/*    /index.html   200!
+
+# Maintain Next.js API routes
+/api/*  /api/:splat  200 

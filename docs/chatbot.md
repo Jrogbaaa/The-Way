@@ -1,0 +1,116 @@
+# Social Media Expert Chat Documentation
+
+## Overview
+
+The Social Media Expert Chat is an AI-powered conversation feature that provides professional advice on social media strategy, content creation, audience engagement, analytics interpretation, and trend forecasting. The feature is powered by Replicate's Llama 2 model, which has been specifically instructed to act as an expert social media strategist with 10+ years of experience across all major platforms.
+
+## Features
+
+- **Platform-Specific Strategy**: Tailored advice for Instagram, TikTok, LinkedIn, X, Facebook, Pinterest, and emerging platforms.
+- **Content Creation Assistance**: Creative ideas for posts, captions, hashtags, and content calendars aligned with specific brand voices and objectives.
+- **Audience Engagement Optimization**: Tactics for increasing engagement through timing, format selection, community management, and interactive content.
+- **Analytics Interpretation**: Help understanding performance metrics with actionable insights to improve content strategy.
+- **Trend Forecasting**: Current information on emerging social media trends, formats, and best practices.
+
+## How to Use
+
+1. Navigate to the Chat page using the sidebar or top navigation bar.
+2. Enter your social media questions in the text input at the bottom of the screen.
+3. Press Enter or click the send button to submit your question.
+4. Review the AI's response, which includes:
+   - Strategic overview of your situation
+   - Specific recommendations
+   - Examples or templates you can implement
+   - Metrics to track for measuring success
+   - Follow-up questions to refine advice
+
+## Examples of Questions
+
+- "How can I increase my Instagram engagement rate?"
+- "What are the best practices for TikTok video content in 2024?"
+- "How should I interpret a drop in LinkedIn post reach?"
+- "Can you suggest a content calendar for a fitness brand?"
+- "What hashtag strategy works best for small businesses on Instagram?"
+- "How do I improve my conversion rate from social media traffic?"
+
+## Implementation Details
+
+### Technical Architecture
+
+The Social Media Expert Chat is implemented using:
+
+- Next.js frontend for the chat interface
+- Server-side API endpoint for processing requests
+- Replicate API with Llama 2 model for generating responses
+- State management for chat history persistence
+
+### API Integration
+
+The chat feature communicates with the `/api/chat` endpoint, which processes requests and forwards them to Replicate's API. The implementation includes:
+
+- Message history tracking for contextual conversations
+- Error handling and recovery
+- Loading states for improved UX
+- Special system prompt for the first message to establish expertise
+
+### Conversation Context
+
+The chat maintains context throughout the conversation, allowing the AI to remember:
+
+- Previous questions and its responses
+- User-provided information about their audience, goals, and metrics
+- Specific platforms or strategies being discussed
+
+## Prompt Engineering
+
+The social media expert is powered by a carefully crafted system prompt that defines:
+
+1. The expert persona with 10+ years of experience
+2. Primary capabilities across different aspects of social media
+3. Guidelines for providing advice, including platform identification and reasoning
+4. Structured response format with actionable components
+5. Diagnostic approaches for troubleshooting poor performance
+
+## Troubleshooting
+
+### Common Issues
+
+- **No response**: Check your internet connection and verify your Replicate API key is correctly set.
+- **Generic responses**: Try being more specific about your platform, audience, or goals.
+- **Cut-off responses**: For very long responses, the AI might reach token limits. Break complex questions into smaller parts.
+
+### API Key Setup
+
+To use the chat functionality, you need a valid Replicate API key:
+
+1. Obtain a Replicate API key from https://replicate.com
+2. Add the key to your `.env` or `.env.local` file as `REPLICATE_API_TOKEN=your-key-here`
+3. Restart the development server if it's running
+
+## Extending the Feature
+
+### Adding New Capabilities
+
+To extend the social media expert's capabilities:
+
+1. Modify the system prompt in `lib/api/replicateChat.ts` to include new areas of expertise
+2. Update this documentation to reflect new capabilities
+3. Consider adding specialized chat modes for different aspects of social media
+
+### Customizing the UI
+
+The chat interface can be customized by editing:
+
+- `app/chat/page.tsx` - The main chat interface component
+- CSS styles in the component for appearance adjustments
+- Bubble styling and layout in the message rendering section
+
+## Future Enhancements
+
+Planned future enhancements include:
+
+- Saving chat history to user accounts
+- Multiple specialized chat agents for different social media aspects
+- File upload capability for analyzing social media content
+- Integration with analytics platforms for data-driven advice
+- Expanded platform coverage for emerging social networks 
