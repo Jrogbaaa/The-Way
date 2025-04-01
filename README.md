@@ -237,3 +237,56 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Supabase](https://supabase.io)
 - [Replicate](https://replicate.com)
 - [Google Vertex AI](https://cloud.google.com/vertex-ai)
+
+## Deployment
+
+### Vercel Deployment
+
+The application is deployed using [Vercel](https://vercel.com/). The deployment process is automated through GitHub integration.
+
+1. Push your code to GitHub
+2. Connect your GitHub repository to Vercel
+3. Configure the required environment variables in Vercel dashboard:
+   - All the environment variables listed in the `.env.example` file
+
+For manual deployment, use:
+
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Login to Vercel
+vercel login
+
+# Deploy to production
+vercel --prod
+```
+
+### Environment Variables
+
+Ensure all required environment variables are set in the Vercel dashboard:
+
+- `GEMINI_API_KEY` - Google Gemini API key for chat functionality
+- `GOOGLE_API_KEY` - Google API key for other Google services
+- `VERTEX_AI_LOCATION` - Location for Vertex AI services (e.g., us-central1)
+- `GOOGLE_CLOUD_VISION_CREDENTIALS` - Base64 encoded Google Vision credentials
+- `GOOGLE_CLOUD_PROJECT_ID` - Google Cloud project ID
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
+- `REPLICATE_API_TOKEN` - Replicate API token
+- `NEXT_PUBLIC_APP_URL` - Public URL of your application
+
+For detailed information about each environment variable, see `.env.example`.
+
+### Google Credentials
+
+For Google Cloud services (Vertex AI, Vision API), you need to handle the credentials file:
+
+1. Generate a service account key from Google Cloud Console
+2. For Vercel deployment, base64 encode the JSON file:
+   ```bash
+   cat google-credentials.json | base64
+   ```
+3. Store the encoded string in the `GOOGLE_CLOUD_VISION_CREDENTIALS` environment variable
+4. The application automatically decodes this string during runtime

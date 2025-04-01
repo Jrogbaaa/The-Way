@@ -12,7 +12,7 @@ const createDummyEnvFile = () => {
     console.log('Creating dummy .env.local for build...');
     const dummyEnvContent = `
 # Dummy environment variables for build process
-# These will be overridden by actual Netlify environment variables
+# These will be overridden by actual Vercel environment variables
 NEXT_PUBLIC_SUPABASE_URL=https://dummy-value-for-build.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-value-for-build
 SUPABASE_SERVICE_ROLE_KEY=dummy-value-for-build
@@ -32,32 +32,26 @@ VERTEX_AI_LOCATION=us-central1
   }
 };
 
-// Create next.config.override.js to enforce dynamic rendering
-const createNextConfigOverride = () => {
-  const overridePath = path.join(process.cwd(), 'next.config.override.js');
+// Create Vercel config file if it doesn't exist
+const createVercelConfigFile = () => {
+  const vercelConfigPath = path.join(process.cwd(), 'vercel.json');
   
-  console.log('Creating Next.js config override...');
-  const overrideContent = `
-// This file is auto-generated and used to override Next.js config during build
-module.exports = {
-  ...require('./next.config.ts'),
-  // Force dynamic rendering for all pages
-  experimental: {
-    workerThreads: false,
-    cpus: 1
-  },
-  staticPageGenerationTimeout: 1,
-  // Generate a unique build ID to prevent caching issues
-  generateBuildId: () => 'build-' + Date.now()
-};
-  `;
-  
-  fs.writeFileSync(overridePath, overrideContent.trim());
-  console.log('Next.js config override created successfully.');
+  if (!fs.existsSync(vercelConfigPath)) {
+    console.log('Creating vercel.json file...');
+    const vercelConfigContent = `{
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next"
+}`;
+    
+    fs.writeFileSync(vercelConfigPath, vercelConfigContent);
+    console.log('vercel.json file created successfully.');
+  }
 };
 
 // Run the prebuild tasks
 createDummyEnvFile();
-createNextConfigOverride();
+createVercelConfigFile();
 
 console.log('Prebuild complete!'); 

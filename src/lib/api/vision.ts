@@ -1,25 +1,21 @@
 import vision from '@google-cloud/vision';
 import { API_CONFIG } from '../config';
+import { getGoogleCredentials } from '../credentials';
 
 // Create a client with the provided credentials
 const createClient = () => {
   try {
     // For server-side usage only
     if (typeof window === 'undefined') {
-      const credentials = process.env.GOOGLE_CLOUD_VISION_CREDENTIALS;
+      // Use our credentials helper to get the Google credentials
+      const credentials = getGoogleCredentials();
       
-      if (!credentials) {
+      if (!credentials || Object.keys(credentials).length === 0) {
         throw new Error('Google Cloud Vision credentials not found');
       }
       
-      // Credentials can be either a JSON string or a path to a JSON file
-      const parsedCredentials = 
-        credentials.startsWith('{') 
-          ? JSON.parse(credentials) 
-          : credentials;
-      
       return new vision.ImageAnnotatorClient({
-        credentials: parsedCredentials,
+        credentials: credentials,
       });
     }
     throw new Error('Google Cloud Vision client can only be created server-side');

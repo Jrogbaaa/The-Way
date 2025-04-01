@@ -4,22 +4,27 @@
 
 // To use the Vertex AI client, run: npm install @google-cloud/vertexai
 import { VertexAI } from '@google-cloud/vertexai';
+import { getGoogleProjectId, getVertexAILocation, getGoogleCredentials } from '../credentials';
 
 // Create a client with the provided credentials
 const createVertexClient = () => {
   try {
     // For server-side usage only
     if (typeof window === 'undefined') {
-      const projectId = process.env.GOOGLE_PROJECT_ID;
+      const projectId = getGoogleProjectId();
+      const location = getVertexAILocation();
       
       if (!projectId) {
         console.warn('Google Project ID not found, using mock implementation');
         return null; // We'll handle this case in the analyzeImageWithVertexAI function
       }
       
+      // The VertexAI constructor will automatically use the 
+      // GOOGLE_APPLICATION_CREDENTIALS environment variable
+      // or the credentials provided through the auth library
       return new VertexAI({
         project: projectId,
-        location: 'us-central1', // Default location
+        location: location
       });
     }
     throw new Error('Vertex AI client can only be created server-side');

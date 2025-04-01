@@ -181,6 +181,69 @@ The application requires the following environment variables:
 
 The application is deployed using Vercel. The deployment process is automated through GitHub integration.
 
+### Vercel Setup
+
+1. Connect your GitHub repository to Vercel
+2. Configure all required environment variables in the Vercel dashboard
+3. Vercel will automatically deploy when changes are pushed to the main branch
+
+### Deployment Commands
+
+For local testing of the production build:
+
+```bash
+# Build for production
+npm run build
+
+# Start the production server
+npm start
+```
+
+For manual deployment via Vercel CLI:
+
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Login to Vercel
+vercel login
+
+# Deploy to production
+vercel --prod
+```
+
 ### Environment Variables
 
-Ensure all required environment variables are set in the deployment environment as listed above. 
+Ensure all required environment variables are set in the Vercel dashboard:
+
+- `GEMINI_API_KEY` - Google Gemini API key for chat functionality
+- `GOOGLE_API_KEY` - Google API key for other Google services
+- `VERTEX_AI_LOCATION` - Location for Vertex AI services (e.g., us-central1)
+- `GOOGLE_CLOUD_VISION_CREDENTIALS` - Base64 encoded Google Vision credentials
+- `GOOGLE_CLOUD_PROJECT_ID` - Google Cloud project ID
+- `REPLICATE_API_TOKEN` - Replicate API token
+- `NEXT_PUBLIC_API_URL` - API base URL
+
+### Handling Google Credentials on Vercel
+
+For Google Cloud services, Vercel requires the credentials to be stored as an environment variable:
+
+1. Base64 encode your Google credentials file:
+   ```bash
+   cat google-credentials.json | base64
+   ```
+
+2. Add the encoded string as `GOOGLE_CLOUD_VISION_CREDENTIALS` in Vercel
+
+3. In your code, decode the base64 string to access the credentials:
+   ```typescript
+   // Example code in your application
+   const decodedCredentials = Buffer.from(
+     process.env.GOOGLE_CLOUD_VISION_CREDENTIALS || '',
+     'base64'
+   ).toString();
+   
+   const credentials = JSON.parse(decodedCredentials);
+   ```
+
+This approach keeps your Google credentials secure while allowing them to be accessible to your application. 
