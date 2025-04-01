@@ -85,11 +85,14 @@ const getTrainingTips = (stage: number) => {
   }
 };
 
-export default function TrainingStatusPage({ 
-  params 
-}: { 
-  params: { id: string } 
-}) {
+// Use proper type for params in Next.js 15
+type TrainingPageParams = {
+  params: {
+    id: string;
+  };
+};
+
+export default function TrainingStatusPage({ params }: TrainingPageParams) {
   const router = useRouter();
   const { id } = params;
   
