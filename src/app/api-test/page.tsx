@@ -8,6 +8,9 @@ import { supabase } from '@/lib/supabase';
 import { generateContent } from '@/lib/api/gemini';
 import visionAPI from '@/lib/api/vision';
 
+// Mark this page as dynamic to prevent static generation during build
+export const dynamic = 'force-dynamic';
+
 export default function ApiTestPage() {
   const [results, setResults] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});

@@ -6,6 +6,9 @@ import { Activity, Image, FileText, BarChart2, Clock, Zap, Award, TrendingUp,
 import MainLayout from '@/components/layout/MainLayout';
 import { Tooltip } from '@/components/ui/tooltip';
 
+// Mark page as dynamic to prevent static generation during build
+export const dynamic = 'force-dynamic';
+
 // Activity type definition
 type ActivityItem = {
   id: string;
