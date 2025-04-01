@@ -2,30 +2,36 @@
   base = "."
   command = "npm run build"
   publish = ".next"
+  ignore = "if [[ $COMMIT_SUMMARY == *skip-ci* ]]; then exit 0; else exit 1; fi"
 
 [build.environment]
   NEXT_TELEMETRY_DISABLED = "1"
+  NEXT_FORCE_DYNAMIC = "1"
+  NETLIFY_NEXT_PLUGIN_SKIP = "true"
 
 # Handle SPA redirects
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/.netlify/functions/server"
   status = 200
+  force = true
 
 # For Next.js API routes
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/nextjs-api/:splat"
+  to = "/.netlify/functions/server"
   status = 200
 
 # For Next.js SSR
 [[redirects]]
   from = "/_next/data/*"
-  to = "/.netlify/functions/nextjs-server"
+  to = "/.netlify/functions/server"
   status = 200
 
 [functions]
   directory = ".netlify/functions"
+  node_bundler = "esbuild"
+  included_files = [".next/standalone/**", ".next/static/**"]
 
 [dev]
   command = "npm run dev"

@@ -54,7 +54,25 @@ const nextConfig: NextConfig = {
     // This forces no static generation
     workerThreads: false,
     cpus: 1
-  }
+  },
+  
+  // Explicitly exclude problematic pages from static generation
+  exportPathMap: async function (defaultPathMap) {
+    // Remove API test page from static generation
+    delete defaultPathMap['/api-test'];
+    return defaultPathMap;
+  },
+  
+  // Override to prevent static generation of certain pages
+  generateBuildId: async () => {
+    return 'build-' + new Date().getTime();
+  },
+  
+  onDemandEntries: {
+    // Reduce the time Next.js keeps pages in memory
+    maxInactiveAge: 10 * 1000,
+    pagesBufferLength: 1,
+  },
 };
 
 export default nextConfig;

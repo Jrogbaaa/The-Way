@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "NEXT_FORCE_DYNAMIC=1 next build",
+    "build": "node prebuild.js && NEXT_FORCE_DYNAMIC=1 next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "prebuild": "node prebuild.js"
   },
   "dependencies": {
     "@google-cloud/vertexai": "^1.9.3",

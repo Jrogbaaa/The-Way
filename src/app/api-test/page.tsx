@@ -7,11 +7,6 @@ import { runCristinaModel } from '@/lib/api/replicate';
 import { generateContent } from '@/lib/api/gemini';
 import visionAPI from '@/lib/api/vision';
 
-// Force dynamic rendering and disable static generation
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const fetchCache = 'force-no-store';
-
 // Prevent client initialization of supabase at build time
 let supabase: any;
 if (typeof window !== 'undefined') {
