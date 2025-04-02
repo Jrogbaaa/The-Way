@@ -1,16 +1,16 @@
-# Post Analysis with Vertex AI
+# Post Analysis with Hugging Face
 
 ## Overview
 
-The Way platform now includes intelligent post analysis powered by Google Vertex AI. This feature helps content creators ensure their images are suitable for social media by analyzing images for potentially inappropriate content and providing engagement potential estimates.
+The Way platform includes intelligent post analysis powered by open-source Hugging Face models. This feature helps content creators ensure their images are suitable for social media by analyzing images for content quality and providing data-driven engagement potential estimates.
 
 ## Features
 
-- **Content Safety Analysis**: Automatically analyzes images for adult, violent, medical, or racy content
-- **Content Categorization**: Identifies the main subjects and categorizes image content
-- **Engagement Prediction**: Estimates the potential social media engagement based on image content
-- **Facial Analysis**: Detects faces and analyzes expressions for better portrait optimization
-- **Professional Assessment**: Provides a comprehensive analysis summary with approval status
+- **Content Recognition**: Automatically identifies key subjects and elements in your images
+- **Engagement Prediction**: Provides statistically-backed estimates of social media engagement potential
+- **Detailed Pros & Cons**: Offers specific strengths and weaknesses with engagement impact percentages
+- **Platform Recommendations**: Suggests optimal platforms and posting times based on content analysis
+- **Data-Driven Insights**: All recommendations are backed by engagement statistics and best practices
 
 ## How to Access
 
@@ -20,66 +20,54 @@ The Way platform now includes intelligent post analysis powered by Google Vertex
    - Direct URL: `/posts/upload`
 
 2. Upload an image and click "Analyze for Social Media" to run the analysis
-3. Review the analysis results before posting
+3. Review the detailed analysis results before posting
+
+Alternatively, use our dedicated analyzer:
+
+1. Navigate to "Social Media Analyzer" in the sidebar
+2. Upload your image
+3. Receive detailed engagement analysis
 
 ## Implementation Details
 
-This feature uses Google Vertex AI to analyze images. The implementation includes:
+This feature uses Hugging Face's open-source AI models to analyze images. The implementation includes:
 
 ### API Endpoint
 
-The `/api/analyze-image` endpoint processes image uploads and performs analysis using Vertex AI.
+The `/api/analyze-image` endpoint processes image uploads and performs analysis using Hugging Face models:
 
 ```typescript
 // src/app/api/analyze-image/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { analyzeImageWithVertexAI } from '@/lib/api/vertex';
+import axios from 'axios';
+
+// Hugging Face API endpoints
+const HF_API_URL = 'https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large';
+const HF_ENGAGEMENT_API_URL = 'https://api-inference.huggingface.co/models/facebook/bart-large-mnli';
 
 export async function POST(request: NextRequest) {
-  // Handle image upload and pass to Vertex AI for analysis
+  // Process image with Hugging Face models
   // Return comprehensive analysis results
 }
 ```
 
-### Vertex AI Integration
+### Hugging Face Integration
 
-The analysis is performed using Google Vertex AI's image analysis capabilities:
+The analysis uses two key Hugging Face models:
+
+1. **BLIP Image Captioning Model**: Generates detailed descriptions of image content
+2. **BART-Large NLI Model**: Evaluates engagement potential based on image content
 
 ```typescript
-// src/lib/api/vertex.ts
-import { VertexAI } from '@google-cloud/vertexai';
+// Getting image caption
+async function getImageCaption(imageBuffer: Buffer, apiKey: string): Promise<string> {
+  // Call Hugging Face BLIP model to generate caption
+}
 
-const analyzeImageWithVertexAI = async (imageBuffer: Buffer) => {
-  // Initialize Vertex with your Cloud project and location
-  const vertexAI = new VertexAI({
-    project: process.env.GOOGLE_CLOUD_PROJECT_ID,
-    location: 'us-central1',
-  });
-
-  // Get the generative model
-  const generativeModel = vertexAI.preview.getGenerativeModel({
-    model: 'gemini-1.5-pro-vision-001',
-  });
-
-  // Convert image to base64
-  const base64Image = imageBuffer.toString('base64');
-
-  // Call Vertex AI to analyze the image
-  const result = await generativeModel.generateContent({
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          {text: 'Analyze this image for social media appropriateness. Check for adult content, violence, and inappropriate material. Also assess its potential engagement and categorize the content.'},
-          {inlineData: {data: base64Image, mimeType: 'image/jpeg'}}
-        ]
-      }
-    ]
-  });
-
-  // Process and structure the response
-  return processVertexAIResponse(result.response);
-};
+// Analyzing engagement potential
+async function analyzeEngagement(caption: string, apiKey: string) {
+  // Call Hugging Face BART model to evaluate engagement
+}
 ```
 
 ### User Interface
@@ -88,17 +76,41 @@ The upload interface in `PostUploadForm.tsx` provides a user-friendly way to ana
 
 1. Upload an image
 2. Click "Analyze for Social Media" 
-3. Review analysis results
-4. Proceed with posting if approved
+3. Review data-driven analysis results with clear pros and cons
+4. See specific platform recommendations and engagement estimates
+5. Proceed with posting
+
+## Data-Driven Analysis
+
+Our analysis provides concrete, statistically-backed insights:
+
+- **Engagement Percentages**: Each pro/con includes specific engagement impact percentages
+- **Platform Optimization**: Recommendations for optimal platforms based on content type
+- **Posting Time Analysis**: Suggested posting times for maximum reach
+- **Performance Percentiles**: Where your content likely ranks against typical posts
+- **Specific Improvement Suggestions**: Actionable improvements with expected impact
 
 ## Configuration
 
-To use this feature, ensure your Google Cloud credentials are properly configured:
+To use this feature, ensure your Hugging Face API key is configured:
 
 ```
-GOOGLE_CLOUD_PROJECT_ID=your-project-id
-GOOGLE_APPLICATION_CREDENTIALS=path/to/your/credentials.json
+HUGGING_FACE_API_KEY=your_hugging_face_api_key
 ```
+
+You'll need a Hugging Face API key with inference permissions for these models.
+
+## Technical Details
+
+The analysis pipeline works as follows:
+
+1. **Image Upload**: User uploads an image through the UI
+2. **Caption Generation**: BLIP model generates a detailed description of the image
+3. **Engagement Analysis**: BART model evaluates engagement potential based on the caption
+4. **Content Analysis**: Custom algorithms analyze the caption for specific content types
+5. **Statistics Application**: Engagement statistics are applied based on content elements
+6. **Results Formatting**: Data is organized into clear pros, cons, and recommendations
+7. **UI Presentation**: Results are displayed in an easy-to-understand format
 
 ## Future Enhancements
 

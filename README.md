@@ -14,9 +14,14 @@ A full-stack Next.js application with Supabase backend that integrates multiple 
   - Chat with a Social Media Expert Agent (powered by Google Gemini)
   - Get professional advice on social media strategy, content creation, and analytics
   
+- 📊 **Social Media Content Analysis**:
+  - Google Vertex AI-powered comprehensive image analysis
+  - Hugging Face-powered engagement prediction (open-source alternative)
+  - Get pros and cons of your content before posting
+  
 - 🔄 **Modular Architecture**: Easily extensible for adding new AI models and capabilities
 
-- 🧩 **Robust API Integration**: Seamless communication with Replicate API and Google AI services
+- 🧩 **Robust API Integration**: Seamless communication with Replicate API, Google AI services, and Hugging Face
 
 - 🛡️ **Error Handling**: Graceful error handling and fallbacks for API failures
 
@@ -60,6 +65,24 @@ We've integrated Google's Vertex AI to provide intelligent image analysis for so
 
 For detailed documentation, see [Post Analysis Documentation](./docs/post-analysis.md).
 
+### Social Media Analyzer with Hugging Face (New)
+
+We've added an alternative social media content analyzer powered by open-source Hugging Face models. This provides a focused engagement prediction analysis with clear pros and cons.
+
+**How to Access:**
+1. Click on "Social Media Analyzer" in the sidebar
+2. Upload an image to analyze
+3. Get instant feedback on engagement potential
+
+**Features:**
+- Open-source AI models for transparent analysis
+- Visual engagement score indicator
+- Detailed pros and cons list for content optimization
+- Content-specific recommendations
+- No account required for quick analysis
+
+For detailed documentation, see [Post Analysis Documentation](./docs/post-analysis.md).
+
 ## Getting Started
 
 ### Prerequisites
@@ -88,6 +111,9 @@ GOOGLE_APPLICATION_CREDENTIALS=path/to/your/google-credentials.json
 GOOGLE_PROJECT_ID=your_gcp_project_id
 GOOGLE_API_KEY=your_google_api_key
 GEMINI_API_KEY=your_gemini_api_key
+
+# Hugging Face Integration
+HUGGING_FACE_API_KEY=your_hugging_face_api_key
 
 # App URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -174,8 +200,11 @@ the-way/
 │   │   │   ├── imagen/     # Google Vertex AI Imagen API
 │   │   │   ├── replicate/  # Replicate API
 │   │   │   ├── chat/       # Gemini Chat API
+│   │   │   ├── analyze-image/ # Vertex AI image analysis API
+│   │   │   ├── analyze-social-post/ # Hugging Face social media analysis
 │   │   │   └── proxy/      # Image proxy to avoid CORS issues
 │   │   ├── chat/           # Chat interface with social media expert
+│   │   ├── social-analyzer/ # Social media post analyzer (Hugging Face)
 │   │   ├── models/         # Model testing pages
 │   │   │   ├── cristina/   # Cristina model page
 │   │   │   ├── jaime/      # Jaime model page
