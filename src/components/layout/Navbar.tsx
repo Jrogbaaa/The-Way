@@ -8,10 +8,12 @@ import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/config';
 import Logo from '@/components/ui/Logo';
 import ButtonLink from '@/components/ui/button-link';
+import { useState } from 'react';
 
 const Navbar = () => {
   const router = useRouter();
   const { user, signOut } = useAuthStore();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     signOut();
@@ -21,6 +23,16 @@ const Navbar = () => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       handleSignOut();
+    }
+  };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const handleMobileMenuKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      toggleMobileMenu();
     }
   };
 
@@ -74,8 +86,45 @@ const Navbar = () => {
           </nav>
         </div>
         <div className="flex items-center gap-4">
+          {/* Mobile menu button */}
+          <div className="md:hidden">
+            <button
+              type="button"
+              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+              onClick={toggleMobileMenu}
+              onKeyDown={handleMobileMenuKeyDown}
+              tabIndex={0}
+              aria-expanded={mobileMenuOpen}
+              aria-label="Toggle mobile menu"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="h-6 w-6"
+              >
+                {mobileMenuOpen ? (
+                  <>
+                    <path d="M18 6L6 18" />
+                    <path d="M6 6L18 18" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M4 6h16" />
+                    <path d="M4 12h16" />
+                    <path d="M4 18h16" />
+                  </>
+                )}
+              </svg>
+            </button>
+          </div>
+          
           {user ? (
-            <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4">
               <Link 
                 href={ROUTES.dashboard}
                 className="text-sm font-medium hover:text-primary"
@@ -115,8 +164,8 @@ const Navbar = () => {
                 Sign Out
               </Button>
             </div>
-          ) : (
-            <div className="flex items-center gap-2">
+          ) :
+            <div className="hidden md:flex items-center gap-2">
               <ButtonLink 
                 href={ROUTES.login}
                 variant="ghost"
@@ -134,8 +183,119 @@ const Navbar = () => {
                 Sign Up
               </ButtonLink>
             </div>
-          )}
+          }
         </div>
+      </div>
+      
+      {/* Mobile menu dropdown */}
+      <div 
+        className={`md:hidden transition-all duration-300 overflow-hidden ${
+          mobileMenuOpen ? 'max-h-96 border-b border-gray-200 dark:border-gray-800' : 'max-h-0'
+        }`}
+      >
+        <nav className="container px-4 py-3 flex flex-col space-y-2">
+          <Link 
+            href={ROUTES.models}
+            className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+            tabIndex={mobileMenuOpen ? 0 : -1}
+            aria-label="Test AI Models"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Test Models
+          </Link>
+          <Link 
+            href="/api-test"
+            className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+            tabIndex={mobileMenuOpen ? 0 : -1}
+            aria-label="Test API Connections"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            API Tests
+          </Link>
+          <Link 
+            href={ROUTES.gallery}
+            className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+            tabIndex={mobileMenuOpen ? 0 : -1}
+            aria-label="Browse gallery"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Gallery
+          </Link>
+          <Link 
+            href={ROUTES.chat}
+            className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+            tabIndex={mobileMenuOpen ? 0 : -1}
+            aria-label="Chat with AI"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Chat
+          </Link>
+          <Link 
+            href={ROUTES.uploadPost}
+            className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+            tabIndex={mobileMenuOpen ? 0 : -1}
+            aria-label="Analyze a post"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Analyze Post
+          </Link>
+          
+          {user ? (
+            <>
+              <Link 
+                href={ROUTES.dashboard}
+                className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                tabIndex={mobileMenuOpen ? 0 : -1}
+                aria-label="Go to dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Dashboard
+              </Link>
+              <Link 
+                href={ROUTES.profile}
+                className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                tabIndex={mobileMenuOpen ? 0 : -1}
+                aria-label="View profile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Profile
+              </Link>
+              <button
+                type="button" 
+                className="text-left text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 w-full"
+                onClick={() => {
+                  handleSignOut();
+                  setMobileMenuOpen(false);
+                }}
+                tabIndex={mobileMenuOpen ? 0 : -1}
+                aria-label="Sign out"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link 
+                href={ROUTES.login}
+                className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                tabIndex={mobileMenuOpen ? 0 : -1}
+                aria-label="Sign in to your account"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign In
+              </Link>
+              <Link 
+                href={ROUTES.signup}
+                className="text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 px-3 py-2.5 rounded-md"
+                tabIndex={mobileMenuOpen ? 0 : -1}
+                aria-label="Create a new account"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign Up
+              </Link>
+            </>
+          )}
+        </nav>
       </div>
     </header>
   );
