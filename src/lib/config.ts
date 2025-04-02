@@ -30,7 +30,7 @@ export const ROUTES = {
   dashboard: "/dashboard",
   profile: "/profile",
   models: "/models",
-  createModel: "/models/create",
+  createModel: "/create-model",
   cristinaModel: "/models/cristina",
   jaimeModel: "/models/jaime",
   chat: "/chat",

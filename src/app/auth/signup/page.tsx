@@ -5,25 +5,40 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/config';
 import { ArrowLeft, Sparkles } from 'lucide-react';
+import OnboardingWelcome from '@/components/OnboardingWelcome';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [signupComplete, setSignupComplete] = useState(false);
+  const [userName, setUserName] = useState('');
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    // For presentation, simulate signup and redirect to welcome page
+    // Extract name from email for personalized welcome
+    const nameFromEmail = email.split('@')[0];
+    setUserName(nameFromEmail);
+    
+    // For presentation, simulate signup and show onboarding modal
     setTimeout(() => {
-      window.location.href = ROUTES.dashboard;
+      setLoading(false);
+      setSignupComplete(true);
     }, 1500);
+  };
+
+  const handleOnboardingClosed = () => {
+    // Redirect to dashboard after onboarding is closed
+    window.location.href = ROUTES.dashboard;
   };
   
   return (
     <div className="flex min-h-screen flex-col">
+      {signupComplete && <OnboardingWelcome userName={userName} onClose={handleOnboardingClosed} />}
+      
       <div className="flex flex-1">
         {/* Left side - signup form */}
         <div className="flex flex-col w-full lg:w-1/2 px-4 py-12 sm:px-6 lg:px-8 bg-white dark:bg-gray-950">
