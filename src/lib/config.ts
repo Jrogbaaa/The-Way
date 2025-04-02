@@ -37,6 +37,7 @@ export const ROUTES = {
   gallery: "/gallery",
   targeting: "/targeting",
   uploadPost: "/posts/upload",
+  socialAnalyzer: "/social-analyzer",
 };
 
 export const AI_MODELS = {
