@@ -141,25 +141,26 @@ export default function ModelsPage() {
       <div className={`transition-opacity duration-500 ${animateIn ? 'opacity-100' : 'opacity-0'}`}>
         {/* Header section with title, filter, and create button */}
         <div 
-          className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 opacity-0 animate-slide-in"
+          className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 opacity-0 animate-slide-in space-y-4 sm:space-y-0"
           style={{
             animationDelay: '0.1s',
             animationFillMode: 'forwards'
           }}
         >
-          <div>
-            <h1 className="text-3xl font-bold flex items-center">
-              <Sparkles className="h-6 w-6 mr-2 text-indigo-600" />
+          <div className="pb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold flex items-center mb-2">
+              <Sparkles className="h-6 w-6 mr-3 text-indigo-600" />
               My AI Models
             </h1>
-            <p className="text-gray-600 mt-1">Manage and use your custom AI models</p>
+            <p className="text-gray-600 text-sm">Manage and use your custom AI models</p>
           </div>
           
-          <div className="flex gap-4 mt-4 sm:mt-0">
+          <div className="flex gap-3 sm:gap-4">
             <div className="relative">
               <Button 
                 variant="outline" 
-                className="flex items-center bg-white/50 backdrop-blur-sm border-gray-200 hover:bg-white/80 transition-all"
+                className="flex items-center bg-white/50 backdrop-blur-sm border-gray-200 hover:bg-white/80 transition-all px-4 py-2.5"
+                size="sm"
               >
                 <Filter className="h-4 w-4 mr-2" />
                 Filter
@@ -168,7 +169,8 @@ export default function ModelsPage() {
             
             <Link href="/create-model">
               <Button 
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md transition-all duration-300 hover:-translate-y-1"
+                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md transition-all duration-300 hover:-translate-y-1 px-4 py-2.5"
+                size="sm"
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Create Model

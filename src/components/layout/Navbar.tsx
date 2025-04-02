@@ -84,12 +84,12 @@ const Navbar = () => {
 
   return (
     <header className="w-full border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
-      <div className="container flex h-16 items-center justify-between px-4 md:px-6">
-        <div className="flex items-center gap-4">
+      <div className="container flex h-16 items-center justify-between px-5 sm:px-6 md:px-6">
+        <div className="flex items-center gap-3">
           {isInteriorPage && (
             <button
               type="button"
-              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
+              className="p-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
               onClick={handleToggleSidebar}
               onKeyDown={handleSidebarKeyDown}
               tabIndex={0}
@@ -101,7 +101,7 @@ const Navbar = () => {
           )}
           <Link 
             href={ROUTES.home}
-            className="flex items-center gap-2 text-lg font-semibold hover:opacity-90 transition-opacity rounded-md p-1 focus:outline-none border-0 whitespace-nowrap"
+            className="flex items-center gap-3 text-lg font-semibold hover:opacity-90 transition-opacity rounded-md p-1 focus:outline-none border-0 whitespace-nowrap"
             style={{ textDecoration: 'none', outline: 'none', border: 'none' }}
             tabIndex={0}
             aria-label="Go to home page"
@@ -144,7 +144,7 @@ const Navbar = () => {
             </Link>
           </nav>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           {/* Notifications button */}
           {user && (
             <div className="relative">
@@ -201,7 +201,7 @@ const Navbar = () => {
               <ButtonLink 
                 href={ROUTES.signup}
                 variant="primary"
-                className="px-4 py-2 whitespace-nowrap text-sm"
+                className="px-5 py-2.5 whitespace-nowrap text-sm font-medium rounded-full"
                 aria-label="Create a new account"
               >
                 Sign Up
