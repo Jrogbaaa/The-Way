@@ -291,7 +291,7 @@ export default function CreateModelPage() {
                     type="text"
                     value={formData.name}
                     onChange={handleChange}
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-shadow duration-200"
+                    className="w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-200"
                     placeholder="My Custom Model"
                     required
                   />
@@ -309,7 +309,7 @@ export default function CreateModelPage() {
                     value={formData.description}
                     onChange={handleChange}
                     rows={3}
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-shadow duration-200"
+                    className="w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-200"
                     placeholder="This model specializes in..."
                   />
                 </div>
@@ -442,7 +442,7 @@ export default function CreateModelPage() {
                     name="parameters.resolution"
                     value={formData.parameters.resolution}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-shadow duration-200"
+                    className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-200"
                   >
                     <option value={512}>512 × 512 (Faster)</option>
                     <option value={768}>768 × 768 (Balanced)</option>
@@ -461,7 +461,7 @@ export default function CreateModelPage() {
                     name="parameters.num_train_epochs"
                     value={formData.parameters.num_train_epochs}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-shadow duration-200"
+                    className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-200"
                   >
                     <option value={1}>1 Epoch (Faster)</option>
                     <option value={2}>2 Epochs (Balanced)</option>
@@ -537,7 +537,7 @@ export default function CreateModelPage() {
                     caption="Close-up portrait"
                   />
                   <ExampleTrainingImage 
-                    url="/training-examples/full-body-pose.jpg" 
+                    url="/training-examples/full-body-woman.jpg" 
                     caption="Full body, natural pose"
                   />
                   <ExampleTrainingImage 
@@ -545,7 +545,7 @@ export default function CreateModelPage() {
                     caption="Different lighting"
                   />
                   <ExampleTrainingImage 
-                    url="/training-examples/different-angle.jpg" 
+                    url="/training-examples/woman-different-angle.jpg" 
                     caption="Different angle"
                   />
                 </div>

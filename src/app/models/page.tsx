@@ -318,7 +318,7 @@ export default function ModelsPage() {
                   variant="outline" 
                   className="w-full text-xs transition-all duration-300 hover:border-indigo-300"
                 >
-                  Edit Model
+                  Use Model
                 </Button>
                 
                 <Button 
@@ -347,7 +347,7 @@ export default function ModelsPage() {
               Train a custom AI model tailored to your specific needs
             </p>
             
-            <Link href="/create-model" className="mt-6 w-full">
+            <Link href="/models/create" className="mt-6 w-full">
               <Button 
                 className="w-full bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-100 transition-all duration-300"
               >
