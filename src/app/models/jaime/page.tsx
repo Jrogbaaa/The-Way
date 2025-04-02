@@ -73,7 +73,7 @@ export default function JaimeModelPage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
         <Button asChild variant="outline" size="sm">
-          <Link href="/models">
+          <Link href="/models" className="whitespace-nowrap">
             ← Back to Models
           </Link>
         </Button>

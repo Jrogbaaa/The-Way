@@ -171,26 +171,13 @@ export default function CristinaModelPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Button variant="outline" size="sm" asChild className="gap-1">
-            <Link href={ROUTES.models}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4"
-              >
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-              Back
+        <div className="flex items-center space-x-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/models" className="whitespace-nowrap">
+              ← Back to Models
             </Link>
           </Button>
+          <h2 className="text-2xl font-bold">Cristina Model Test</h2>
         </div>
         
         <div className="flex flex-col md:flex-row gap-8">

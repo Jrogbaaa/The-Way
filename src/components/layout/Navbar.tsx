@@ -96,12 +96,12 @@ const Navbar = () => {
               aria-expanded={sidebarOpen}
               aria-label="Toggle sidebar"
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-7 w-7" />
             </button>
           )}
           <Link 
             href={ROUTES.home}
-            className="flex items-center gap-2 text-lg font-semibold hover:opacity-90 transition-opacity rounded-md p-1 focus:outline-none border-0"
+            className="flex items-center gap-2 text-lg font-semibold hover:opacity-90 transition-opacity rounded-md p-1 focus:outline-none border-0 whitespace-nowrap"
             style={{ textDecoration: 'none', outline: 'none', border: 'none' }}
             tabIndex={0}
             aria-label="Go to home page"
@@ -195,26 +195,7 @@ const Navbar = () => {
             </div>
           )}
           
-          {/* Left side mobile menu button */}
-          <div className="md:hidden">
-            <button
-              type="button"
-              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-              onClick={toggleMobileMenu}
-              onKeyDown={handleMobileMenuKeyDown}
-              tabIndex={0}
-              aria-expanded={mobileMenuOpen}
-              aria-label="Toggle mobile menu"
-            >
-              {mobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </button>
-          </div>
-          
-          {/* Mobile Sign Up button (replaces right hamburger menu) */}
+          {/* Mobile Sign Up button */}
           {!user && (
             <div className="md:hidden">
               <ButtonLink 
@@ -292,7 +273,7 @@ const Navbar = () => {
         </div>
       </div>
       
-      {/* Mobile menu dropdown */}
+      {/* Mobile menu dropdown, triggered by clicking the hamburger button in dashboard sidebar */}
       <div 
         className={`md:hidden transition-all duration-300 overflow-hidden ${
           mobileMenuOpen ? 'max-h-96 border-b border-gray-200 dark:border-gray-800' : 'max-h-0'
