@@ -38,8 +38,32 @@ export const setupGoogleAuth = () => {
       return false;
     }
     
-    // Explicitly set authentication environment variable with absolute path
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = absolutePath;
+    // Read in the credentials JSON directly
+    try {
+      const credentialsJson = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
+      
+      // Create a temporary credentials file without spaces in the path
+      const tempDir = path.join(process.cwd(), '.temp');
+      
+      // Create temp directory if it doesn't exist
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      
+      const tempPath = path.join(tempDir, 'google-credentials-temp.json');
+      
+      // Write credentials to temp file
+      fs.writeFileSync(tempPath, JSON.stringify(credentialsJson, null, 2));
+      
+      // Set the environment variable to use this path instead
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = tempPath;
+      
+      console.log('Created temporary credentials file at:', tempPath);
+    } catch (error) {
+      console.error('Error creating temporary credentials file:', error);
+      // Fall back to original path
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = absolutePath;
+    }
     
     // Make sure project ID is set
     const projectId = getGoogleProjectId();
@@ -49,7 +73,6 @@ export const setupGoogleAuth = () => {
     }
     
     console.log('Google authentication setup complete');
-    console.log('Credentials path:', absolutePath);
     console.log('Project ID:', projectId);
     
     return true;
@@ -81,11 +104,12 @@ export const verifyGoogleAuth = () => {
     // Try to read and parse the credentials file
     const credentials = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
     
-    // Verify it's a service account key file
+    // Verify it's a service account key file and return the client email for debugging
     return credentials && 
            credentials.type === 'service_account' && 
            credentials.project_id && 
-           credentials.client_email;
+           credentials.client_email ? 
+           credentials.client_email : false;
   } catch (error) {
     console.error('Error verifying Google authentication:', error);
     return false;
