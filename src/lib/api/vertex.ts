@@ -28,6 +28,9 @@ const createVertexClient = () => {
         console.warn('Google authentication verification failed, attempting to continue anyway');
       }
       
+      // Log the path being used for credentials
+      console.log('Using credentials path:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
+      
       // The VertexAI constructor will automatically use the 
       // GOOGLE_APPLICATION_CREDENTIALS environment variable
       return new VertexAI({
@@ -38,6 +41,15 @@ const createVertexClient = () => {
     throw new Error('Vertex AI client can only be created server-side');
   } catch (error) {
     console.error('Error creating Vertex AI client:', error);
+    // Add more detailed error information
+    if (error instanceof Error) {
+      if (error.message.includes('GOOGLE_APPLICATION_CREDENTIALS')) {
+        console.error('This may be due to missing or invalid credentials file.');
+        console.error('Current credentials path:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
+      } else if (error.message.includes('permission')) {
+        console.error('This may be due to insufficient permissions for the service account.');
+      }
+    }
     throw error;
   }
 };

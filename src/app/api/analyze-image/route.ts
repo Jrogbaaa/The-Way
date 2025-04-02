@@ -4,12 +4,16 @@ import { setupGoogleAuth } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('POST /api/analyze-image: Starting request processing');
+    
     // Set up Google authentication explicitly
-    setupGoogleAuth();
+    const authSetupResult = setupGoogleAuth();
+    console.log('Authentication setup result:', authSetupResult);
 
     // Check if the request is multipart/form-data
     const contentType = request.headers.get('content-type') || '';
     if (!contentType.includes('multipart/form-data')) {
+      console.error('Invalid content type:', contentType);
       return NextResponse.json({ error: 'Request must be multipart/form-data' }, { status: 400 });
     }
 
@@ -18,14 +22,20 @@ export async function POST(request: NextRequest) {
     const file = formData.get('image') as File | null;
 
     if (!file) {
+      console.error('No image file provided in form data');
       return NextResponse.json({ error: 'No image file provided' }, { status: 400 });
     }
 
+    console.log('Image file received:', file.name, file.type, file.size + ' bytes');
+    
     // Convert the file to a buffer
     const buffer = Buffer.from(await file.arrayBuffer());
+    console.log('File converted to buffer, size:', buffer.length);
 
     // Use Vertex AI to analyze the image
+    console.log('Calling analyzeImageWithVertexAI...');
     const analysis = await analyzeImageWithVertexAI(buffer);
+    console.log('Analysis completed successfully');
 
     return NextResponse.json({ analysis });
   } catch (error) {
@@ -34,6 +44,8 @@ export async function POST(request: NextRequest) {
     // Provide more helpful error messages for authentication issues
     if (error instanceof Error) {
       const errorMessage = error.message;
+      console.error('Error details:', errorMessage);
+      
       if (errorMessage.includes('authentication') || 
           errorMessage.includes('credentials') || 
           errorMessage.includes('permission')) {
