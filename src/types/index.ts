@@ -5,43 +5,46 @@
 /**
  * Analysis response from the image analysis API
  */
-export interface AnalysisResult {
-  safeSearch: {
-    adult: string;
-    medical: string;
-    racy: string;
-    violence: string;
-  };
-  labels: Array<{
-    description: string;
-    score: number;
-  }>;
-  faces: Array<{
-    joyLikelihood?: string;
-    sorrowLikelihood?: string;
-    angerLikelihood?: string;
-    surpriseLikelihood?: string;
-  }>;
+export type AnalysisResult = {
   approvalStatus: {
     approved: boolean;
     reason: string;
   };
+  safeSearch?: {
+    adult: string;
+    medical: string;
+    racy: string;
+    spoof: string;
+    violence: string;
+  };
+  labels?: any[];
+  faces?: any[];
+  engagementPotential?: number;
   summary: string;
-  // Can be string or object with level and reasons or any other structure
-  engagementPotential: string | {
-    level?: string;
-    reasons?: string[];
-  } | Record<string, any>;
-  categories?: string[] | string;
-  socialMediaPotential?: string;
+  categories?: string[] | string | { [key: string]: any };
   platformFit?: string[] | string;
+  socialMediaPotential?: string;
   optimizationTips?: string[] | string;
-  // Enhanced fields
-  platformRecommendations?: Record<string, string>;
-  hashtagRecommendations?: string[];
   captionIdeas?: string[];
+  hashtagRecommendations?: string[];
+  platformRecommendations?: { [key: string]: string };
   contentSeriesPotential?: string;
-}
+  
+  // New fields for Hugging Face integration
+  pros?: string[];
+  cons?: string[];
+  recommendation?: string;
+  socialMediaAnalysis?: {
+    caption: string;
+    engagement: {
+      score: number;
+      level: string;
+    };
+    pros: string[];
+    cons: string[];
+    recommendation: string;
+  };
+};
 
 /**
  * Type guard for checking if engagementPotential is an object
@@ -57,35 +60,12 @@ export function isEngagementObject(
  * @param value The engagementPotential value from the API
  * @returns A string representation of the engagement potential
  */
-export function getEngagementText(value: any): string {
-  if (typeof value === 'string') {
-    return value;
-  }
-  
-  if (typeof value === 'object' && value !== null) {
-    // Check if it has a level property
-    if ('level' in value) {
-      return value.level || 'Moderate';
-    }
-    
-    // Handle specific structure with these keys (coming from social media analysis)
-    if ('performanceExcellence' in value || 
-        'personalMoments' in value || 
-        'teamPeerInteractions' in value || 
-        'teamPeers' in value ||
-        'visualImpact' in value || 
-        'authenticity' in value ||
-        'emotionalAppeal' in value) {
-      return 'High potential';
-    }
-    
-    // Handle any other non-empty object
-    if (Object.keys(value).length > 0) {
-      return 'Moderate potential';
-    }
-  }
-  
-  return 'Moderate';
+export function getEngagementText(score: number): string {
+  if (score >= 80) return 'Very High';
+  if (score >= 65) return 'High';
+  if (score >= 45) return 'Moderate';
+  if (score >= 30) return 'Low';
+  return 'Very Low';
 }
 
 /**

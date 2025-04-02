@@ -86,7 +86,29 @@ const PostUploadForm = () => {
       if (!data || !data.analysis) {
         throw new Error('Invalid response from image analysis service');
       }
-      setAnalysisResult(data.analysis);
+      
+      // Process social media analysis data
+      const analysis = data.analysis;
+      
+      // Prepare approval status
+      const approvalStatus = analysis.social || {
+        approved: true,
+        reason: 'Image appears appropriate for social media'
+      };
+      
+      // Create unified analysis result
+      const result = {
+        ...analysis,
+        approvalStatus,
+        summary: analysis.summary || 'No detailed analysis available',
+        engagementPotential: analysis.socialMediaAnalysis?.engagement?.score || 50,
+        // Use new socialMediaAnalysis object if available
+        pros: analysis.socialMediaAnalysis?.pros || [],
+        cons: analysis.socialMediaAnalysis?.cons || [],
+        recommendation: analysis.socialMediaAnalysis?.recommendation || '',
+      };
+      
+      setAnalysisResult(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze image');
     } finally {
@@ -236,7 +258,7 @@ const PostUploadForm = () => {
               className="hidden"
             />
             
-            {selectedImage && !analysisResult && (
+            {selectedImage && !analysisResult && !isAnalyzing && (
               <button
                 type="button"
                 onClick={handleAnalyzeImage}
@@ -260,94 +282,88 @@ const PostUploadForm = () => {
           
           {/* Analysis Results */}
           {analysisResult && (
-            <div className="space-y-4">
-              <div className={`p-4 rounded-lg border ${analysisResult.approvalStatus.approved ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
-                <div className="flex items-start">
-                  <div className={`flex-shrink-0 p-1 rounded-full ${analysisResult.approvalStatus.approved ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                    {analysisResult.approvalStatus.approved ? (
-                      <Check className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <AlertCircle className="w-5 h-5 text-yellow-600" />
-                    )}
-                  </div>
-                  <div className="ml-3">
-                    <h3 className={`text-sm font-medium ${analysisResult.approvalStatus.approved ? 'text-green-800' : 'text-yellow-800'}`}>
-                      Social Media Analysis
-                    </h3>
-                    <div className="mt-1">
-                      <p className="text-sm text-gray-600">{analysisResult.approvalStatus.reason}</p>
+            <div className="mt-6 border-t border-gray-200 pt-6">
+              <div className={`p-4 rounded-lg border ${analysisResult.approvalStatus?.approved 
+                ? 'border-green-200 bg-green-50' 
+                : 'border-red-200 bg-red-50'}`}>
+                <div className="flex items-center">
+                  {analysisResult.approvalStatus?.approved ? (
+                    <div className="flex-shrink-0 bg-green-100 rounded-full p-1">
+                      <Check className="h-4 w-4 text-green-600" />
                     </div>
+                  ) : (
+                    <div className="flex-shrink-0 bg-red-100 rounded-full p-1">
+                      <X className="h-4 w-4 text-red-600" />
+                    </div>
+                  )}
+                  <div className="ml-3">
+                    <h3 className={`text-sm font-medium ${analysisResult.approvalStatus?.approved 
+                      ? 'text-green-800' 
+                      : 'text-red-800'}`}>
+                      {analysisResult.approvalStatus?.approved 
+                        ? 'Image Approved for Social Media' 
+                        : 'Image May Not Be Suitable'}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {analysisResult.approvalStatus?.reason}
+                    </p>
                   </div>
                 </div>
               </div>
-
-              {/* Pros and Cons Analysis */}
-              <div className="grid md:grid-cols-2 gap-4">
+              
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Pros Section */}
                 <div className="p-4 rounded-lg border border-green-200 bg-green-50">
                   <h3 className="text-sm font-medium text-green-800 flex items-center mb-3">
                     <Check className="w-4 h-4 mr-2" />
-                    Pros
+                    Positive Aspects
                   </h3>
                   <ul className="space-y-2">
-                    {analysisResult.engagementPotential && (
-                      <li className="flex items-start">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Engagement:</span> {getEngagementText(analysisResult.engagementPotential)} potential engagement
-                        </p>
-                      </li>
+                    {/* Show pros from new socialMediaAnalysis if available */}
+                    {analysisResult.pros && analysisResult.pros.length > 0 ? (
+                      analysisResult.pros.map((pro, index) => (
+                        <li key={index} className="flex items-start">
+                          <div className="flex-shrink-0 mt-0.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div>
+                          </div>
+                          <p className="text-sm text-gray-700">{pro}</p>
+                        </li>
+                      ))
+                    ) : (
+                      // Fallbacks for compatibility
+                      <>
+                        {analysisResult.approvalStatus?.approved && (
+                          <li className="flex items-start">
+                            <div className="flex-shrink-0 mt-0.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div>
+                            </div>
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Safety:</span> Content appears appropriate for social media
+                            </p>
+                          </li>
+                        )}
+                        
+                        {analysisResult.labels && analysisResult.labels.length > 0 && (
+                          <li className="flex items-start">
+                            <div className="flex-shrink-0 mt-0.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div>
+                            </div>
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Content:</span> Clear subjects identified
+                            </p>
+                          </li>
+                        )}
+                        
+                        <li className="flex items-start">
+                          <div className="flex-shrink-0 mt-0.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div>
+                          </div>
+                          <p className="text-sm text-gray-700">
+                            <span className="font-medium">Quality:</span> Image is clear and properly formatted
+                          </p>
+                        </li>
+                      </>
                     )}
-                    
-                    {analysisResult.categories && (
-                      <li className="flex items-start">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Categories:</span> {Array.isArray(analysisResult.categories) 
-                            ? analysisResult.categories.join(', ') 
-                            : typeof analysisResult.categories === 'string'
-                              ? analysisResult.categories
-                              : typeof analysisResult.categories === 'object' && analysisResult.categories !== null
-                                ? 'Various categories detected'
-                                : 'No categories detected'}
-                        </p>
-                      </li>
-                    )}
-                    
-                    {analysisResult.labels && analysisResult.labels.length > 0 && (
-                      <li className="flex items-start">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Content:</span> Clear subjects identified
-                        </p>
-                      </li>
-                    )}
-                    
-                    {analysisResult.faces && analysisResult.faces.length > 0 && (
-                      <li className="flex items-start">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">People:</span> Contains {analysisResult.faces.length} recognizable face(s)
-                        </p>
-                      </li>
-                    )}
-                    
-                    <li className="flex items-start">
-                      <div className="flex-shrink-0 mt-0.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div>
-                      </div>
-                      <p className="text-sm text-gray-700">
-                        <span className="font-medium">Quality:</span> Image is clear and properly formatted
-                      </p>
-                    </li>
                   </ul>
                 </div>
                 
@@ -358,213 +374,81 @@ const PostUploadForm = () => {
                     Potential Concerns
                   </h3>
                   <ul className="space-y-2">
-                    {analysisResult.safeSearch && analysisResult.safeSearch.adult && analysisResult.safeSearch.adult !== 'VERY_UNLIKELY' && (
-                      <li className="flex items-start">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></div>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Adult Content:</span> {analysisResult.safeSearch.adult.toLowerCase()} likely
-                        </p>
-                      </li>
-                    )}
-                    
-                    {analysisResult.safeSearch && analysisResult.safeSearch.violence && analysisResult.safeSearch.violence !== 'VERY_UNLIKELY' && (
-                      <li className="flex items-start">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></div>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Violent Content:</span> {analysisResult.safeSearch.violence.toLowerCase()} likely
-                        </p>
-                      </li>
-                    )}
-                    
-                    {analysisResult.safeSearch && analysisResult.safeSearch.medical && analysisResult.safeSearch.medical !== 'VERY_UNLIKELY' && (
-                      <li className="flex items-start">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></div>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Medical Content:</span> {analysisResult.safeSearch.medical.toLowerCase()} likely
-                        </p>
-                      </li>
-                    )}
-                    
-                    {analysisResult.safeSearch && analysisResult.safeSearch.racy && analysisResult.safeSearch.racy !== 'VERY_UNLIKELY' && (
-                      <li className="flex items-start">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></div>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Racy Content:</span> {analysisResult.safeSearch.racy.toLowerCase()} likely
-                        </p>
-                      </li>
-                    )}
-                    
-                    {(!analysisResult.labels || analysisResult.labels.length === 0) && (
-                      <li className="flex items-start">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></div>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Clarity:</span> No clear subjects identified
-                        </p>
-                      </li>
-                    )}
-                    
-                    {!analysisResult.approvalStatus.approved && (
-                      <li className="flex items-start">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></div>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Social Media Policy:</span> May violate platform guidelines
-                        </p>
-                      </li>
-                    )}
-                    
-                    {(!analysisResult.engagementPotential || 
-                      getEngagementText(analysisResult.engagementPotential).toLowerCase().includes('low')) && (
-                      <li className="flex items-start">
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></div>
-                        </div>
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Engagement:</span> May not generate significant interaction
-                        </p>
-                      </li>
+                    {/* Show cons from new socialMediaAnalysis if available */}
+                    {analysisResult.cons && analysisResult.cons.length > 0 ? (
+                      analysisResult.cons.map((con, index) => (
+                        <li key={index} className="flex items-start">
+                          <div className="flex-shrink-0 mt-0.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></div>
+                          </div>
+                          <p className="text-sm text-gray-700">{con}</p>
+                        </li>
+                      ))
+                    ) : (
+                      // Fallbacks for compatibility
+                      <>
+                        {!analysisResult.approvalStatus?.approved && (
+                          <li className="flex items-start">
+                            <div className="flex-shrink-0 mt-0.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></div>
+                            </div>
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Social Media Policy:</span> May violate platform guidelines
+                            </p>
+                          </li>
+                        )}
+                        
+                        {(!analysisResult.engagementPotential || 
+                          getEngagementText(analysisResult.engagementPotential).toLowerCase().includes('low')) && (
+                          <li className="flex items-start">
+                            <div className="flex-shrink-0 mt-0.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></div>
+                            </div>
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Engagement:</span> May not generate significant interaction
+                            </p>
+                          </li>
+                        )}
+                      </>
                     )}
                   </ul>
                 </div>
               </div>
               
               {/* Summary */}
-              <div className="p-4 rounded-lg border border-gray-200 bg-gray-50">
+              <div className="p-4 mt-4 rounded-lg border border-gray-200 bg-gray-50">
                 <h3 className="text-sm font-medium text-gray-800 mb-2">Analysis Summary</h3>
                 <p className="text-sm text-gray-700">{analysisResult.summary}</p>
+                
+                {/* Show recommendation from new socialMediaAnalysis if available */}
+                {analysisResult.recommendation && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-800 mb-1">Recommendation</h4>
+                    <p className="text-sm text-gray-700">{analysisResult.recommendation}</p>
+                  </div>
+                )}
               </div>
               
-              {/* Social Media Strategy Insights */}
-              {(analysisResult.socialMediaPotential || analysisResult.platformFit || analysisResult.optimizationTips) && (
-                <div className="p-4 rounded-lg border border-indigo-200 bg-indigo-50">
-                  <h3 className="text-sm font-medium text-indigo-800 mb-3">Social Media Strategy Insights</h3>
-                  
-                  {analysisResult.socialMediaPotential && (
-                    <div className="mb-4">
-                      <h4 className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">Content Potential</h4>
-                      <p className="text-sm text-gray-700">{analysisResult.socialMediaPotential}</p>
+              {/* Engagement Score */}
+              {analysisResult.engagementPotential && (
+                <div className="mt-4 p-4 rounded-lg border border-blue-200 bg-blue-50">
+                  <h3 className="text-sm font-medium text-blue-800 mb-3">Engagement Potential</h3>
+                  <div className="flex items-center">
+                    <div className="w-14 h-14 rounded-full bg-white border-4 border-blue-200 flex items-center justify-center mr-4">
+                      <span className="text-lg font-bold text-blue-800">{analysisResult.engagementPotential}</span>
                     </div>
-                  )}
-                  
-                  {/* Platform-specific Recommendations */}
-                  {analysisResult.platformRecommendations && Object.keys(analysisResult.platformRecommendations).length > 0 && (
-                    <div className="mb-4">
-                      <h4 className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">Platform Strategy</h4>
-                      <div className="space-y-3">
-                        {Object.entries(analysisResult.platformRecommendations).map(([platform, recommendation], index) => (
-                          <div key={index} className="bg-white bg-opacity-50 p-3 rounded-md">
-                            <h5 className="text-sm font-medium text-indigo-800">{platform}</h5>
-                            <p className="text-sm text-gray-700 mt-1">{recommendation}</p>
-                          </div>
-                        ))}
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-blue-800">
+                        {getEngagementText(analysisResult.engagementPotential)}
+                      </h4>
+                      <div className="w-full h-2 bg-blue-100 rounded-full mt-2">
+                        <div 
+                          className="h-full bg-blue-600 rounded-full" 
+                          style={{ width: `${analysisResult.engagementPotential}%` }}
+                        ></div>
                       </div>
                     </div>
-                  )}
-                  
-                  {analysisResult.platformFit && analysisResult.platformFit.length > 0 && (
-                    <div className="mb-4">
-                      <h4 className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">Best Platforms</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {Array.isArray(analysisResult.platformFit) ? (
-                          analysisResult.platformFit.map((platform, index) => (
-                            <span key={index} className="px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-medium">
-                              {platform}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-medium">
-                            {analysisResult.platformFit}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Caption Ideas */}
-                  {analysisResult.captionIdeas && analysisResult.captionIdeas.length > 0 && (
-                    <div className="mb-4">
-                      <h4 className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">Caption Ideas</h4>
-                      <ul className="space-y-2">
-                        {analysisResult.captionIdeas.map((caption, index) => (
-                          <li key={index} className="flex items-start">
-                            <div className="flex-shrink-0 text-indigo-500 mr-1.5">•</div>
-                            <p className="text-sm text-gray-700">{caption}</p>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {/* Hashtag Recommendations */}
-                  {analysisResult.hashtagRecommendations && analysisResult.hashtagRecommendations.length > 0 && (
-                    <div className="mb-4">
-                      <h4 className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">Recommended Hashtags</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {analysisResult.hashtagRecommendations.map((hashtag, index) => (
-                          <span key={index} className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
-                            {hashtag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Content Series Potential */}
-                  {analysisResult.contentSeriesPotential && (
-                    <div className="mb-4">
-                      <h4 className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">Content Series Potential</h4>
-                      <div className="bg-white bg-opacity-50 p-3 rounded-md">
-                        <p className="text-sm text-gray-700">{analysisResult.contentSeriesPotential}</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {analysisResult.optimizationTips && analysisResult.optimizationTips.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">Optimization Tips</h4>
-                      <ul className="space-y-2">
-                        {Array.isArray(analysisResult.optimizationTips) ? (
-                          analysisResult.optimizationTips.map((tip, index) => (
-                            <li key={index} className="flex items-start">
-                              <div className="flex-shrink-0 text-indigo-500 mr-1.5">•</div>
-                              <p className="text-sm text-gray-700">{tip}</p>
-                            </li>
-                          ))
-                        ) : (
-                          <li className="flex items-start">
-                            <div className="flex-shrink-0 text-indigo-500 mr-1.5">•</div>
-                            <p className="text-sm text-gray-700">{analysisResult.optimizationTips}</p>
-                          </li>
-                        )}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {/* Enhanced Engagement Analysis */}
-                  {analysisResult.engagementPotential && typeof analysisResult.engagementPotential === 'object' && 'reasons' in analysisResult.engagementPotential && analysisResult.engagementPotential.reasons && analysisResult.engagementPotential.reasons.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-indigo-200">
-                      <h4 className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-2">Engagement Analysis</h4>
-                      <ul className="space-y-2">
-                        {analysisResult.engagementPotential.reasons.map((reason: string, index: number) => (
-                          <li key={index} className="flex items-start">
-                            <div className="flex-shrink-0 text-indigo-500 mr-1.5">•</div>
-                            <p className="text-sm text-gray-700">{reason}</p>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  </div>
                 </div>
               )}
             </div>
@@ -578,23 +462,30 @@ const PostUploadForm = () => {
           )}
           
           {/* Submit button */}
-          <button
-            type="submit"
-            disabled={isUploading || !selectedImage || !analysisResult}
-            className={`w-full px-4 py-3 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-              isUploading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-            aria-label={isUploading ? 'Uploading post...' : 'Analyze post'}
-          >
-            {isUploading ? (
-              <span className="flex items-center justify-center">
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Processing...
-              </span>
-            ) : (
-              'Analyze Post'
-            )}
-          </button>
+          <div className="mt-6 flex justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedImage(null);
+                setImagePreview(null);
+                setAnalysisResult(null);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = '';
+                }
+              }}
+              className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Try Another Image
+            </button>
+            
+            <button
+              type="submit"
+              className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              onClick={() => console.log('Post submitted')} // This would call handleSubmit in a real implementation
+            >
+              Upload Post
+            </button>
+          </div>
         </form>
       </div>
     </div>

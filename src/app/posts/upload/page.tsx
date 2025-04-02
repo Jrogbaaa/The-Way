@@ -12,7 +12,7 @@ export default function UploadPostPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Analyze Post</h1>
           <p className="text-gray-600">
-            Create a new post with automatic image analysis using Google Vision AI
+            Create a new post with automatic image analysis for social media engagement
           </p>
         </div>
         
