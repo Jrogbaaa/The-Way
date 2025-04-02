@@ -533,19 +533,19 @@ export default function CreateModelPage() {
                 <h3 className="text-lg font-semibold mb-4">Example Training Data</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <ExampleTrainingImage 
-                    url="/the-way/public/training-examples/portrait-closeup.jpg" 
+                    url="/training-examples/portrait-closeup.jpg" 
                     caption="Close-up portrait"
                   />
                   <ExampleTrainingImage 
-                    url="/the-way/public/training-examples/full-body-pose.jpg" 
+                    url="/training-examples/full-body-pose.jpg" 
                     caption="Full body, natural pose"
                   />
                   <ExampleTrainingImage 
-                    url="/the-way/public/training-examples/different-lighting.jpg" 
+                    url="/training-examples/different-lighting.jpg" 
                     caption="Different lighting"
                   />
                   <ExampleTrainingImage 
-                    url="/the-way/public/training-examples/different-angle.jpg" 
+                    url="/training-examples/different-angle.jpg" 
                     caption="Different angle"
                   />
                 </div>
