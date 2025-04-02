@@ -189,7 +189,7 @@ export default function Home() {
               <div className="flex flex-col justify-center space-y-6 max-w-2xl mx-auto lg:mx-0">
                 <div className="space-y-4">
                   <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
-                    Create perfect social media content in minutes
+                    We know what's best for your social media. We're gonna show you how it's done.
                   </h1>
                   <p className="text-xl text-violet-100 md:text-xl/relaxed font-light">
                     Our AI-powered platform guides you through content creation, targeting, and distribution in one seamless flow.
@@ -239,9 +239,9 @@ export default function Home() {
                       <div className="w-1/2 h-4 bg-indigo-100 dark:bg-indigo-900 rounded-full"></div>
                       
                       <div className="mt-8 grid grid-cols-3 gap-3 w-full">
-                        <div className="aspect-square bg-white dark:bg-gray-800 rounded-lg shadow-sm"></div>
-                        <div className="aspect-square bg-white dark:bg-gray-800 rounded-lg shadow-sm"></div>
-                        <div className="aspect-square bg-white dark:bg-gray-800 rounded-lg shadow-sm"></div>
+                        <div className="aspect-square bg-pink-400 dark:bg-pink-600 rounded-lg shadow-sm"></div>
+                        <div className="aspect-square bg-blue-400 dark:bg-blue-600 rounded-lg shadow-sm"></div>
+                        <div className="aspect-square bg-purple-400 dark:bg-purple-600 rounded-lg shadow-sm"></div>
                       </div>
                     </div>
                   </div>
