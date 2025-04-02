@@ -7,6 +7,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/config';
+import Link from 'next/link';
 
 // Mark page as dynamic to prevent static generation during build
 export const dynamic = 'force-dynamic';
@@ -237,20 +238,16 @@ export default function Dashboard() {
             <Zap className="h-5 w-5 mr-3" />
             <p className="font-medium">AI Suggestion: {suggestedActions[currentSuggestion]}</p>
           </div>
-          <button 
+          <Link
+            href={
+              currentSuggestion === 0 ? ROUTES.createModel :
+              currentSuggestion === 1 ? ROUTES.uploadPost :
+              '/calendar'
+            }
             className="px-3 py-1 rounded-full bg-white/20 text-sm hover:bg-white/30 transition-colors"
-            onClick={() => {
-              // Routes based on the current suggestion
-              const suggestionRoutes = [
-                ROUTES.createModel, // "Try training a custom model for your brand style"
-                ROUTES.uploadPost,  // "Analyze your top-performing posts for insights"
-                '/calendar'         // "Schedule your next week's content calendar"
-              ];
-              router.push(suggestionRoutes[currentSuggestion]);
-            }}
           >
             Try now
-          </button>
+          </Link>
         </div>
         
         {/* Stats overview */}

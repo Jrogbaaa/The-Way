@@ -195,7 +195,7 @@ const Navbar = () => {
             </div>
           )}
           
-          {/* Mobile menu button */}
+          {/* Left side mobile menu button */}
           <div className="md:hidden">
             <button
               type="button"
@@ -213,6 +213,20 @@ const Navbar = () => {
               )}
             </button>
           </div>
+          
+          {/* Mobile Sign Up button (replaces right hamburger menu) */}
+          {!user && (
+            <div className="md:hidden">
+              <ButtonLink 
+                href={ROUTES.signup}
+                variant="primary"
+                className="px-4 py-2 whitespace-nowrap text-sm"
+                aria-label="Create a new account"
+              >
+                Sign Up
+              </ButtonLink>
+            </div>
+          )}
           
           {user ? (
             <div className="hidden md:flex items-center gap-4">
