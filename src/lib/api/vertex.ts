@@ -5,6 +5,7 @@
 // To use the Vertex AI client, run: npm install @google-cloud/vertexai
 import { VertexAI } from '@google-cloud/vertexai';
 import { getGoogleProjectId, getVertexAILocation, getGoogleCredentials } from '../credentials';
+import { verifyGoogleAuth } from '../auth-helpers';
 
 // Create a client with the provided credentials
 const createVertexClient = () => {
@@ -19,9 +20,16 @@ const createVertexClient = () => {
         return null; // We'll handle this case in the analyzeImageWithVertexAI function
       }
       
+      // Verify authentication is set up correctly
+      const isAuthValid = verifyGoogleAuth();
+      console.log(`Vertex AI auth verification: ${isAuthValid ? 'success' : 'failed'}`);
+      
+      if (!isAuthValid) {
+        console.warn('Google authentication verification failed, attempting to continue anyway');
+      }
+      
       // The VertexAI constructor will automatically use the 
       // GOOGLE_APPLICATION_CREDENTIALS environment variable
-      // or the credentials provided through the auth library
       return new VertexAI({
         project: projectId,
         location: location

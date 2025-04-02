@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeImageWithVertexAI } from '@/lib/api/vertex';
+import { setupGoogleAuth } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
   try {
+    // Set up Google authentication explicitly
+    setupGoogleAuth();
+
     // Check if the request is multipart/form-data
     const contentType = request.headers.get('content-type') || '';
     if (!contentType.includes('multipart/form-data')) {
@@ -26,6 +30,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ analysis });
   } catch (error) {
     console.error('Error analyzing image:', error);
+    
+    // Provide more helpful error messages for authentication issues
+    if (error instanceof Error) {
+      const errorMessage = error.message;
+      if (errorMessage.includes('authentication') || 
+          errorMessage.includes('credentials') || 
+          errorMessage.includes('permission')) {
+        return NextResponse.json({
+          error: 'Google authentication failed. Please check your credentials configuration.',
+          details: errorMessage
+        }, { status: 401 });
+      }
+    }
+    
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Error analyzing image' },
       { status: 500 }
