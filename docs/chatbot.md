@@ -11,6 +11,67 @@ The Social Media Expert Chat is an AI-powered conversation feature that provides
 - **Audience Engagement Optimization**: Tactics for increasing engagement through timing, format selection, community management, and interactive content.
 - **Analytics Interpretation**: Help understanding performance metrics with actionable insights to improve content strategy.
 - **Trend Forecasting**: Current information on emerging social media trends, formats, and best practices.
+- **High-Impact Content Strategy**: Data-driven recommendations based on the 20% of content types that drive 80% of engagement.
+- **Platform-Optimized Tactics**: Specialized techniques for each platform based on their unique algorithms and audience behaviors.
+
+## Expert Knowledge: High-Impact Social Media Strategy
+
+Our Social Media Expert is now equipped with specialized knowledge of high-impact strategies that drive maximum engagement:
+
+### Content Pillars (The 20% That Drives 80% of Engagement)
+
+1. **Performance/Professional Excellence (40% of posts)**
+   - Live/recent performance highlights
+   - Behind-the-scenes preparation
+   - Professional milestones
+   - Training/practice sessions
+   - *Why:* Creates aspirational connection and showcases core value proposition
+
+2. **Authentic Personal Moments (30% of posts)**
+   - Unscripted family interactions
+   - Natural lifestyle moments
+   - Raw emotional reactions
+   - Personal challenges/victories
+   - *Why:* Builds relatability and emotional connection
+
+3. **Team/Peer Interactions (30% of posts)**
+   - Genuine moments with teammates
+   - Professional collaborations
+   - Friendly interactions with peers
+   - Group celebrations
+   - *Why:* Expands reach and authenticates personal brand
+
+### Optimal Timing & Frequency
+
+The expert can advise on scientifically-backed timing strategies:
+- Post 1 hour before peak platform times
+- Post within 2 hours after performances/events
+- Share stories during commute hours (7-9am, 5-7pm)
+- Frequency: 1 high-quality post per day, 3-5 authentic moments daily in stories, weekly live streams for major events
+
+### Format Optimization
+
+Recommendations on the most effective content formats:
+- **Visual Content:** High-quality action shots, raw unfiltered moments, multi-image carousels (3-5 images), 15-30 second video clips
+- **Caption Strategy:** First 125 characters tell the key story, personal voice and emotion, minimal hashtags, clear call-to-action
+
+### Engagement Amplifiers
+
+Tactics to boost interaction with content:
+- Engage with fans within first 30 minutes
+- Reply to top comments
+- Share fan content in stories
+- Share incomplete stories (continue in comments)
+- Ask specific questions
+- Create anticipation for upcoming events
+
+### Platform-Specific Tactics
+
+- **TikTok:** Emphasize raw authenticity over polish, embrace trends quickly, use 2-5 hashtags maximum
+- **Instagram:** Balance curation with authenticity, use Stories for daily moments, Reels for discovery
+- **LinkedIn:** Focus on professional achievements and industry insights with thoughtful commentary
+- **X/Twitter:** Real-time reactions, conversations, and timely commentary on relevant events
+- **Facebook:** Community-building content, longer narrative posts, targeted group engagement
 
 ## How to Use
 
@@ -19,8 +80,8 @@ The Social Media Expert Chat is an AI-powered conversation feature that provides
 3. Press Enter or click the send button to submit your question.
 4. Review the AI's response, which includes:
    - Strategic overview of your situation
-   - Specific recommendations
-   - Examples or templates you can implement
+   - Specific, data-driven recommendations based on proven engagement tactics
+   - Examples or templates you can implement immediately
    - Metrics to track for measuring success
    - Follow-up questions to refine advice
 
@@ -32,6 +93,10 @@ The Social Media Expert Chat is an AI-powered conversation feature that provides
 - "Can you suggest a content calendar for a fitness brand?"
 - "What hashtag strategy works best for small businesses on Instagram?"
 - "How do I improve my conversion rate from social media traffic?"
+- "Which content pillars should I focus on for maximum engagement?"
+- "What's the ideal posting frequency for my Instagram account?"
+- "How can I optimize my captions for better engagement?"
+- "What platform-specific tactics should I use for TikTok vs. Instagram?"
 
 ## Implementation Details
 
@@ -67,9 +132,11 @@ The social media expert is powered by a carefully crafted system prompt that def
 
 1. The expert persona with 10+ years of experience
 2. Primary capabilities across different aspects of social media
-3. Guidelines for providing advice, including platform identification and reasoning
-4. Structured response format with actionable components
-5. Diagnostic approaches for troubleshooting poor performance
+3. High-impact content strategies that drive 80% of engagement
+4. Platform-specific tactics optimized for each social network
+5. Guidelines for providing advice, including platform identification and reasoning
+6. Structured response format with actionable components
+7. Diagnostic approaches for troubleshooting poor performance
 
 ## Troubleshooting
 
@@ -93,7 +160,7 @@ To use the chat functionality, you need a valid Replicate API key:
 
 To extend the social media expert's capabilities:
 
-1. Modify the system prompt in `lib/api/replicateChat.ts` to include new areas of expertise
+1. Modify the system prompt in `src/app/api/chat/route.ts` to include new areas of expertise
 2. Update this documentation to reflect new capabilities
 3. Consider adding specialized chat modes for different aspects of social media
 
@@ -113,4 +180,5 @@ Planned future enhancements include:
 - Multiple specialized chat agents for different social media aspects
 - File upload capability for analyzing social media content
 - Integration with analytics platforms for data-driven advice
-- Expanded platform coverage for emerging social networks 
+- Expanded platform coverage for emerging social networks
+- Personalization based on user profile and past performance data 

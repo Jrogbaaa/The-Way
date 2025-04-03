@@ -26,6 +26,7 @@ To analyze your content before posting to social media:
    - Interactive sections display data-driven pros and cons with specific engagement metrics
    - Circular engagement score shows percentile ranking with visual representation
    - Platform-specific recommendations include optimal posting times with concrete data
+   - Content pillar identification helps align your content with high-performing categories
    - Expandable/collapsible sections allow focusing on specific analysis aspects
 
 5. **Upload or modify as needed**:
@@ -48,125 +49,108 @@ Our redesigned analysis interface provides:
    - Clear separation between positive aspects and improvement areas
    - Expandable sections allow detailed exploration of specific factors
 
-3. **Strategic recommendations**:
+3. **Content pillar identification**:
+   - Automatically detects which of the high-performing content pillars your post belongs to
+   - Indicates the ideal content mix (40% professional excellence, 30% authentic moments, 30% team interactions)
+   - Provides specific posting advice based on the identified content type
+
+4. **Strategic recommendations**:
    - Platform-specific posting advice based on content analysis
    - Optimal timing recommendations with percentage improvement potential
    - Hashtag strategy tailored to your specific content type
    - Expected engagement metrics compared to account averages
+   - First 125 characters caption optimization advice
 
-4. **Analysis report access**:
+5. **Analysis report access**:
    - Download a complete analysis report for record-keeping or team sharing
    - Save insights for future content planning and strategy development
 
-## Social Media Analyzer Feature
+## Content Pillars: The 20% That Drives 80% of Engagement
 
-We offer a dedicated Social Media Analyzer with an enhanced UI:
+Our enhanced analyzer now identifies your content within three key content pillars that research shows drive the majority of social media engagement:
 
-1. **Access the analyzer**:
-   - Click "Social Media Analyzer" in the sidebar
-   - Or navigate directly to `/social-analyzer` in your browser
+1. **Performance/Professional Excellence (40% of ideal mix)**
+   - Content showcasing professional achievements and expertise
+   - Behind-the-scenes of work or preparation
+   - Professional milestones and skills demonstration
+   - Training, practice, or execution of professional tasks
+   - *Analysis benefit:* The system identifies if your content establishes aspirational connection and showcases core value
 
-2. **How it works**:
-   - Upload any image through the modern, intuitive interface
-   - Watch the real-time analysis progress with visual feedback
-   - Get comprehensive engagement prediction with data-backed metrics
-   - Review statistically-supported recommendations in a visually structured format
+2. **Authentic Personal Moments (30% of ideal mix)**
+   - Unscripted personal or family interactions
+   - Natural lifestyle moments without heavy production
+   - Raw emotional reactions and genuine experiences
+   - Personal challenges and victories
+   - *Analysis benefit:* The system evaluates how well your content builds relatability and emotional connection
 
-3. **Key benefits**:
-   - Focused specifically on engagement prediction with concrete metrics
-   - Open-source AI models for transparent analysis
-   - Visual representation of performance percentages for each factor
-   - Modern, card-based interface for improved readability and focus
+3. **Team/Peer Interactions (30% of ideal mix)**
+   - Genuine moments with teammates or colleagues
+   - Professional collaborations and partnerships
+   - Friendly interactions with peers or industry contacts
+   - Group celebrations and social gatherings
+   - *Analysis benefit:* The system measures how effectively your content expands reach and authenticates your personal brand
 
-## Image Generation Models
+## Platform-Specific Optimization
 
-Our redesigned model interfaces provide a superior image generation experience across all models (Standard, Cristina, and Jaime):
+Our enhanced analyzer now provides tailored recommendations for specific platforms based on your content type:
 
-1. **Professional, consistent UI**:
-   - Clean, modern UI with card-based layouts and clear sections
-   - Consistent design language across all model types (Standard, Cristina, and Jaime)
-   - Helpful tips and examples directly in the interface
-   - Contextual information about each model's capabilities and best uses
+1. **Instagram-optimized advice**:
+   - Multi-image carousel recommendations (3-5 images) for increased dwell time
+   - Reels format suggestions when appropriate for your content
+   - Story sequence recommendations for daily authentic content
+   - Caption optimization focusing on the critical first 125 characters
 
-2. **Enhanced form experience**:
-   - Well-structured form inputs with intuitive labeling
-   - Improved textarea styling with focus states and proper spacing
-   - Clear differentiation between required and optional fields
-   - Loading spinner animation on generate button for visual feedback
+2. **TikTok-optimized recommendations**:
+   - Authenticity evaluation for TikTok's algorithm preferences
+   - Suggestions for raw, unfiltered delivery style
+   - Trending sound integration possibilities
+   - Optimal hashtag count (2-5 maximum)
 
-3. **Real-time progress tracking**:
-   - Animated progress bars show generation status with percentage completion
-   - Estimated time remaining updates dynamically during generation
-   - Clear status messages indicate the current stage of the process
-   - Visual feedback when generation completes successfully
+3. **LinkedIn-focused strategies** (for professional content):
+   - Professional context enhancement suggestions
+   - Industry insight incorporation recommendations
+   - Optimal posting times for professional audiences (weekday mornings/lunch breaks)
+   - Caption structure for maximum professional impact
 
-4. **Immersive results presentation**:
-   - Full-screen overlay displays generated images immediately upon completion
-   - Success notification provides clear confirmation of completion
-   - High-quality image preview with optimal sizing and navigation controls
-   - Background blur focuses attention on the generated content
-
-5. **Enhanced image management**:
-   - One-click download button for immediate image saving
-   - Image navigation controls for multi-image generations
-   - Thumbnail gallery view persists after closing the overlay
-   - Hover effects indicate interactive elements for improved usability
-
-6. **Model-specific features**:
-   - Custom interfaces tailored to each model's unique capabilities
-   - Specialized prompt suggestions based on model strengths
-   - Advanced options when appropriate for the model type
-   - Consistent experience across all model types with model-specific optimizations
-
-## Understanding the Enhanced Analysis
-
-Our improved analysis provides deeper insights with specific data points:
-
-### Content Recognition
-Our Hugging Face AI models identify:
-- Main subjects and elements in your image with improved accuracy
-- Content categories with specific engagement impact percentages
-- Visual quality indicators and their quantified effect on performance
-- Platform-specific concerns that could affect audience reception
-
-### Engagement Potential
-Based on AI analysis of millions of social media posts:
-- Engagement score on a scale of 1-100 with visual representation
-- Percentile ranking compared to typical social posts (e.g., "top 15%")
-- Expected engagement metrics (e.g., "35-45% above account average") 
-- Platform-specific recommendations with data-backed reasoning
-
-### Pros and Cons
-Each strength and weakness includes specific metrics:
-- Percentage impact on engagement metrics (e.g., "drives 32% higher engagement")
-- Platform-specific performance differences (e.g., "particularly on Facebook")
-- Detailed cause-and-effect analysis (e.g., "reducing bounce rates by 68%")
-- Statistical backing for all recommendations with concrete numbers
+4. **Platform pairing suggestions**:
+   - Content-specific platform combinations (e.g., "This food content performs best on Instagram and Pinterest")
+   - Cross-posting strategy recommendations
+   - Platform priority ranking based on content type and engagement potential
 
 ## Data-Driven Insights
 
-Our enhanced analysis provides more specific, data-driven recommendations:
+Our enhanced analysis provides specific, data-backed recommendations:
 
+- **Content Pillar Alignment**: How well your content matches the 20% of content types that drive 80% of engagement
 - **People Content**: Images with people receive 38% higher engagement across all platforms
 - **Facial Expressions**: Positive expressions drive 32% higher engagement and 47% more shares on Instagram
-- **Colorful Content**: Vibrant images generate 24% higher click-through rates and a 17% increase in session duration
+- **Group Photos**: Group content receives 38% more shares than individual portraits on Facebook and LinkedIn
+- **Colorful Content**: Vibrant images generate 24% higher click-through rates and 17% increased session duration
+- **Multi-Image Potential**: Carousels (3-5 images) increase dwell time and drive 2.5x more engagement than single images
+- **Video Potential**: Short clips (15-30 seconds) perform exceptionally well across platforms
+- **Authenticity Indicators**: Raw, authentic content builds stronger audience connections on TikTok and Instagram Stories
+- **Travel Content**: Destination content typically generates 56% higher audience retention and 43% increased profile visits
 - **Composition Quality**: Well-composed imagery increases viewer retention by 26% and boosts conversion rates by 18%
-- **Food Content**: Food posts generate 43% higher engagement on Instagram and TikTok
-- **Animal Content**: Animal content performs 52% above platform averages and has 40% higher viral potential
-- **Quality Issues**: Low-quality visuals result in 45% lower impression rates and 68% higher bounce rates
-- **Text Problems**: Small text reduces mobile engagement by 38%, causing immediate scroll-past
+- **Food Content**: Food posts generate 34% more saves and sharing than average posts on Instagram and Pinterest
+- **Animal Content**: Animal content drives 63% higher emotional response and 2.3x more commenting behavior
+- **Quality Issues**: Dark or blurry images reduce engagement by up to 61% on visually-driven platforms
+- **Text Problems**: Small text is difficult to read on mobile devices (87% of social media is consumed mobile)
+- **Complexity Issues**: Overly complex images perform 43% worse on quick-scrolling platforms
+- **Emotional Elements**: Content without clear emotional elements receives 27% less engagement and 52% fewer shares
+- **Storytelling Potential**: Images lacking narrative potential make compelling captions harder to create
+- **Call-to-Action Potential**: Content without clear CTA potential reduces comment rates by up to 38%
 
 ## Best Practices
 
 For the best results with our enhanced interface:
 
-- Take advantage of expandable sections to focus on specific analysis aspects
-- Use the visual engagement indicator to quickly assess content potential
-- Review platform-specific recommendations for targeted content strategy
-- Follow the timing recommendations for optimal posting schedules
-- Download analysis reports for future reference and team sharing
-- Compare multiple images to find the highest-performing option
-- Use model tips sections for better prompt engineering with each AI model
+- Analyze multiple content types to understand which pillars perform best for your audience
+- Follow platform-specific timing recommendations (different for each content type)
+- Optimize captions by focusing on the first 125 characters
+- Engage with audience comments within the first 30 minutes after posting
+- Use the recommended hashtag strategy for your specific content type
+- Balance your content mix: 40% professional excellence, 30% authentic moments, 30% team interactions
+- Download analysis reports to track which content types perform best over time
 
 ## Troubleshooting
 
