@@ -196,6 +196,27 @@ const Sidebar = () => {
       color: 'amber',
     },
     {
+      name: 'Create Video',
+      href: ROUTES.storyboardCreator,
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-5 w-5"
+        >
+          <polygon points="23 7 16 12 23 17 23 7" />
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+        </svg>
+      ),
+      label: 'Create storyboard and videos',
+      color: 'red',
+    },
+    {
       name: 'Profile',
       href: ROUTES.profile,
       icon: (
@@ -301,6 +322,14 @@ const Sidebar = () => {
         icon: {
           active: 'text-orange-600 dark:text-orange-400',
           inactive: 'text-orange-500 group-hover:text-orange-600 dark:text-orange-400'
+        }
+      },
+      red: {
+        active: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-l-4 border-red-500',
+        hover: 'hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20 dark:hover:text-red-300 hover:border-l-4 hover:border-red-500',
+        icon: {
+          active: 'text-red-600 dark:text-red-400',
+          inactive: 'text-red-500 group-hover:text-red-600 dark:text-red-400'
         }
       }
     };

@@ -38,6 +38,7 @@ export const ROUTES = {
   targeting: "/targeting",
   uploadPost: "/posts/upload",
   socialAnalyzer: "/social-analyzer",
+  storyboardCreator: "/storyboard-creator",
 };
 
 export const AI_MODELS = {
