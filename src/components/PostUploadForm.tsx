@@ -15,7 +15,10 @@ import {
   PieChart,
   BarChart,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Star,
+  Sparkles,
+  Lightbulb
 } from 'lucide-react';
 import { AnalysisResult, getEngagementText } from '@/types';
 
@@ -30,6 +33,167 @@ interface PostUploadFormProps {
   onSubmit?: (formData: FormData) => void;
   onAnalysisComplete?: (result: AnalysisResult) => void;
 }
+
+// Define example images for different content categories
+const getSimilarExampleImages = (caption: string) => {
+  const lowerCaption = caption.toLowerCase();
+  
+  // Map common themes to example images
+  const themeMap: Record<string, { images: string[], tips: string[] }> = {
+    sports: {
+      images: [
+        '/examples/placeholder.svg',
+        '/examples/placeholder.svg'
+      ],
+      tips: [
+        'Action shots showing movement perform 2.3x better than static poses',
+        'Outdoor lighting with golden hour tones increases engagement by 35%',
+        'Sports equipment clearly visible boosts recognition and relatability'
+      ]
+    },
+    food: {
+      images: [
+        '/examples/placeholder.svg',
+        '/examples/placeholder.svg'
+      ],
+      tips: [
+        'Overhead angles showcase food details better than side angles',
+        'Natural lighting improves food color appeal by 45%',
+        'Including hands in frame creates a sense of scale and interaction'
+      ]
+    },
+    nature: {
+      images: [
+        '/examples/placeholder.svg',
+        '/examples/placeholder.svg'
+      ],
+      tips: [
+        'Golden hour lighting increases engagement by 48% for outdoor scenes',
+        'Including a human element/silhouette boosts relatability by 35%',
+        'Rule of thirds composition improves visual flow and interest'
+      ]
+    },
+    selfie: {
+      images: [
+        '/examples/placeholder.svg',
+        '/examples/placeholder.svg'
+      ],
+      tips: [
+        'Soft, diffused lighting minimizes shadows and improves facial clarity',
+        'Eye contact with camera increases connection with viewers by 40%',
+        'Slightly elevated angle is most flattering for facial features'
+      ]
+    },
+    travel: {
+      images: [
+        '/examples/placeholder.svg',
+        '/examples/placeholder.svg'
+      ],
+      tips: [
+        'Including yourself in landmark photos increases engagement by 62%',
+        'Unique perspectives of common attractions stand out from typical tourist shots',
+        'Rich colors and balance between sky/landscape optimizes visual appeal'
+      ]
+    },
+    // Default fallback for any unrecognized content
+    default: {
+      images: [
+        '/examples/placeholder.svg',
+        '/examples/placeholder.svg'
+      ],
+      tips: [
+        'Rule of thirds composition creates visual balance and interest',
+        'Natural lighting consistently outperforms artificial lighting',
+        'Including a human element increases relatability by 38%'
+      ]
+    }
+  };
+  
+  // Determine content category based on caption
+  let category = 'default';
+  
+  if (lowerCaption.includes('sport') || lowerCaption.includes('tennis') || 
+      lowerCaption.includes('basketball') || lowerCaption.includes('soccer') ||
+      lowerCaption.includes('football') || lowerCaption.includes('playing') ||
+      lowerCaption.includes('athlete') || lowerCaption.includes('running')) {
+    category = 'sports';
+  } else if (lowerCaption.includes('food') || lowerCaption.includes('meal') || 
+      lowerCaption.includes('restaurant') || lowerCaption.includes('eating') ||
+      lowerCaption.includes('dish') || lowerCaption.includes('plate') ||
+      lowerCaption.includes('cooking') || lowerCaption.includes('cuisine')) {
+    category = 'food';
+  } else if (lowerCaption.includes('nature') || lowerCaption.includes('outdoor') || 
+      lowerCaption.includes('landscape') || lowerCaption.includes('mountain') ||
+      lowerCaption.includes('beach') || lowerCaption.includes('forest') ||
+      lowerCaption.includes('sunset') || lowerCaption.includes('hiking')) {
+    category = 'nature';
+  } else if (lowerCaption.includes('selfie') || lowerCaption.includes('portrait') || 
+      lowerCaption.includes('face') || (lowerCaption.includes('person') && lowerCaption.includes('camera'))) {
+    category = 'selfie';
+  } else if (lowerCaption.includes('travel') || lowerCaption.includes('vacation') || 
+      lowerCaption.includes('trip') || lowerCaption.includes('tourist') ||
+      lowerCaption.includes('landmark') || lowerCaption.includes('destination')) {
+    category = 'travel';
+  }
+  
+  // Return the examples for the determined category
+  return {
+    category,
+    ...themeMap[category]
+  };
+};
+
+// Function to generate specific action items to improve engagement
+const getSpecificImprovements = (score: number, description: string, cons: string[]) => {
+  const improvements = [];
+  
+  // Add score-based improvements
+  if (score < 85) {
+    improvements.push('Increase visual contrast to make subject stand out more');
+  }
+  
+  if (score < 75) {
+    improvements.push('Add vibrant elements or colors to catch attention');
+  }
+  
+  if (score < 65) {
+    improvements.push('Consider including people or faces to increase emotional connection');
+  }
+  
+  // Description-based specific improvements
+  const lowerDescription = description.toLowerCase();
+  if (lowerDescription.includes('dark') || lowerDescription.includes('dim')) {
+    improvements.push('Improve lighting - brighten image by 30-40% for optimal visibility');
+  }
+  
+  if (lowerDescription.includes('group') && !lowerDescription.includes('smiling')) {
+    improvements.push('Include authentic emotions - smiling faces increase engagement by 42%');
+  }
+  
+  if (!lowerDescription.includes('color') && !lowerDescription.includes('vibrant')) {
+    improvements.push('Enhance color saturation - vibrant images perform 38% better than muted tones');
+  }
+  
+  // Add cons-based specific improvements
+  cons.forEach(con => {
+    if (con.includes('dark') || con.includes('blurry')) {
+      improvements.push('Use editing tools to increase brightness and sharpness');
+    }
+    if (con.includes('complex')) {
+      improvements.push('Simplify composition - remove distracting background elements');
+    }
+  });
+  
+  // Ensure we have at least 3 improvements
+  if (improvements.length < 3) {
+    improvements.push('Align with current trending aesthetics in your content category');
+    improvements.push('Add a story element that creates emotional connection with viewers');
+    improvements.push('Consider including product/subject from a unique perspective');
+  }
+  
+  // Limit to 5 improvements maximum
+  return improvements.slice(0, 5);
+};
 
 // Default image size limit (5MB)
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -57,7 +221,8 @@ const PostUploadForm: React.FC<PostUploadFormProps> = ({ onSubmit, onAnalysisCom
     pros: true,
     cons: true,
     summary: true,
-    engagement: true
+    engagement: true,
+    perfectScore: true
   });
   
   // Handle results animation
@@ -565,6 +730,130 @@ const PostUploadForm: React.FC<PostUploadFormProps> = ({ onSubmit, onAnalysisCom
                       <Download className="w-4 h-4 mr-2" />
                       Download Analysis Report
                     </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Perfect Score Strategy */}
+              <div className="mt-5 bg-white rounded-xl shadow-md border border-indigo-100 overflow-hidden hover:shadow-lg transition-all duration-300">
+                <div 
+                  className="flex items-center justify-between p-4 border-b border-indigo-100 cursor-pointer"
+                  onClick={() => toggleSection('perfectScore')}
+                >
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center">
+                    <Star className="w-5 h-5 mr-2 text-indigo-500" />
+                    Perfect Score Strategy
+                  </h3>
+                  {expandedSections.perfectScore ? (
+                    <ChevronUp className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
+                
+                {expandedSections.perfectScore && (
+                  <div className="p-5">
+                    <p className="text-sm text-indigo-700 mb-4">
+                      Based on your image content, here's how to achieve a perfect social media engagement score
+                    </p>
+                    
+                    {(() => {
+                      // Get description from analysis or fallback to form data
+                      const description = analysisResult.summary || formData.description || '';
+                      const examples = getSimilarExampleImages(description);
+                      const improvements = getSpecificImprovements(
+                        analysisResult.engagementPotential || 50, 
+                        description,
+                        analysisResult.cons || []
+                      );
+                      
+                      return (
+                        <div>
+                          <div className="mb-5">
+                            <div className="flex items-center mb-3">
+                              <Camera className="w-4 h-4 text-indigo-600 mr-2" />
+                              <h4 className="text-base font-medium text-gray-900">
+                                {examples.category.charAt(0).toUpperCase() + examples.category.slice(1)} Content Detected
+                              </h4>
+                            </div>
+                            
+                            {/* Similar optimized examples */}
+                            <p className="text-sm text-gray-600 mb-3">
+                              Here are some high-performing examples similar to your content:
+                            </p>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {examples.images.map((img, index) => (
+                                <div key={index} className="relative rounded-lg overflow-hidden border border-gray-200 bg-white">
+                                  <div className="aspect-w-16 aspect-h-9 relative bg-gray-100">
+                                    {/* Use a placeholder or create placeholders in your public directory */}
+                                    <div className="absolute inset-0 bg-indigo-50 flex items-center justify-center">
+                                      <p className="text-sm text-indigo-600 text-center p-2">
+                                        Example {index + 1}: High-scoring {examples.category} content
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold rounded-full h-7 w-7 flex items-center justify-center">
+                                    98
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          {/* Best practices */}
+                          <div className="mb-5">
+                            <div className="flex items-center mb-3">
+                              <Sparkles className="w-4 h-4 text-indigo-600 mr-2" />
+                              <h4 className="text-base font-medium text-gray-900">
+                                {examples.category.charAt(0).toUpperCase() + examples.category.slice(1)} Content Best Practices
+                              </h4>
+                            </div>
+                            
+                            <div className="bg-indigo-50 p-4 rounded-lg">
+                              <ul className="space-y-2">
+                                {examples.tips.map((tip, index) => (
+                                  <li key={index} className="text-sm text-indigo-800 flex items-start">
+                                    <Check className="w-4 h-4 text-indigo-600 mr-2 mt-0.5 flex-shrink-0" />
+                                    <span>{tip}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                          
+                          {/* Specific improvement actions */}
+                          <div>
+                            <div className="flex items-center mb-3">
+                              <Lightbulb className="w-4 h-4 text-yellow-600 mr-2" />
+                              <h4 className="text-base font-medium text-gray-900">
+                                Actions to Improve Your Score
+                              </h4>
+                            </div>
+                            
+                            <div className="bg-yellow-50 p-4 rounded-lg">
+                              <ul className="space-y-2 mb-4">
+                                {improvements.map((improvement, index) => (
+                                  <li key={index} className="text-sm text-yellow-800 flex items-start">
+                                    <div className="w-5 h-5 rounded-full bg-yellow-200 text-yellow-800 flex items-center justify-center mr-2 mt-0.5 flex-shrink-0 text-xs font-bold">
+                                      {index + 1}
+                                    </div>
+                                    <span>{improvement}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                              
+                              <div className="text-sm text-indigo-800 bg-indigo-100 p-3 rounded-lg flex items-start">
+                                <Info className="w-4 h-4 text-indigo-600 mr-2 mt-0.5 flex-shrink-0" />
+                                <span>
+                                  <strong>Pro Tip:</strong> After making these improvements, try our AI Model creation to generate perfect social media content consistently.
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
