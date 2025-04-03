@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
         "Authorization": `Token ${replicateApiKey}`
       },
       body: JSON.stringify({
-        version: "3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1aa95d0db",
+        version: "6244f70a6b0dfd1bb6984a53f9dfedb15142234597b12481be5b0d8ce979c138",
         input: {
           image: `data:image/jpeg;base64,${base64Data}`,
           motion_bucket_id: motion_bucket_id,

@@ -94,33 +94,64 @@ export const runJaimeModel = async (input: PredictionInput) => {
  */
 export const runSdxlModel = async (input: PredictionInput) => {
   const modelId = `${AI_MODELS.sdxl.id}:${AI_MODELS.sdxl.version}`;
+  const maxRetries = 2;
+  let lastError: Error | null = null;
   
-  try {
-    const response = await fetch('/api/replicate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        modelId,
-        input: {
-          ...AI_MODELS.sdxl.defaultParams,
-          ...input,
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      // Add delay between retries
+      if (attempt > 0) {
+        console.log(`Retrying SDXL model request (attempt ${attempt})`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+      
+      const response = await fetch('/api/replicate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      }),
-    });
+        body: JSON.stringify({
+          modelId,
+          input: {
+            ...AI_MODELS.sdxl.defaultParams,
+            ...input,
+          },
+        }),
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to generate image');
+      // Parse response first to get error details if present
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || `Failed to generate image: ${response.status} ${response.statusText}`);
+      }
+
+      // Check if output exists and is in the expected format
+      if (!data.output) {
+        throw new Error('Invalid response format: missing output field');
+      }
+      
+      // Validate that the output contains at least one URL
+      if (Array.isArray(data.output) && data.output.length === 0) {
+        throw new Error('No images were generated');
+      }
+
+      console.log('SDXL model generated output successfully');
+      return data.output;
+    } catch (error) {
+      console.error(`Error running SDXL model (attempt ${attempt + 1}/${maxRetries + 1}):`, error);
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      // If this is the last attempt, throw the error
+      if (attempt === maxRetries) {
+        throw lastError;
+      }
+      // Otherwise continue to the next retry
     }
-
-    const { output } = await response.json();
-    return output;
-  } catch (error) {
-    console.error("Error running SDXL model:", error);
-    throw error;
   }
+  
+  // This should never be reached due to the throw in the loop
+  throw lastError || new Error('Unknown error occurred');
 };
 
 /**

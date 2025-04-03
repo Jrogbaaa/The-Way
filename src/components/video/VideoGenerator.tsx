@@ -126,11 +126,11 @@ export default function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps
         <div>
           <div className="flex items-center mb-1 space-x-1">
             <Label htmlFor="prompt" className="text-sm font-medium">
-              Prompt (Recommended)
+              Prompt (Required for best results)
             </Label>
             <div className="text-gray-500 text-xs italic flex items-center">
               <Info className="h-3 w-3 mr-1" />
-              <span>Helps guide motion direction</span>
+              <span>Essential for good motion</span>
             </div>
           </div>
           <Input
@@ -187,6 +187,7 @@ export default function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps
           <li>Generation can take 20-60 seconds</li>
           <li>Images with people or faces may give mixed results</li>
         </ul>
+        <p className="mt-2 text-center">Powered by Replicate's Stable Video Diffusion</p>
       </div>
     </div>
   );
