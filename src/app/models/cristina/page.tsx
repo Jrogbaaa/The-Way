@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { runCristinaModel } from '@/lib/api/replicate';
 import { ImageModal } from '@/components/ui/image-modal';
 import Link from 'next/link';
-import { ImageIcon, Download, Check, X, ArrowLeft, ArrowRight, XCircle, Loader2, Info } from 'lucide-react';
+import { ImageIcon, Download, Check, X, ArrowLeft, ArrowRight, XCircle, Loader2, Info, Sparkles } from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/utils';
 import AdBlockerDetector from '@/components/AdBlockerDetector';
 import ProgressBar from '@/components/ProgressBar';
@@ -22,8 +22,19 @@ export default function CristinaModelPage() {
   const [showGeneratedOverlay, setShowGeneratedOverlay] = useState(false);
   const [overlayImageIndex, setOverlayImageIndex] = useState(0);
   
+  // Suggested prompts for quick selection
+  const suggestedPrompts = [
+    'CRISTINA wearing a dress walking on the beach, sunset, golden hour lighting',
+    'CRISTINA in a business suit in an office setting, professional portrait',
+    'CRISTINA with a camera taking photos, outdoors, natural lighting',
+    'CRISTINA in casual clothing in a cafe, lifestyle photography',
+    'CRISTINA with a laptop working remotely, modern interior',
+    'CRISTINA in winter clothing in a snowy setting'
+  ];
+  
   // Refs for content
   const resultsSectionRef = useRef<HTMLDivElement>(null);
+  const promptInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Use our generation progress hook
   const {
@@ -141,6 +152,15 @@ export default function CristinaModelPage() {
     }
   };
   
+  // Handle selecting a suggested prompt
+  const handleSelectPrompt = (selectedPrompt: string) => {
+    setPrompt(selectedPrompt);
+    // Focus the prompt input after selecting
+    if (promptInputRef.current) {
+      promptInputRef.current.focus();
+    }
+  };
+  
   // Handle the full-screen overlay navigation
   const navigateOverlayImage = (direction: 'prev' | 'next') => {
     if (direction === 'prev' && overlayImageIndex > 0) {
@@ -228,11 +248,35 @@ export default function CristinaModelPage() {
               <h3 className="text-lg font-semibold mb-4">Generate an Image</h3>
               <form onSubmit={handleGenerate} className="space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="prompt" className="text-sm font-medium">
-                    Prompt
-                  </label>
+                  <div className="flex justify-between items-center">
+                    <label htmlFor="prompt" className="text-sm font-medium">
+                      Prompt
+                    </label>
+                    <span className="text-xs text-gray-500 flex items-center">
+                      <Sparkles className="h-3 w-3 mr-1 text-blue-500" />
+                      Try a suggestion
+                    </span>
+                  </div>
+                  
+                  {/* Prompt suggestions */}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {suggestedPrompts.map((suggestedPrompt, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => handleSelectPrompt(suggestedPrompt)}
+                        className="text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-full transition-colors"
+                      >
+                        {suggestedPrompt.length > 30 
+                          ? suggestedPrompt.substring(0, 30) + '...' 
+                          : suggestedPrompt}
+                      </button>
+                    ))}
+                  </div>
+                  
                   <textarea
                     id="prompt"
+                    ref={promptInputRef}
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     className="flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
