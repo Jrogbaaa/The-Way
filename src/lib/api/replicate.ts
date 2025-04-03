@@ -13,6 +13,19 @@ export interface PredictionInput {
   [key: string]: any; // Allow for custom parameters
 }
 
+// Add a new interface for image-to-video input parameters
+export interface ImageToVideoInput {
+  image: string; // Base64 or URL
+  prompt?: string;
+  negative_prompt?: string;
+  num_frames?: number;
+  num_inference_steps?: number;
+  guidance_scale?: number;
+  motion_bucket_id?: number;
+  fps?: number;
+  noise_aug_strength?: number;
+}
+
 /**
  * Run prediction using the Cristina model
  */
@@ -243,6 +256,94 @@ export const uploadFile = async (fileData: Buffer | Blob) => {
   }
 };
 
+// Add a new function to run image-to-video conversion
+/**
+ * Run prediction using the Wan 2.1 image-to-video model
+ */
+export const runImageToVideoModel = async (input: ImageToVideoInput) => {
+  const modelId = `${AI_MODELS.wan2_i2v.id}:${AI_MODELS.wan2_i2v.version}`;
+  const maxRetries = 2;
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      // Add delay between retries
+      if (attempt > 0) {
+        console.log(`Retrying image-to-video model request (attempt ${attempt})`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+      
+      const response = await fetch('/api/video/image-to-video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...AI_MODELS.wan2_i2v.defaultParams,
+          ...input,
+        }),
+      });
+
+      // Parse response first to get error details if present
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || `Failed to generate video: ${response.status} ${response.statusText}`);
+      }
+
+      // For immediate response with prediction ID
+      if (data.predictionId && data.status === 'started') {
+        console.log('Video generation started with prediction ID:', data.predictionId);
+        return {
+          predictionId: data.predictionId,
+          status: data.status,
+          message: data.message
+        };
+      }
+      
+      // For wait-for-result response
+      if (data.output) {
+        console.log('Video generated successfully:', data.output);
+        return data.output;
+      }
+      
+      // If we reached here without a valid output, throw an error
+      throw new Error('Invalid response format: missing output or prediction ID');
+    } catch (error) {
+      console.error(`Error running image-to-video model (attempt ${attempt + 1}/${maxRetries + 1}):`, error);
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      // If this is the last attempt, throw the error
+      if (attempt === maxRetries) {
+        throw lastError;
+      }
+      // Otherwise continue to the next retry
+    }
+  }
+  
+  // This should never be reached due to the throw in the loop
+  throw lastError || new Error('Unknown error occurred');
+};
+
+/**
+ * Check the status of a video generation prediction
+ */
+export const checkVideoGenerationStatus = async (predictionId: string) => {
+  try {
+    const response = await fetch(`/api/video/image-to-video?id=${predictionId}`);
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || `Failed to check status: ${response.status} ${response.statusText}`);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error checking video generation status:', error);
+    throw error;
+  }
+};
+
 export default {
   runCristinaModel,
   runJaimeModel,
@@ -252,4 +353,6 @@ export default {
   getModelInfo,
   getModelVersions,
   uploadFile,
+  runImageToVideoModel,
+  checkVideoGenerationStatus,
 }; 

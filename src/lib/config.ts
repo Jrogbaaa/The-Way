@@ -48,6 +48,7 @@ export const ROUTES = {
   createModel: "/create-model",
   cristinaModel: "/models/cristina",
   jaimeModel: "/models/jaime",
+  imageToVideo: "/models/image-to-video",
   chat: "/chat",
   gallery: "/gallery",
   targeting: "/targeting",
@@ -117,6 +118,24 @@ export const AI_MODELS = {
       num_outputs: 1,
       num_inference_steps: 25,
       guidance_scale: 7.5,
+    }
+  },
+  // Add the Wan 2.1 image-to-video model
+  wan2_i2v: {
+    id: "wavespeedai/wan-2.1-i2v-720p",
+    version: "ea2e7fcc71ab2cfd5a22680dbfe1b643bb4a2f3086be895a7be78a32dec55a3b",
+    name: "Wan 2.1 Image-to-Video",
+    description: "High-quality 720p image-to-video conversion",
+    defaultParams: {
+      image: "", // Base64 or URL of the input image
+      prompt: "", // Optional text prompt to guide the video generation
+      negative_prompt: "", // Optional negative prompt
+      num_frames: 16, // Default number of frames
+      num_inference_steps: 25, // Default DDIM steps
+      guidance_scale: 9.0, // Default CFG scale
+      motion_bucket_id: 127, // Default motion strength
+      fps: 8, // Default frames per second
+      noise_aug_strength: 0.02, // Default noise augmentation strength
     }
   },
   gemini: {

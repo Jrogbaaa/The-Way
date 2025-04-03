@@ -27,6 +27,19 @@ export default function ModelsPage() {
   // Sample data for models (would be fetched from an API in a real app)
   const [models, setModels] = useState<Model[]>([
     {
+      id: 'image-to-video',
+      name: 'Image to Video',
+      description: 'Convert still images into high-quality 720p videos with realistic motion',
+      category: 'Video',
+      tags: ['Video', 'Animation', 'Motion'],
+      stars: 4.9,
+      lastUsed: 'New',
+      image: '/placeholder-model.jpg',
+      status: 'ready',
+      isNew: true,
+      isFeatured: true
+    },
+    {
       id: '1',
       name: 'Content Generator',
       description: 'Creates compelling blog posts and social media content',
@@ -314,7 +327,7 @@ export default function ModelsPage() {
               </div>
               
               <div className="mt-5">
-                <Link href="/models/sdxl">
+                <Link href={model.id === 'image-to-video' ? '/models/image-to-video' : '/models/sdxl'}>
                   <Button 
                     className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white flex items-center justify-center transition-all duration-300"
                   >
