@@ -35,22 +35,30 @@ const OnboardingWelcome = ({ userName = 'there', onClose }: OnboardingWelcomePro
     return () => window.removeEventListener('resize', checkHeight);
   }, []);
 
-  const handleMakeAIImages = () => {
+  // Fix navigation handlers to ensure proper redirection
+  const navigateTo = (route: string) => {
     setIsVisible(false);
-    if (onClose) onClose();
-    router.push(ROUTES.models); // Redirect to models tab
+    // Navigation must happen after component unmounts to prevent conflicts
+    setTimeout(() => {
+      router.push(route);
+      if (onClose) onClose();
+    }, 10);
+  };
+
+  const handleMakeAIImages = () => {
+    navigateTo(ROUTES.cristinaModel); // Direct to Cristina model for AI images of you
   };
 
   const handleUseExistingModels = () => {
-    setIsVisible(false);
-    if (onClose) onClose();
-    router.push(ROUTES.models);
+    navigateTo(ROUTES.models); // Direct to models overview
   };
 
   const handleAnalyzePost = () => {
-    setIsVisible(false);
-    if (onClose) onClose();
-    router.push(ROUTES.socialAnalyzer);
+    navigateTo(ROUTES.socialAnalyzer); // Direct to social analyzer
+  };
+
+  const handleSkipToDashboard = () => {
+    navigateTo(ROUTES.dashboard); // Direct to dashboard
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -220,11 +228,7 @@ const OnboardingWelcome = ({ userName = 'there', onClose }: OnboardingWelcomePro
             <div className="mt-4 flex justify-end">
               <Button
                 variant="ghost"
-                onClick={() => {
-                  setIsVisible(false);
-                  if (onClose) onClose();
-                  router.push(ROUTES.dashboard);
-                }}
+                onClick={handleSkipToDashboard}
                 className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 py-1.5 h-auto"
               >
                 Skip to dashboard
