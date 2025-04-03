@@ -313,19 +313,14 @@ export default function ModelsPage() {
                 ))}
               </div>
               
-              <div className="mt-5 grid grid-cols-2 gap-2">
-                <Button 
-                  variant="outline" 
-                  className="w-full text-xs transition-all duration-300 hover:border-indigo-300"
-                >
-                  Use Model
-                </Button>
-                
-                <Button 
-                  className="w-full text-xs bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 transition-all duration-300"
-                >
-                  Use Model <ArrowUpRight className="h-3 w-3 ml-1" />
-                </Button>
+              <div className="mt-5">
+                <Link href="/models/sdxl">
+                  <Button 
+                    className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white flex items-center justify-center transition-all duration-300"
+                  >
+                    Use Model <ArrowUpRight className="h-3.5 w-3.5 ml-1.5" />
+                  </Button>
+                </Link>
               </div>
             </div>
           ))}
