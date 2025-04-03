@@ -18,7 +18,7 @@ This feature uses Replicate's **Wan 2.1 Image-to-Video** model to transform your
 3. Adjust advanced settings if needed:
    - Motion Strength: Controls how much movement appears in the video
    - FPS: Frames per second (higher = smoother but shorter)
-   - Number of Frames: Total frames to generate (more frames = longer video)
+   - Number of Frames: Total frames to generate (minimum 81 frames, more frames = longer video)
    - Guidance Scale: How closely the model follows your prompt
 
 ## Tips
@@ -27,7 +27,7 @@ This feature uses Replicate's **Wan 2.1 Image-to-Video** model to transform your
 - Adding a descriptive prompt can help guide the animation style
 - Higher motion strength works well for action scenes, lower for subtle movements
 - The generated video will be in MP4 format at 720p resolution
-- Videos are typically 2-5 seconds long depending on settings
+- Videos are typically 10-20 seconds long depending on settings
 
 ## Technical Details
 

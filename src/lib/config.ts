@@ -128,7 +128,7 @@ export const AI_MODELS = {
       image: "", // Base64 or URL of the input image
       prompt: "", // Optional text prompt to guide the video generation
       negative_prompt: "", // Optional negative prompt
-      num_frames: 16, // Default number of frames
+      num_frames: 81, // Minimum required frames (model requirement)
       num_inference_steps: 25, // Default DDIM steps
       guidance_scale: 9.0, // Default CFG scale
       motion_bucket_id: 127, // Default motion strength

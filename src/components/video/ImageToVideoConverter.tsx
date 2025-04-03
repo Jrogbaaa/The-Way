@@ -26,7 +26,7 @@ export default function ImageToVideoConverter({ onVideoGenerated }: ImageToVideo
   const [negativePrompt, setNegativePrompt] = useState('');
   const [motionStrength, setMotionStrength] = useState(127);
   const [fps, setFps] = useState(8);
-  const [numFrames, setNumFrames] = useState(16);
+  const [numFrames, setNumFrames] = useState(81);
   const [guidanceScale, setGuidanceScale] = useState(9.0);
   
   // UI state
@@ -382,14 +382,14 @@ export default function ImageToVideoConverter({ onVideoGenerated }: ImageToVideo
               
               <div>
                 <label htmlFor="num-frames" className="block text-sm font-medium text-gray-700 mb-1">
-                  Number of Frames (8-40)
+                  Number of Frames (81-150)
                 </label>
                 <div className="flex items-center gap-2">
                   <input
                     type="range"
                     id="num-frames"
-                    min="8"
-                    max="40"
+                    min="81"
+                    max="150"
                     value={numFrames}
                     onChange={(e) => setNumFrames(parseInt(e.target.value))}
                     className="w-full"
