@@ -20,7 +20,13 @@ export default function SignupPage() {
     setLoading(true);
     
     // Extract name from email for personalized welcome
-    const nameFromEmail = email.split('@')[0];
+    // Make it more user-friendly by removing numbers and capitalizing first letter
+    let nameFromEmail = email.split('@')[0];
+    // Remove numbers and special characters at the end
+    nameFromEmail = nameFromEmail.replace(/[0-9_.-]+$/, '');
+    // Capitalize first letter
+    nameFromEmail = nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1);
+    
     setUserName(nameFromEmail);
     
     // For presentation, simulate signup and show onboarding modal
