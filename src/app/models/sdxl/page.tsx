@@ -21,6 +21,7 @@ import {
 import { getProxiedImageUrl } from '@/lib/utils';
 import ProgressBar from '@/components/ProgressBar';
 import { useGenerationProgress } from '@/hooks/useGenerationProgress';
+import { ImageDisplay } from '@/components/ui/image-display';
 
 export default function SdxlModelPage() {
   const [prompt, setPrompt] = useState('');
@@ -119,7 +120,18 @@ export default function SdxlModelPage() {
   };
 
   const openImageModal = (url: string) => {
-    setSelectedImage(url);
+    try {
+      // Check if the URL is valid before opening the modal
+      if (typeof url !== 'string' || !url) {
+        console.error('Invalid URL provided to openImageModal:', url);
+        return;
+      }
+      
+      console.log('Opening image modal for URL:', url);
+      setSelectedImage(url);
+    } catch (error) {
+      console.error('Error opening image modal:', error);
+    }
   };
 
   const closeImageModal = () => {
@@ -418,48 +430,25 @@ export default function SdxlModelPage() {
       
       {/* Results section with gallery */}
       {imageUrls.length > 0 && (
-        <div ref={resultsSectionRef} className="pt-6 mt-6 border-t border-gray-200">
-          <h3 className="text-xl font-semibold mb-5 flex items-center">
-            <ImageIcon className="w-5 h-5 mr-2 text-indigo-600" />
-            Generated Images
-          </h3>
-          
-          <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div ref={resultsSectionRef} className="mt-6">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Generated Images</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {imageUrls.map((url, index) => (
-              <div 
-                key={index} 
-                className="group overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer relative"
-                onClick={() => {
-                  setOverlayImageIndex(index);
-                  setShowGeneratedOverlay(true);
-                }}
-              >
-                <div className="relative aspect-square">
-                  <img 
-                    src={proxiedUrls[url] || url} 
-                    alt={`Generated image ${index + 1}`} 
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    onError={(e) => {
-                      console.error(`Failed to load thumbnail: ${url}`);
-                      e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='10' text-anchor='middle' alignment-baseline='middle' fill='%23999999'%3EImage failed to load%3C/text%3E%3C/svg%3E";
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="absolute bottom-3 left-3 right-3 text-white">
-                      <span className="text-sm font-medium">Click to view full size</span>
-                    </div>
-                    <div className="bg-white rounded-full p-2 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform">
-                      <ImageIcon className="h-5 w-5" />
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 border-t flex justify-between items-center bg-gray-50">
-                  <span className="text-sm font-medium text-gray-700">Image {index + 1}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="hover:bg-gray-200 rounded-full p-2 h-auto w-auto"
+              <div key={index} className="relative aspect-square rounded-lg border border-gray-200 bg-gray-100">
+                <ImageDisplay
+                  src={url}
+                  alt={`Generated image ${index + 1}`}
+                  width={512}
+                  height={512}
+                  className="cursor-pointer"
+                  fallbackText="Image generation failed"
+                  onClick={() => openImageModal(url)}
+                />
+                <div className="absolute bottom-0 right-0 p-2 bg-white bg-opacity-70 rounded-tl">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDownload(url);

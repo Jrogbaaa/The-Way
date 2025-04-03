@@ -41,6 +41,110 @@ interface ActivePrediction {
 // This is just for demo purposes
 const activePredictions = new Map<string, ActivePrediction>();
 
+// Add a utility function to safely handle output format issues
+function getImageUrlsFromOutput(output: unknown): string[] {
+  // If it's already an array of strings, return it
+  if (Array.isArray(output) && output.length > 0 && typeof output[0] === 'string') {
+    return output;
+  }
+  
+  // If it's a string, wrap it in an array
+  if (typeof output === 'string') {
+    return [output];
+  }
+  
+  // If it's an object, try to extract URL
+  if (output && typeof output === 'object') {
+    const obj = output as Record<string, unknown>;
+    
+    // Check common fields where URLs might be stored
+    const possibleFields = ['url', 'image', 'output'];
+    for (const field of possibleFields) {
+      if (obj[field]) {
+        // If the field is an array of strings
+        if (Array.isArray(obj[field]) && obj[field].length > 0 && typeof obj[field][0] === 'string') {
+          return obj[field] as string[];
+        }
+        // If the field is a single string
+        if (typeof obj[field] === 'string') {
+          return [obj[field] as string];
+        }
+      }
+    }
+  }
+  
+  // If we couldn't extract anything, return an empty array
+  console.error('Failed to extract image URLs from output:', output);
+  return [];
+}
+
+// Update the function that handles extraction of image URLs from the result
+function extractImageUrlsFromResult(result: any): string[] {
+  try {
+    if (!result) {
+      console.error('Empty result object');
+      return [];
+    }
+    
+    // First check the output field
+    if (result.output) {
+      const urls = getImageUrlsFromOutput(result.output);
+      if (urls.length > 0) {
+        return urls;
+      }
+    }
+    
+    // Check for nested structures common in different APIs
+    const possiblePaths = ['images', 'data.images', 'results', 'artifacts'];
+    for (const path of possiblePaths) {
+      const parts = path.split('.');
+      let current = result;
+      
+      // Navigate to the nested property
+      for (const part of parts) {
+        if (current && typeof current === 'object' && part in current) {
+          current = current[part];
+        } else {
+          current = null;
+          break;
+        }
+      }
+      
+      // If we found a valid array
+      if (Array.isArray(current) && current.length > 0) {
+        // Check if it's an array of strings (direct URLs)
+        if (typeof current[0] === 'string') {
+          return current;
+        }
+        
+        // Check if it's an array of objects with URL properties
+        if (current[0] && typeof current[0] === 'object') {
+          const urlArray: string[] = [];
+          for (const item of current) {
+            // Check common URL fields
+            for (const field of ['url', 'image_path', 'base64']) {
+              if (item[field] && typeof item[field] === 'string') {
+                urlArray.push(item[field]);
+                break;
+              }
+            }
+          }
+          
+          if (urlArray.length > 0) {
+            return urlArray;
+          }
+        }
+      }
+    }
+    
+    console.error('Could not extract image URLs from result:', result);
+    return [];
+  } catch (error) {
+    console.error('Error extracting image URLs:', error);
+    return [];
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -136,15 +240,25 @@ export async function POST(request: Request) {
         }, { status: 500 });
       }
       
-      // Extract image URLs from the result
-      let imageUrls: string[] = [];
+      // Extract image URLs from the result using our new helper
+      let imageUrls = extractImageUrlsFromResult(result);
+      console.log('Generated images:', imageUrls);
       
-      if (result.output && Array.isArray(result.output)) {
-        imageUrls = result.output;
-        console.log('Generated images:', imageUrls);
+      // Validate each URL
+      if (imageUrls.length > 0) {
+        // Filter out invalid URLs
+        imageUrls = imageUrls.filter(url => {
+          try {
+            new URL(url);
+            return true; // URL is valid
+          } catch (e) {
+            console.error('Invalid URL in result:', url);
+            return false;
+          }
+        });
       }
       
-      // If we didn't get any valid image URLs, use a placeholder
+      // If we still don't have valid URLs, use a placeholder
       if (imageUrls.length === 0) {
         console.error('No valid images returned from Replicate');
         imageUrls = [getPlaceholderImageUrl()];

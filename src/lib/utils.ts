@@ -13,14 +13,61 @@ export function cn(...inputs: ClassValue[]): string {
  */
 export function getProxiedImageUrl(url: string | unknown): string {
   // Handle non-string values
-  if (!url || typeof url !== 'string') {
-    console.warn('Invalid URL provided to getProxiedImageUrl:', url);
+  if (!url) {
+    console.warn('Invalid URL provided to getProxiedImageUrl: empty or null value');
+    return '';
+  }
+  
+  // Special handling for object URLs that were incorrectly serialized
+  if (typeof url === 'object') {
+    console.error('Object provided instead of URL string:', JSON.stringify(url));
+    
+    // Try to extract a URL if it's in a common response format
+    if (url && typeof url === 'object') {
+      // Check for common URL fields in API responses
+      const possibleUrlFields = ['url', 'image_path', 'output', 'image'];
+      for (const field of possibleUrlFields) {
+        // Use safe property access with Record<string, unknown> type
+        const urlObj = url as Record<string, unknown>;
+        if (urlObj[field] && typeof urlObj[field] === 'string') {
+          console.log(`Found URL in object field '${field}':`, urlObj[field]);
+          return getProxiedImageUrl(urlObj[field] as string);
+        }
+      }
+      
+      // Check for array output (common in Replicate responses)
+      if (Array.isArray(url) && url.length > 0 && typeof url[0] === 'string') {
+        console.log('Found URL in array:', url[0]);
+        return getProxiedImageUrl(url[0]);
+      }
+    }
+    
+    console.warn('Unable to extract valid URL from object');
+    return '';
+  }
+  
+  if (typeof url !== 'string') {
+    console.warn('Invalid URL type provided to getProxiedImageUrl:', typeof url);
     return '';
   }
   
   // Don't proxy URLs that are already on our domain
-  if (url.startsWith('/') || url.startsWith(window.location.origin)) {
+  if (url.startsWith('/') || (typeof window !== 'undefined' && url.startsWith(window.location.origin))) {
     return url;
+  }
+  
+  // Don't proxy data URLs
+  if (url.startsWith('data:')) {
+    return url;
+  }
+  
+  // Validate the URL before proxying
+  try {
+    // This will throw if the URL is malformed
+    new URL(url);
+  } catch (error) {
+    console.error('Invalid URL format:', url, error);
+    return '';
   }
   
   // Encode the URL to ensure it's properly passed as a query parameter
