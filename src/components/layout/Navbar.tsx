@@ -107,7 +107,7 @@ const Navbar = () => {
             aria-label="Go to home page"
           >
             <Logo size="md" />
-            <span style={{ border: 'none', outline: 'none' }}>Social AI Agent</span>
+            <span style={{ border: 'none', outline: 'none' }}>Content AI Agent</span>
           </Link>
           <nav className="hidden md:flex gap-6 ml-12">
             <Link 

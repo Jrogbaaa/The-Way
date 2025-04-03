@@ -1,6 +1,6 @@
-# The Way - AI Content Platform
+# The Way: Content AI Agent
 
-A full-stack Next.js application with Supabase backend that integrates multiple AI models for content generation, including image generation and future capabilities.
+A cutting-edge platform that empowers content creators with AI-powered tools to optimize their social media content.
 
 ## Features
 
@@ -87,53 +87,65 @@ For detailed documentation, see [Post Analysis Documentation](./docs/post-analys
 
 ### Prerequisites
 
-- Node.js 18.x or higher
+- Node.js (v18+)
 - npm or yarn
-- Supabase account (for authentication and storage)
-- Replicate API key
-- Google Cloud service account (for Vertex AI integration)
-- Google Gemini API key (for the social media expert chat)
-
-### Environment Setup
-
-Create a `.env.local` file in the root directory with the following variables:
-
-```bash
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-
-# Replicate
-REPLICATE_API_TOKEN=your_replicate_api_token
-
-# Google Vertex AI Integration
-GOOGLE_APPLICATION_CREDENTIALS=path/to/your/google-credentials.json
-GOOGLE_PROJECT_ID=your_gcp_project_id
-GOOGLE_API_KEY=your_google_api_key
-GEMINI_API_KEY=your_gemini_api_key
-
-# Hugging Face Integration
-HUGGING_FACE_API_KEY=your_hugging_face_api_key
-
-# App URL
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
+- NextAuth configured with your preferred authentication providers
 
 ### Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/the-way.git
-cd the-way
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/the-way.git
+   cd the-way
+   ```
 
-# Install dependencies
-npm install
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
-# Start the development server
-npm run dev
-```
+3. Set up environment variables:
+   ```
+   cp .env.example .env.local
+   ```
+   Then edit `.env.local` with your configuration values.
 
-The application will be available at [http://localhost:3000](http://localhost:3000).
+4. Run the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
+## Architecture
+
+The Way is built with a modern tech stack:
+
+- **Next.js** for server-side rendering and API routes
+- **TypeScript** for type safety
+- **Tailwind CSS** for styling
+- **NextAuth.js** for authentication
+- **AI Services** integrated for content analysis and generation
+
+## Documentation
+
+For more detailed information, see the following documentation files:
+
+- [Development Guide](./DEVELOPMENT.md): Coding standards and development practices
+- [API Reference](./API.md): Documentation for backend APIs
+- [Image Analysis Guide](./analyze-post-guide.md): How to use the image analysis features
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+For questions or support, please reach out to our team at support@contentaiagent.com.
 
 ## AI Model Integration
 
@@ -274,10 +286,6 @@ If you encounter issues:
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments
 

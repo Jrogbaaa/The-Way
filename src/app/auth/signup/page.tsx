@@ -223,7 +223,7 @@ export default function SignupPage() {
               </ul>
               <div className="mt-8 rounded-xl bg-white/10 p-6 backdrop-blur-sm">
                 <p className="text-lg italic text-white mb-3">
-                  "Social AI Agent transformed how we create content. We've cut our production time in half while doubling engagement."
+                  "Content AI Agent transformed how we create content. We've cut our production time in half while doubling engagement."
                 </p>
                 <div className="flex items-center">
                   <div className="h-10 w-10 rounded-full bg-indigo-300 mr-3"></div>

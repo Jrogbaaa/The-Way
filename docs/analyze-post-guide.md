@@ -80,33 +80,39 @@ We offer a dedicated Social Media Analyzer with an enhanced UI:
 
 ## Image Generation Models
 
-Our redesigned model interfaces provide a superior image generation experience:
+Our redesigned model interfaces provide a superior image generation experience across all models (Standard, Cristina, and Jaime):
 
-1. **Intuitive model interfaces**:
-   - Clean, modern UI with clear sections for different functionality
+1. **Professional, consistent UI**:
+   - Clean, modern UI with card-based layouts and clear sections
+   - Consistent design language across all model types (Standard, Cristina, and Jaime)
    - Helpful tips and examples directly in the interface
    - Contextual information about each model's capabilities and best uses
-   - Grid layout for optimal space utilization and improved scanning
 
-2. **Real-time progress tracking**:
+2. **Enhanced form experience**:
+   - Well-structured form inputs with intuitive labeling
+   - Improved textarea styling with focus states and proper spacing
+   - Clear differentiation between required and optional fields
+   - Loading spinner animation on generate button for visual feedback
+
+3. **Real-time progress tracking**:
    - Animated progress bars show generation status with percentage completion
    - Estimated time remaining updates dynamically during generation
    - Clear status messages indicate the current stage of the process
    - Visual feedback when generation completes successfully
 
-3. **Immersive results presentation**:
+4. **Immersive results presentation**:
    - Full-screen overlay displays generated images immediately upon completion
    - Success notification provides clear confirmation of completion
-   - High-quality image preview with optimal sizing
+   - High-quality image preview with optimal sizing and navigation controls
    - Background blur focuses attention on the generated content
 
-4. **Enhanced image management**:
+5. **Enhanced image management**:
    - One-click download button for immediate image saving
    - Image navigation controls for multi-image generations
-   - Gallery view persists after closing the overlay
+   - Thumbnail gallery view persists after closing the overlay
    - Hover effects indicate interactive elements for improved usability
 
-5. **Model-specific features**:
+6. **Model-specific features**:
    - Custom interfaces tailored to each model's unique capabilities
    - Specialized prompt suggestions based on model strengths
    - Advanced options when appropriate for the model type

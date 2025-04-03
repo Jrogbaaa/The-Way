@@ -3,7 +3,7 @@
  * Centralizes all configuration variables and provides defaults
  */
 
-export const APP_NAME = "Social AI Agent";
+export const APP_NAME = "Content AI Agent";
 
 export const API_CONFIG = {
   // Supabase

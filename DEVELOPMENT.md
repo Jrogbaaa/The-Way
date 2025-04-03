@@ -1,8 +1,8 @@
-# Social AI Agent Development Guide
+# Content AI Agent Development Guide
 
 ## Overview
 
-The Social AI Agent is a platform for optimizing social media content using AI. This guide covers development practices, architecture, and guidelines for maintaining and extending the codebase.
+The Content AI Agent is a platform for optimizing social media content using AI. This guide covers development practices, architecture, and guidelines for maintaining and extending the codebase.
 
 ## Architecture
 

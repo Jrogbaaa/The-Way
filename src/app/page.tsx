@@ -35,7 +35,7 @@ export default function Home() {
                 aria-label="Go to home page"
               >
                 <Logo size="md" />
-                <span>Social AI Agent</span>
+                <span>Content AI Agent</span>
               </Link>
             </div>
             
@@ -374,7 +374,7 @@ export default function Home() {
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
                 <Logo size="sm" />
-                <span className="text-lg font-semibold">Social AI Agent</span>
+                <span className="text-lg font-semibold">Content AI Agent</span>
               </div>
               <p className="text-sm text-gray-400">
                 Empowering content creators with AI-powered tools for better social media content.
@@ -409,7 +409,7 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-12 pt-8 border-t border-gray-800 text-center text-sm text-gray-400">
-            &copy; {new Date().getFullYear()} Social AI Agent. All rights reserved.
+            &copy; {new Date().getFullYear()} Content AI Agent. All rights reserved.
           </div>
         </div>
       </footer>

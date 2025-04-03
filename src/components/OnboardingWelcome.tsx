@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/config';
-import { ArrowRight, Sparkles, Wand2, PlusCircle, Zap } from 'lucide-react';
+import { ArrowRight, Sparkles, Wand2, PlusCircle, Zap, BarChart, Upload } from 'lucide-react';
 import Link from 'next/link';
 
 interface OnboardingWelcomeProps {
@@ -15,6 +15,8 @@ interface OnboardingWelcomeProps {
 const OnboardingWelcome = ({ userName = 'there', onClose }: OnboardingWelcomeProps) => {
   const router = useRouter();
   const [isVisible, setIsVisible] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleCreateModel = () => {
     setIsVisible(false);
@@ -26,6 +28,28 @@ const OnboardingWelcome = ({ userName = 'there', onClose }: OnboardingWelcomePro
     setIsVisible(false);
     if (onClose) onClose();
     router.push(ROUTES.models);
+  };
+
+  const handleAnalyzePost = () => {
+    setIsVisible(false);
+    if (onClose) onClose();
+    router.push(ROUTES.socialAnalyzer);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setImagePreview(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   if (!isVisible) return null;
@@ -99,6 +123,64 @@ const OnboardingWelcome = ({ userName = 'there', onClose }: OnboardingWelcomePro
                       onClick={handleUseExistingModels}
                     >
                       Browse Models
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* New Analyze Post Feature */}
+                <div className="mt-6">
+                  <div 
+                    className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
+                    onClick={handleAnalyzePost}
+                  >
+                    <div className="flex items-center mb-4">
+                      <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <BarChart className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <h3 className="ml-3 text-lg font-medium">Analyze Post</h3>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Try analyzing your first post to see how our Content AI Agent can help optimize your content for better engagement.
+                    </p>
+                    
+                    <div className="mb-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                      <div className="flex flex-col items-center">
+                        <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-500 text-center">
+                          Upload your content or paste a link to analyze engagement potential
+                        </p>
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          id="analyze-image" 
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                        />
+                        <label 
+                          htmlFor="analyze-image"
+                          className="mt-3 inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-full bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 cursor-pointer"
+                        >
+                          Select Image
+                        </label>
+                      </div>
+                      
+                      {imagePreview && (
+                        <div className="mt-3 relative rounded overflow-hidden w-24 h-24 mx-auto">
+                          <img 
+                            src={imagePreview} 
+                            alt="Preview" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <Button 
+                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                      onClick={handleAnalyzePost}
+                    >
+                      Analyze Content
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>

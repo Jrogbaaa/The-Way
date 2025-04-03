@@ -347,7 +347,7 @@ const Sidebar = () => {
           aria-label="Go to home page"
         >
           <Logo size="md" />
-          <span className="text-lg font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Social AI Agent</span>
+          <span className="text-lg font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Content AI Agent</span>
         </Link>
         <button
           type="button"
