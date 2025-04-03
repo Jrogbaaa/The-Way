@@ -19,6 +19,12 @@ export const API_CONFIG = {
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   googleApiKey: process.env.GOOGLE_API_KEY || "",
   
+  // Video APIs
+  runwayApiKey: process.env.RUNWAY_API_KEY || "",
+  dIdApiKey: process.env.D_ID_API_KEY || "",
+  runwayApiUrl: "https://api.runwayml.com/v1",
+  dIdApiUrl: "https://api.d-id.com/v1",
+  
   // App URLs
   appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
 };
