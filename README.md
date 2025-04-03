@@ -139,22 +139,41 @@ The application will be available at [http://localhost:3000](http://localhost:30
 
 ### Replicate Models
 
-The application integrates with Replicate API for the following models:
+The application integrates with Replicate API for the following models, all featuring a consistent, professional UI with enhanced user experience:
 
 #### Cristina Model
 - Uses Replicate's custom model for generating realistic images of Cristina
 - Model ID: `jrogbaaa/cristina:132c98d22d2171c64e55fe7eb539fbeef0085cb0bd5cac3e8d005234b53ef1cb`
 - Includes custom parameters for optimal generation
+- Features a modern, card-based interface with real-time progress tracking
+- Provides immersive results presentation with full-screen success overlay
 
 #### Jaime Model
 - Uses Replicate's custom model for generating realistic images of Jaime
 - Model ID: `jrogbaaa/jaimecreator:25698e8acc5ade340967890a27752f4432f0baaf10c8d58ded9e21d77ec66a09`
 - Includes custom parameters for optimal generation
+- Features the same professional UI as other models for a consistent experience
+- Includes enhanced form elements and loading states for better user feedback
 
 #### Standard Generations Model (SDXL)
 - Uses Replicate's public Stable Diffusion XL model
 - Model ID: `stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b`
 - Provides high-quality general-purpose image generation
+- Shares the same consistent UI pattern as the specialized models
+
+### User Interface Features
+
+All model pages share these enhanced UI features:
+
+- **Consistent Two-Column Layout**: Left side for interaction, right side for model information
+- **Model Information Cards**: Each model displays its specifications, use cases, and tips
+- **Model Type Badges**: Clear visual indicator of whether a model is "Public" or "Custom"
+- **Professional Form Layout**: Card-based design with improved input fields
+- **Real-time Progress Tracking**: Animated progress bars with time estimation
+- **Immersive Results Display**: Full-screen overlay for viewing generated images
+- **Intuitive Image Management**: Easy download, navigation, and gallery view
+- **Responsive Design**: Optimized for all device sizes with appropriate spacing
+- **Loading Indicators**: Spinner animations and status updates during generation
 
 ### Google Vertex AI Imagen
 

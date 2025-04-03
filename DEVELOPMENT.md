@@ -13,6 +13,7 @@ The application is built using:
 - **TailwindCSS** - For styling
 - **Google Vertex AI** - For image analysis
 - **Google Gemini** - For social media expert chat functionality
+- **Hugging Face Models** - For open-source social media content analysis
 
 ### Directory Structure
 
@@ -23,8 +24,12 @@ the-way/
 │   │   ├── api/               # API endpoints
 │   │   │   ├── imagen/        # Image generation API
 │   │   │   ├── chat/          # Chat API for social media expert
+│   │   │   ├── analyze-image/ # Vertex AI image analysis API
+│   │   │   ├── analyze-social-post/ # Hugging Face social analysis API
 │   │   ├── chat/              # Chat interface page
+│   │   ├── social-analyzer/   # Social media content analyzer page
 │   ├── components/            # React components
+│   │   ├── SocialMediaAnalyzer.tsx # Hugging Face-powered analyzer component
 │   ├── lib/                   # Utility functions & API clients
 │   │   ├── api/               # API integration code
 │   │   │   ├── gemini.ts      # Google Gemini integration
@@ -56,6 +61,41 @@ the-way/
 - Ensure accessibility compliance (ARIA attributes, keyboard navigation)
 - Maintain consistent UI patterns across the application
 
+### Model Interface UI Pattern
+
+All model interfaces in The Way follow a consistent UI pattern to ensure a uniform user experience:
+
+### Layout Structure
+- **Header**: Includes a back button to return to the models page and a model title
+- **Two-Column Layout**: 
+  - Left column (wider): Contains the model tips section, form elements, and results
+  - Right column (narrower): Contains information about the model, its features, and use cases
+- **Model Badge**: Displays whether the model is "Public" or "Custom" in a colored badge
+
+### Model Information
+- **Tips Card**: Highlighted section with an icon containing best practices and example prompts
+- **About Model Card**: Sidebar information about the model, including key features and usage recommendations
+
+### Form Elements
+- **Generate Image Section**: Card-based container with:
+  - Clear section header
+  - Prompt input field
+  - Optional negative prompt field
+  - Submit button with loading state
+- **Error Handling**: Red error message display when issues occur
+
+### Progress Tracking
+- **Progress Bar**: Shows status of image generation
+- **Animated Spinner**: Indicates loading state
+- **Time Estimate**: Shows estimated time remaining
+
+### Results Display
+- **Generated Images**: Grid layout of thumbnails
+- **Image Cards**: Each with preview, image number, and download option
+- **Full-screen View**: Modal with success message, navigation controls, and download option
+
+This consistent pattern ensures users have a familiar experience across all model interfaces, whether using standard or custom models.
+
 ### API Integration
 
 - Document API responses in `lib/api/README.md`
@@ -78,28 +118,45 @@ the-way/
 
 ## Image Analysis Feature
 
-The image analysis feature uses Google Vertex AI to:
+The platform offers two different image analysis options:
+
+### 1. Google Vertex AI Analysis
+
+The Vertex AI-based image analysis uses Google's advanced AI to:
 
 1. Analyze images for content and suitability
 2. Provide recommendations for social media optimization
 3. Suggest platform fit and content improvements
 
-### Key Files:
+#### Key Files:
 
 - `lib/vertex.ts` - Integration with Google Vertex AI
 - `components/PostUploadForm.tsx` - UI for image upload and analysis
 - `types/index.ts` - Type definitions for analysis results
 
-### Analysis Response Structure
+### 2. Hugging Face Analysis (New)
 
-The image analysis returns data including:
+The Hugging Face-based analysis provides an open-source alternative that focuses on:
 
-- Safety analysis (adult, violence, medical, racy content)
-- Content labels with confidence scores
-- Face detection and analysis
-- Social media potential assessment
-- Platform recommendations
-- Optimization tips
+1. Analyzing image content with BLIP captioning model
+2. Predicting engagement potential with BART-Large NLI model
+3. Providing clear pros and cons for social media performance
+
+#### Key Files:
+
+- `app/api/analyze-social-post/route.ts` - Integration with Hugging Face models
+- `components/SocialMediaAnalyzer.tsx` - UI for the standalone analyzer
+- `app/social-analyzer/page.tsx` - Page component for the analyzer
+
+#### Analysis Response Structure
+
+The Hugging Face analysis returns data including:
+
+- Image content caption
+- Engagement score and level (Very Low to Very High)
+- List of pros (content elements that will help engagement)
+- List of cons (elements that may hinder engagement)
+- Specific recommendations for improving engagement potential
 
 ## Chat with Social Media Expert Feature
 
@@ -160,6 +217,7 @@ The chat feature maintains conversation context by:
 - **Type errors**: Ensure API responses match defined types
 - **UI glitches**: Check browser console for React errors
 - **Chat API errors**: Verify Gemini API key is correctly set in .env
+- **Hugging Face errors**: Ensure your Hugging Face API key has inference permissions and is correctly set in .env
 
 ### Debugging Tools
 
@@ -174,76 +232,3 @@ The application requires the following environment variables:
 - `GEMINI_API_KEY` - Google Gemini API key for chat functionality
 - `GOOGLE_API_KEY` - Google API key for other Google services
 - `VERTEX_API_KEY` - Google Vertex AI API key
-- `NEXT_PUBLIC_API_URL` - API base URL
-- `REPLICATE_API_TOKEN` - Replicate API token for image generation
-
-## Deployment
-
-The application is deployed using Vercel. The deployment process is automated through GitHub integration.
-
-### Vercel Setup
-
-1. Connect your GitHub repository to Vercel
-2. Configure all required environment variables in the Vercel dashboard
-3. Vercel will automatically deploy when changes are pushed to the main branch
-
-### Deployment Commands
-
-For local testing of the production build:
-
-```bash
-# Build for production
-npm run build
-
-# Start the production server
-npm start
-```
-
-For manual deployment via Vercel CLI:
-
-```bash
-# Install Vercel CLI
-npm install -g vercel
-
-# Login to Vercel
-vercel login
-
-# Deploy to production
-vercel --prod
-```
-
-### Environment Variables
-
-Ensure all required environment variables are set in the Vercel dashboard:
-
-- `GEMINI_API_KEY` - Google Gemini API key for chat functionality
-- `GOOGLE_API_KEY` - Google API key for other Google services
-- `VERTEX_AI_LOCATION` - Location for Vertex AI services (e.g., us-central1)
-- `GOOGLE_CLOUD_VISION_CREDENTIALS` - Base64 encoded Google Vision credentials
-- `GOOGLE_CLOUD_PROJECT_ID` - Google Cloud project ID
-- `REPLICATE_API_TOKEN` - Replicate API token
-- `NEXT_PUBLIC_API_URL` - API base URL
-
-### Handling Google Credentials on Vercel
-
-For Google Cloud services, Vercel requires the credentials to be stored as an environment variable:
-
-1. Base64 encode your Google credentials file:
-   ```bash
-   cat google-credentials.json | base64
-   ```
-
-2. Add the encoded string as `GOOGLE_CLOUD_VISION_CREDENTIALS` in Vercel
-
-3. In your code, decode the base64 string to access the credentials:
-   ```typescript
-   // Example code in your application
-   const decodedCredentials = Buffer.from(
-     process.env.GOOGLE_CLOUD_VISION_CREDENTIALS || '',
-     'base64'
-   ).toString();
-   
-   const credentials = JSON.parse(decodedCredentials);
-   ```
-
-This approach keeps your Google credentials secure while allowing them to be accessible to your application. 
