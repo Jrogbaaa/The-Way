@@ -18,6 +18,7 @@ To analyze your content before posting to social media:
 
 3. **Analyze your image**:
    - After selecting an image, click the "Analyze for Social Media" button
+   - A progress bar will display the analysis status in real-time
    - Wait for the AI analysis to complete (typically 2-5 seconds)
 
 4. **Review the detailed analysis results**:
@@ -50,6 +51,30 @@ We offer a dedicated Social Media Analyzer:
    - Open-source AI models for transparent analysis
    - Performance percentages for each pro and con
    - Visual engagement score indicator with percentile ranking
+
+## Image Generation Models
+
+When generating images with our model selection:
+
+1. **Real-time progress tracking**:
+   - Visual progress bars show generation status
+   - Estimated time remaining is displayed
+   - Progress updates automatically as generation proceeds
+
+2. **Instant image display**:
+   - Generated images appear immediately after completion
+   - The page automatically scrolls to show your new image
+   - A success notification confirms when your image is ready
+
+3. **Easy image management**:
+   - Preview images in full-screen mode with one click
+   - Download images directly with the download button
+   - Generate multiple variants with different prompts
+
+4. **Model options**:
+   - Jaime model for realistic male portraits
+   - SDXL model for versatile creative images
+   - Custom models for specialized content
 
 ## Understanding the Analysis
 
