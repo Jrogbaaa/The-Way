@@ -1,6 +1,7 @@
 import React, { useState, useCallback, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Loader2, Upload } from "lucide-react";
 
 interface VideoGeneratorProps {
@@ -13,6 +14,7 @@ export default function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps
   const [videoUrl, setVideoUrl] = useState<string>("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [prompt, setPrompt] = useState<string>("");
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -63,6 +65,7 @@ export default function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps
         },
         body: JSON.stringify({
           image_base64: base64Image,
+          prompt: prompt || undefined,
           num_frames: 25,
           fps: 7,
           motion_bucket_id: 127
@@ -83,7 +86,7 @@ export default function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps
     } finally {
       setLoading(false);
     }
-  }, [selectedImage, onVideoGenerated]);
+  }, [selectedImage, prompt, onVideoGenerated]);
 
   return (
     <div className="w-full max-w-md mx-auto bg-white p-6 rounded-lg shadow-sm">
@@ -116,6 +119,20 @@ export default function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps
               {previewUrl ? "Change Image" : "Upload your image here"}
             </span>
           </Label>
+        </div>
+
+        {/* Optional Prompt */}
+        <div>
+          <Label htmlFor="prompt" className="text-sm font-medium mb-1 block">
+            Prompt (Optional)
+          </Label>
+          <Input
+            id="prompt"
+            placeholder="Describe the desired motion (e.g., 'zoom in slowly', 'pan left to right')"
+            value={prompt}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setPrompt(e.target.value)}
+            className="w-full"
+          />
         </div>
 
         {/* Create Video Button */}

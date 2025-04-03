@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let imageBuffer: ArrayBuffer;
+    let imageBase64: string;
 
     // Handle image from URL
     if (image_url) {
@@ -52,13 +52,14 @@ export async function POST(req: NextRequest) {
         );
       }
       
-      imageBuffer = await imageResponse.arrayBuffer();
+      const imageBuffer = await imageResponse.arrayBuffer();
+      imageBase64 = Buffer.from(imageBuffer).toString('base64');
     } 
     // Handle image from base64
     else {
       console.log("Processing base64 image data");
-      const base64Data = image_base64!.split(',')[1]; // Remove the data:image/jpeg;base64, part
-      imageBuffer = new Uint8Array(Buffer.from(base64Data, 'base64')).buffer;
+      // Remove the data:image/jpeg;base64, part
+      imageBase64 = image_base64!.split(',')[1]; 
     }
     
     // Call Hugging Face API
@@ -67,19 +68,22 @@ export async function POST(req: NextRequest) {
       console.log(`With additional prompt context: "${prompt}"`);
     }
     
+    // For Stable Video Diffusion, we need to structure the request differently
+    // The model expects specific parameters for image-to-video generation
     const payload = {
-      inputs: {
-        image: Buffer.from(imageBuffer).toString('base64'),
-        num_frames,
-        fps,
-        motion_bucket_id
+      inputs: imageBase64,
+      parameters: {
+        num_inference_steps: 25,
+        num_frames: num_frames,
+        fps: fps,
+        motion_bucket_id: motion_bucket_id
       }
     };
 
-    // Add prompt to payload context if provided
-    if (prompt) {
-      // @ts-ignore - Add prompt to payload
-      payload.inputs.prompt = prompt;
+    // Add prompt to payload if provided
+    if (prompt && prompt.trim() !== "") {
+      // @ts-ignore - Add prompt to parameters
+      payload.parameters.prompt = prompt;
     }
     
     const headers: Record<string, string> = {
@@ -91,6 +95,8 @@ export async function POST(req: NextRequest) {
       headers["Authorization"] = `Bearer ${apiKey}`;
     }
     
+    console.log("Sending request to Hugging Face API...");
+    
     const hfResponse = await fetch(`${API_CONFIG.huggingFaceApiUrl}/${model_id}`, {
       method: "POST",
       headers,
@@ -101,9 +107,11 @@ export async function POST(req: NextRequest) {
       let errorMessage = "Hugging Face API error";
       try {
         const errorData = await hfResponse.json();
+        console.error("Error response from Hugging Face:", errorData);
         errorMessage = errorData.error || errorMessage;
-      } catch {
+      } catch (e) {
         // If error parsing fails, use generic error with status code
+        console.error("Failed to parse error response:", e);
         errorMessage = `${errorMessage}: ${hfResponse.status} ${hfResponse.statusText}`;
       }
       
