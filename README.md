@@ -83,6 +83,86 @@ We've added an alternative social media content analyzer powered by open-source 
 
 For detailed documentation, see [Post Analysis Documentation](./docs/post-analysis.md).
 
+## Storyboard-to-Video System
+
+The storyboard-to-video system allows users to:
+
+1. Create personalized AI models of themselves
+2. Generate consistent AI photos as key frames in a storyboard
+3. Define a narrative flow with shot descriptions
+4. Automatically generate intermediate frames
+5. Compile into smooth, long-form video content
+
+### Key Concept
+
+The system generates "keyframe" images at approximately 2-second intervals using personalized AI models, then uses video generation to create smooth motion between these consistent frames, resulting in cohesive longer-form videos where characters maintain visual consistency.
+
+### User Flow
+
+1. User creates personalized AI model (using existing infrastructure)
+2. User defines storyboard sequence with text descriptions for each scene
+3. System generates consistent keyframe images for each scene using personalized models
+4. User reviews, adjusts, and approves keyframes
+5. System processes approved keyframes to create interpolated video
+6. User receives final video with options to edit or regenerate segments
+
+### Technical Implementation
+
+The storyboard-to-video system consists of several key components:
+
+1. **Storyboard Creator**: Interface for creating and managing storyboards
+2. **Character Consistency Management**: System for maintaining character consistency across frames
+3. **Keyframe Generation API**: Endpoints for generating consistent keyframe images
+4. **Video Interpolation System**: Service for creating smooth transitions between keyframes
+5. **Timeline Component**: UI for visualizing and organizing scenes
+6. **Video Processing Engine**: Backend for compiling keyframes into a final video
+
+### Database Schema
+
+The system uses the following database tables:
+
+- `storyboards`: Main table for storyboard projects
+- `scenes`: Individual scenes within a storyboard
+- `storyboard_characters`: Characters used in storyboards
+- `scene_characters`: Junction table for characters in specific scenes
+- `videos`: Generated videos from storyboards
+
+### API Endpoints
+
+- `/api/storyboard/generate-keyframe`: Generate a keyframe image for a scene
+- `/api/storyboard/generate-video`: Process keyframes into a final video
+
+### Character Consistency
+
+The system uses several techniques to maintain character consistency:
+
+1. Feature extraction from personalized AI models
+2. Enhanced prompts with character-specific details
+3. Optional consistency analysis and enforcement
+
+### Video Generation
+
+Video generation occurs in two main steps:
+
+1. Keyframe generation with consistent characters and settings
+2. Frame interpolation between keyframes to create smooth motion
+
+The system supports integration with multiple video interpolation services:
+
+- Runway Gen-2
+- D-ID
+- Custom interpolation solutions
+
+### Usage
+
+To access the storyboard creator, navigate to:
+
+```
+/storyboard-creator
+```
+
+For more detailed documentation on the storyboard system, see the [Storyboard Documentation](./docs/storyboard.md).
+
 ## Getting Started
 
 ### Prerequisites

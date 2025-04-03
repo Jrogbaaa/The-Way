@@ -2,6 +2,9 @@
  * Core application type definitions
  */
 
+// Export all storyboard types
+export * from './storyboard';
+
 /**
  * Analysis response from the image analysis API
  */
@@ -185,4 +188,6 @@ export const ROUTES = {
   resetPassword: '/auth/reset-password',
   profile: '/profile',
   settings: '/settings',
+  storyboard: '/storyboard-creator',
+  storyboardDetail: (id: string) => `/storyboard-creator/${id}`,
 }; 
