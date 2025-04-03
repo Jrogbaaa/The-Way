@@ -2,7 +2,7 @@ import React, { useState, useCallback, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, Info } from "lucide-react";
 
 interface VideoGeneratorProps {
   onVideoGenerated?: (videoUrl: string) => void;
@@ -28,8 +28,9 @@ export default function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps
       };
       reader.readAsDataURL(file);
       
-      // Clear any previous errors
+      // Clear any previous errors and video
       setError("");
+      setVideoUrl("");
     }
   };
 
@@ -123,12 +124,18 @@ export default function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps
 
         {/* Optional Prompt */}
         <div>
-          <Label htmlFor="prompt" className="text-sm font-medium mb-1 block">
-            Prompt (Optional)
-          </Label>
+          <div className="flex items-center mb-1 space-x-1">
+            <Label htmlFor="prompt" className="text-sm font-medium">
+              Prompt (Recommended)
+            </Label>
+            <div className="text-gray-500 text-xs italic flex items-center">
+              <Info className="h-3 w-3 mr-1" />
+              <span>Helps guide motion direction</span>
+            </div>
+          </div>
           <Input
             id="prompt"
-            placeholder="Describe the desired motion (e.g., 'zoom in slowly', 'pan left to right')"
+            placeholder="Examples: 'zoom in slowly', 'pan left to right', 'camera moving around subject'"
             value={prompt}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setPrompt(e.target.value)}
             className="w-full"
@@ -144,7 +151,7 @@ export default function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creating Video...
+              Creating Video... (20-60 seconds)
             </>
           ) : (
             "Create Video"
@@ -170,6 +177,16 @@ export default function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps
             />
           </div>
         )}
+      </div>
+      
+      <div className="mt-4 text-xs text-gray-500 border-t pt-4">
+        <p className="mb-1"><strong>Tips:</strong></p>
+        <ul className="list-disc pl-4 space-y-1">
+          <li>Adding a prompt significantly improves results</li>
+          <li>Simple images with clear subjects work best</li>
+          <li>Generation can take 20-60 seconds</li>
+          <li>Images with people or faces may give mixed results</li>
+        </ul>
       </div>
     </div>
   );

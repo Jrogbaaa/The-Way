@@ -64,28 +64,8 @@ export async function POST(req: NextRequest) {
     
     // Call Hugging Face API
     console.log(`Calling Hugging Face API with model: ${model_id}`);
-    if (prompt) {
-      console.log(`With additional prompt context: "${prompt}"`);
-    }
     
-    // For Stable Video Diffusion, we need to structure the request differently
-    // The model expects specific parameters for image-to-video generation
-    const payload = {
-      inputs: imageBase64,
-      parameters: {
-        num_inference_steps: 25,
-        num_frames: num_frames,
-        fps: fps,
-        motion_bucket_id: motion_bucket_id
-      }
-    };
-
-    // Add prompt to payload if provided
-    if (prompt && prompt.trim() !== "") {
-      // @ts-ignore - Add prompt to parameters
-      payload.parameters.prompt = prompt;
-    }
-    
+    // Construct headers
     const headers: Record<string, string> = {
       "Content-Type": "application/json"
     };
@@ -95,24 +75,43 @@ export async function POST(req: NextRequest) {
       headers["Authorization"] = `Bearer ${apiKey}`;
     }
     
+    // Create the API URL - using the direct inference endpoint
+    const apiUrl = `https://api-inference.huggingface.co/models/${model_id}`;
+    
     console.log("Sending request to Hugging Face API...");
     
-    const hfResponse = await fetch(`${API_CONFIG.huggingFaceApiUrl}/${model_id}`, {
+    // Create a simple payload - for this model, we just need to send the image with Content-Type: application/json
+    // The model-specific parameters are included in the body
+    const payload = {
+      inputs: imageBase64,
+      parameters: {
+        motion_bucket_id: motion_bucket_id,
+        fps: fps,
+        num_frames: num_frames,
+      }
+    };
+    
+    // Add prompt to the parameters if provided
+    if (prompt && prompt.trim()) {
+      // @ts-ignore
+      payload.parameters.prompt = prompt.trim();
+    }
+    
+    // Call the Hugging Face API
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers,
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
-
-    if (!hfResponse.ok) {
-      let errorMessage = "Hugging Face API error";
+    
+    if (!response.ok) {
+      let errorMessage = `Hugging Face API error: ${response.status} ${response.statusText}`;
       try {
-        const errorData = await hfResponse.json();
+        const errorData = await response.json();
         console.error("Error response from Hugging Face:", errorData);
-        errorMessage = errorData.error || errorMessage;
+        if (errorData.error) errorMessage = errorData.error;
       } catch (e) {
-        // If error parsing fails, use generic error with status code
         console.error("Failed to parse error response:", e);
-        errorMessage = `${errorMessage}: ${hfResponse.status} ${hfResponse.statusText}`;
       }
       
       console.error("Hugging Face API error:", errorMessage);
@@ -120,20 +119,19 @@ export async function POST(req: NextRequest) {
         { 
           success: false, 
           error: errorMessage,
-          status: hfResponse.status
+          status: response.status
         },
-        { status: hfResponse.status }
+        { status: response.status }
       );
     }
-
-    // Get response which should be the video data
-    const videoBuffer = await hfResponse.arrayBuffer();
     
-    // Convert to base64 for the response
+    // Get the response as an array buffer (binary data)
+    const videoBuffer = await response.arrayBuffer();
+    
+    // Convert the video to base64 for sending to the client
     const videoBase64 = Buffer.from(videoBuffer).toString('base64');
     const videoDataUrl = `data:video/mp4;base64,${videoBase64}`;
     
-    // Return the video URL
     return NextResponse.json({
       success: true,
       videoUrl: videoDataUrl,
