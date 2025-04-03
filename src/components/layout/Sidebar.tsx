@@ -196,8 +196,8 @@ const Sidebar = () => {
       color: 'amber',
     },
     {
-      name: 'Create Video',
-      href: ROUTES.storyboardCreator,
+      name: 'Video Creator',
+      href: ROUTES.imageToVideo,
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -213,29 +213,8 @@ const Sidebar = () => {
           <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
         </svg>
       ),
-      label: 'Create storyboard and videos',
+      label: 'Convert images to videos',
       color: 'red',
-    },
-    {
-      name: 'Video Demo',
-      href: ROUTES.videoDemo,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <polygon points="10 8 16 12 10 16 10 8" />
-        </svg>
-      ),
-      label: 'Simple AI video generation',
-      color: 'teal',
     },
     {
       name: 'Profile',

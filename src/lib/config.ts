@@ -54,8 +54,6 @@ export const ROUTES = {
   targeting: "/targeting",
   uploadPost: "/posts/upload",
   socialAnalyzer: "/social-analyzer",
-  storyboardCreator: "/storyboard-creator",
-  videoDemo: "/video-demo",
 };
 
 export const AI_MODELS = {
