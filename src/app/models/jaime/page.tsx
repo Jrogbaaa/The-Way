@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { runJaimeModel } from '@/lib/api/replicate';
 import { ImageModal } from '@/components/ui/image-modal';
 import Link from 'next/link';
-import { ImageIcon, Download, Check, X, ArrowLeft, ArrowRight, XCircle } from 'lucide-react';
+import { ImageIcon, Download, Check, X, ArrowLeft, ArrowRight, XCircle, Loader2 } from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/utils';
 import AdBlockerDetector from '@/components/AdBlockerDetector';
 import ProgressBar from '@/components/ProgressBar';
@@ -113,59 +113,43 @@ export default function JaimeModelPage() {
   const closeImageModal = () => {
     setSelectedImage(null);
   };
+
+  const handleDownload = (url: string) => {
+    try {
+      const a = document.createElement('a');
+      a.href = proxiedUrls[url] || url;
+      a.download = `jaime-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Failed to download image:', err);
+      alert('Error downloading image. Try right-click and "Save Image As..." instead.');
+    }
+  };
   
-  // Handle dismissing the generated image overlay
+  // Handle the full-screen overlay navigation
+  const navigateOverlayImage = (direction: 'prev' | 'next') => {
+    if (direction === 'prev' && overlayImageIndex > 0) {
+      setOverlayImageIndex(overlayImageIndex - 1);
+    } else if (direction === 'next' && overlayImageIndex < imageUrls.length - 1) {
+      setOverlayImageIndex(overlayImageIndex + 1);
+    }
+  };
+  
+  // Get the current image in the overlay
+  const currentOverlayImage = imageUrls[overlayImageIndex] || '';
+  const currentOverlayProxiedUrl = proxiedUrls[currentOverlayImage] || currentOverlayImage;
+  
+  // Dismiss the overlay
   const dismissGeneratedOverlay = () => {
     setShowGeneratedOverlay(false);
     
-    // Optionally scroll to the gallery section
+    // Scroll to the results section if it exists
     if (resultsSectionRef.current) {
-      resultsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      resultsSectionRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
-  
-  // Navigate through images in the overlay
-  const navigateOverlayImage = (direction: 'next' | 'prev') => {
-    if (direction === 'next') {
-      setOverlayImageIndex(prev => 
-        prev < imageUrls.length - 1 ? prev + 1 : prev
-      );
-    } else {
-      setOverlayImageIndex(prev => 
-        prev > 0 ? prev - 1 : prev
-      );
-    }
-  };
-  
-  // Handle downloading the image
-  const handleDownload = async (url: string) => {
-    try {
-      // Use proxied URL for download
-      const proxiedUrl = proxiedUrls[url] || url;
-      const response = await fetch(proxiedUrl);
-      const blob = await response.blob();
-      
-      // Create a download link and trigger it
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      
-      // Extract filename from URL or use a default
-      const filename = url.split('/').pop() || 'jaime-generated-image.jpg';
-      link.setAttribute('download', filename);
-      
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
-      console.error('Error downloading image:', error);
-    }
-  };
-
-  // Get current overlay image
-  const currentOverlayImage = imageUrls[overlayImageIndex] || '';
-  const currentOverlayProxiedUrl = currentOverlayImage ? (proxiedUrls[currentOverlayImage] || currentOverlayImage) : '';
 
   return (
     <div className="space-y-6">
@@ -175,7 +159,7 @@ export default function JaimeModelPage() {
             ← Back to Models
           </Link>
         </Button>
-        <h2 className="text-2xl font-bold">Jaime Model Test</h2>
+        <h2 className="text-2xl font-bold">Jaime Model</h2>
       </div>
       
       {/* Full-screen Generated Image Overlay */}
@@ -305,51 +289,62 @@ export default function JaimeModelPage() {
         </div>
       )}
       
-      <form onSubmit={handleGenerate} className="space-y-4">
-        <div>
-          <label htmlFor="prompt" className="block text-sm font-medium mb-1">
-            Prompt
-          </label>
-          <textarea
-            id="prompt"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            rows={3}
-            placeholder="JAIME in a suit, professional headshot, studio lighting"
-            required
-          />
+      <div className="rounded-lg border bg-white shadow-sm">
+        <div className="p-6">
+          <form onSubmit={handleGenerate} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="prompt" className="text-sm font-medium">
+                Prompt
+              </label>
+              <textarea
+                id="prompt"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                className="flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={3}
+                placeholder="JAIME in a suit, professional headshot, studio lighting"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="negative-prompt" className="text-sm font-medium">
+                Negative Prompt (Optional)
+              </label>
+              <textarea
+                id="negative-prompt"
+                value={negativePrompt}
+                onChange={(e) => setNegativePrompt(e.target.value)}
+                className="flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={2}
+                placeholder="blurry, bad quality, distorted"
+              />
+            </div>
+            
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+            
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="w-full inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              aria-label={loading ? 'Generating image...' : 'Generate image'}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                'Generate Image'
+              )}
+            </button>
+          </form>
         </div>
-        
-        <div>
-          <label htmlFor="negative-prompt" className="block text-sm font-medium mb-1">
-            Negative Prompt (Optional)
-          </label>
-          <textarea
-            id="negative-prompt"
-            value={negativePrompt}
-            onChange={(e) => setNegativePrompt(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            rows={2}
-            placeholder="blurry, bad quality, distorted"
-          />
-        </div>
-        
-        <Button 
-          type="submit" 
-          disabled={loading} 
-          className="w-full"
-          aria-label={loading ? 'Generating image...' : 'Generate image'}
-        >
-          {loading ? 'Generating...' : 'Generate Image'}
-        </Button>
-      </form>
-      
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded" role="alert">
-          {error}
-        </div>
-      )}
+      </div>
       
       {/* Results section with gallery */}
       {imageUrls.length > 0 && (
