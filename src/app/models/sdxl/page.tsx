@@ -7,6 +7,8 @@ import { ImageModal } from '@/components/ui/image-modal';
 import Link from 'next/link';
 import { ImageIcon } from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/utils';
+import ProgressBar from '@/components/ProgressBar';
+import { useGenerationProgress } from '@/hooks/useGenerationProgress';
 
 export default function SdxlModelPage() {
   const [prompt, setPrompt] = useState('');
@@ -16,6 +18,20 @@ export default function SdxlModelPage() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [proxiedUrls, setProxiedUrls] = useState<Record<string, string>>({});
+
+  // Use our generation progress hook
+  const {
+    progress,
+    processingTimeMs,
+    estimatedTotalTimeMs,
+    startGeneration,
+    completeGeneration,
+    failGeneration,
+    reset: resetProgress
+  } = useGenerationProgress({ 
+    modelName: 'SDXL',
+    estimatedTime: 10000 // Estimate 10 seconds for SDXL
+  });
 
   // Generate proxied URLs for all images
   useEffect(() => {
@@ -35,6 +51,12 @@ export default function SdxlModelPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setImageUrls([]);
+    resetProgress();
+    
+    // Start the progress indicator immediately
+    const fakeId = `sdxl-${Date.now()}`;
+    startGeneration(fakeId);
     
     try {
       const output = await runSdxlModel({
@@ -46,15 +68,24 @@ export default function SdxlModelPage() {
       // The output is typically an array of image URLs
       if (Array.isArray(output)) {
         setImageUrls(output);
+        // Complete the progress with the first image URL
+        if (output.length > 0) {
+          completeGeneration(output[0]);
+        } else {
+          failGeneration('No images were generated');
+        }
       } else if (typeof output === 'string') {
         setImageUrls([output]);
+        completeGeneration(output);
       } else {
         console.error('Unexpected output format:', output);
         setImageUrls([]);
+        failGeneration('Unexpected output format');
       }
     } catch (err) {
       console.error('Error generating image:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
+      failGeneration(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -83,6 +114,19 @@ export default function SdxlModelPage() {
         <h3 className="text-lg font-semibold mb-1">Standard Generations Test</h3>
         <p>This is a test page using the public Stable Diffusion XL model to verify our API integration.</p>
       </div>
+      
+      {/* Display the progress bar when generation is in progress */}
+      {progress.status !== 'starting' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+          <ProgressBar
+            status={progress.status}
+            progress={progress.progress}
+            processingTimeMs={processingTimeMs}
+            estimatedTotalTimeMs={estimatedTotalTimeMs}
+            modelName="SDXL"
+          />
+        </div>
+      )}
       
       <form onSubmit={handleGenerate} className="space-y-4">
         <div>

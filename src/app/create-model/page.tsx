@@ -6,6 +6,8 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Sparkles, Save, Upload, AlertCircle, Info, Server, Database, Lightbulb, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import Link from 'next/link';
+import ProgressBar from '@/components/ProgressBar';
+import { useGenerationProgress } from '@/hooks/useGenerationProgress';
 
 // Define form data interface for type safety
 interface FormData {
@@ -25,6 +27,7 @@ export default function CreateModelPage() {
   const [step, setStep] = useState(1);
   const [animateIn, setAnimateIn] = useState(false);
   const [showTip, setShowTip] = useState(true);
+  const [isCreatingModel, setIsCreatingModel] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -36,6 +39,20 @@ export default function CreateModelPage() {
       learningRate: 0.001,
       batchSize: 4
     }
+  });
+  
+  // Use generation progress hook for model creation progress tracking
+  const {
+    progress,
+    processingTimeMs,
+    estimatedTotalTimeMs,
+    startGeneration,
+    completeGeneration,
+    failGeneration,
+    reset: resetProgress
+  } = useGenerationProgress({ 
+    modelName: 'Custom Model',
+    estimatedTime: formData.configuration.epochs * 15000 // Roughly estimate based on epochs
   });
   
   // Progress steps
@@ -111,6 +128,28 @@ export default function CreateModelPage() {
       setStep(prev => prev - 1);
       window.scrollTo(0, 0);
     }
+  };
+  
+  // Handle model creation
+  const handleCreateModel = () => {
+    setIsCreatingModel(true);
+    resetProgress();
+    
+    // Generate a fake ID for the model
+    const modelId = `model-${Date.now()}`;
+    startGeneration(modelId);
+    
+    // This would normally be an API call to create the model
+    // For now, we'll just simulate progress
+    
+    // Simulate training progress over time
+    const totalDuration = formData.configuration.epochs * 15000; // 15 seconds per epoch
+    
+    // Simulate model completion after the total duration
+    setTimeout(() => {
+      completeGeneration(`model-${formData.name.toLowerCase().replace(/\s+/g, '-')}`);
+      // In a real implementation, we would redirect to the model detail page
+    }, totalDuration);
   };
   
   // Check if the current step's required fields are filled
@@ -224,6 +263,39 @@ export default function CreateModelPage() {
             ))}
           </div>
         </div>
+        
+        {/* Model Creation Progress */}
+        {isCreatingModel && progress.status !== 'starting' && (
+          <div 
+            className="mb-8 p-4 bg-white rounded-xl shadow-sm border border-gray-200 animate-fade-in"
+            style={{ animationDuration: '0.3s' }}
+          >
+            <h3 className="text-lg font-medium mb-3">Training Your Custom Model</h3>
+            <ProgressBar
+              status={progress.status}
+              progress={progress.progress}
+              processingTimeMs={processingTimeMs}
+              estimatedTotalTimeMs={estimatedTotalTimeMs}
+              modelName={formData.name || 'Custom Model'}
+            />
+            
+            <div className="mt-4 text-sm text-gray-600">
+              {progress.status === 'processing' ? (
+                <p>Training in progress. This may take several minutes depending on your configuration and dataset size.</p>
+              ) : progress.status === 'succeeded' ? (
+                <div className="p-3 bg-green-50 border border-green-100 rounded-lg text-green-800">
+                  <p className="font-medium">Training complete! Your model is ready to use.</p>
+                  <p className="mt-1">Navigate to the Models section to start using your new model.</p>
+                </div>
+              ) : progress.status === 'failed' ? (
+                <div className="p-3 bg-red-50 border border-red-100 rounded-lg text-red-800">
+                  <p className="font-medium">Training failed.</p>
+                  <p className="mt-1">Please check your data and configuration and try again.</p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
         
         {/* Step Content */}
         <div 
@@ -469,7 +541,7 @@ export default function CreateModelPage() {
           )}
           
           {/* Step 4: Review */}
-          {step === 4 && (
+          {step === 4 && !isCreatingModel && (
             <div className="space-y-6">
               <div className="flex items-center mb-6">
                 <div className="bg-indigo-100 p-2 rounded-full">
@@ -547,7 +619,7 @@ export default function CreateModelPage() {
           
           {/* Navigation buttons */}
           <div className="flex justify-between mt-8">
-            {step > 1 ? (
+            {step > 1 && !isCreatingModel ? (
               <Button 
                 variant="outline" 
                 onClick={handlePrevious}
@@ -559,7 +631,7 @@ export default function CreateModelPage() {
               <div></div>
             )}
             
-            {step < steps.length ? (
+            {step < steps.length && !isCreatingModel ? (
               <Button 
                 onClick={handleNext}
                 disabled={!isStepValid()}
@@ -568,15 +640,25 @@ export default function CreateModelPage() {
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
+            ) : step === steps.length && !isCreatingModel ? (
+              <Button 
+                onClick={handleCreateModel}
+                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white transition-all duration-300 hover:translate-x-1"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Create Model
+              </Button>
             ) : (
-              <Link href="/models">
-                <Button 
-                  className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white transition-all duration-300 hover:translate-x-1"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Create Model
-                </Button>
-              </Link>
+              progress.status === 'succeeded' && (
+                <Link href="/models">
+                  <Button 
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white transition-all duration-300 hover:translate-x-1"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Go to Models
+                  </Button>
+                </Link>
+              )
             )}
           </div>
         </div>

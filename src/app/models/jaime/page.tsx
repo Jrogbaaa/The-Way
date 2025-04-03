@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { ImageIcon } from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/utils';
 import AdBlockerDetector from '@/components/AdBlockerDetector';
+import ProgressBar from '@/components/ProgressBar';
+import { useGenerationProgress } from '@/hooks/useGenerationProgress';
 
 export default function JaimeModelPage() {
   const [prompt, setPrompt] = useState('JAIME ');
@@ -17,6 +19,20 @@ export default function JaimeModelPage() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [proxiedUrls, setProxiedUrls] = useState<Record<string, string>>({});
+
+  // Use our generation progress hook
+  const {
+    progress,
+    processingTimeMs,
+    estimatedTotalTimeMs,
+    startGeneration,
+    completeGeneration,
+    failGeneration,
+    reset: resetProgress
+  } = useGenerationProgress({ 
+    modelName: 'Jaime',
+    estimatedTime: 15000 // Estimate 15 seconds for Jaime model
+  });
 
   // Generate proxied URLs for all images
   useEffect(() => {
@@ -36,6 +52,12 @@ export default function JaimeModelPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setImageUrls([]);
+    resetProgress();
+    
+    // Start the progress indicator immediately
+    const fakeId = `jaime-${Date.now()}`;
+    startGeneration(fakeId);
     
     try {
       const output = await runJaimeModel({
@@ -47,15 +69,24 @@ export default function JaimeModelPage() {
       // The output is typically an array of image URLs
       if (Array.isArray(output)) {
         setImageUrls(output);
+        // Complete the progress with the first image URL
+        if (output.length > 0) {
+          completeGeneration(output[0]);
+        } else {
+          failGeneration('No images were generated');
+        }
       } else if (typeof output === 'string') {
         setImageUrls([output]);
+        completeGeneration(output);
       } else {
         console.error('Unexpected output format:', output);
         setImageUrls([]);
+        failGeneration('Unexpected output format');
       }
     } catch (err) {
       console.error('Error generating image:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
+      failGeneration(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -100,6 +131,19 @@ export default function JaimeModelPage() {
       </div>
       
       <AdBlockerDetector />
+      
+      {/* Display the progress bar when generation is in progress */}
+      {progress.status !== 'starting' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+          <ProgressBar
+            status={progress.status}
+            progress={progress.progress}
+            processingTimeMs={processingTimeMs}
+            estimatedTotalTimeMs={estimatedTotalTimeMs}
+            modelName="Jaime"
+          />
+        </div>
+      )}
       
       <form onSubmit={handleGenerate} className="space-y-4">
         <div>
