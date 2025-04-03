@@ -57,21 +57,26 @@ We offer a dedicated Social Media Analyzer:
 When generating images with our model selection:
 
 1. **Real-time progress tracking**:
-   - Visual progress bars show generation status
-   - Estimated time remaining is displayed
-   - Progress updates automatically as generation proceeds
+   - Visual progress bars show generation status with clear percentage indicators
+   - Estimated time remaining is displayed during generation
+   - Progress updates automatically as the AI model works on your image
 
-2. **Instant image display**:
-   - Generated images appear immediately after completion
-   - The page automatically scrolls to show your new image
-   - A success notification confirms when your image is ready
+2. **Immersive image presentation**:
+   - Generated images automatically appear in a full-screen overlay immediately upon completion
+   - Clear success notification confirms when your image is ready
+   - No need to scroll or search for your newly generated image
 
-3. **Easy image management**:
-   - Preview images in full-screen mode with one click
-   - Download images directly with the download button
-   - Generate multiple variants with different prompts
+3. **Immediate image actions**:
+   - Download your generated image directly from the overlay with one click
+   - Navigate between multiple generated images when available
+   - Easy dismissal with prominent close controls when you're ready
 
-4. **Model options**:
+4. **Persistent gallery access**:
+   - All generated images remain available in the gallery section even after closing the overlay
+   - Grid layout allows easy viewing of all your creations
+   - Quick access to download any image from the gallery view
+
+5. **Model options**:
    - Jaime model for realistic male portraits
    - SDXL model for versatile creative images
    - Custom models for specialized content

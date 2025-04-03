@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { runJaimeModel } from '@/lib/api/replicate';
 import { ImageModal } from '@/components/ui/image-modal';
 import Link from 'next/link';
-import { ImageIcon, Download, Check } from 'lucide-react';
+import { ImageIcon, Download, Check, X, ArrowLeft, ArrowRight, XCircle } from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/utils';
 import AdBlockerDetector from '@/components/AdBlockerDetector';
 import ProgressBar from '@/components/ProgressBar';
@@ -19,9 +19,10 @@ export default function JaimeModelPage() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [proxiedUrls, setProxiedUrls] = useState<Record<string, string>>({});
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [showGeneratedOverlay, setShowGeneratedOverlay] = useState(false);
+  const [overlayImageIndex, setOverlayImageIndex] = useState(0);
   
-  // Refs for scrolling
+  // Refs for content
   const resultsSectionRef = useRef<HTMLDivElement>(null);
 
   // Use our generation progress hook
@@ -52,20 +53,13 @@ export default function JaimeModelPage() {
     }
   }, [imageUrls]);
   
-  // Scroll to results when generation completes
+  // Show full-screen overlay when generation completes
   useEffect(() => {
-    if (progress.status === 'succeeded' && resultsSectionRef.current) {
-      resultsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setShowSuccessPopup(true);
-      
-      // Auto-hide the success popup after 5 seconds
-      const timerId = setTimeout(() => {
-        setShowSuccessPopup(false);
-      }, 5000);
-      
-      return () => clearTimeout(timerId);
+    if (progress.status === 'succeeded' && imageUrls.length > 0) {
+      setOverlayImageIndex(0);
+      setShowGeneratedOverlay(true);
     }
-  }, [progress.status]);
+  }, [progress.status, imageUrls.length]);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +67,7 @@ export default function JaimeModelPage() {
     setError(null);
     setImageUrls([]);
     resetProgress();
-    setShowSuccessPopup(false);
+    setShowGeneratedOverlay(false);
     
     // Start the progress indicator immediately
     const fakeId = `jaime-${Date.now()}`;
@@ -120,6 +114,29 @@ export default function JaimeModelPage() {
     setSelectedImage(null);
   };
   
+  // Handle dismissing the generated image overlay
+  const dismissGeneratedOverlay = () => {
+    setShowGeneratedOverlay(false);
+    
+    // Optionally scroll to the gallery section
+    if (resultsSectionRef.current) {
+      resultsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+  
+  // Navigate through images in the overlay
+  const navigateOverlayImage = (direction: 'next' | 'prev') => {
+    if (direction === 'next') {
+      setOverlayImageIndex(prev => 
+        prev < imageUrls.length - 1 ? prev + 1 : prev
+      );
+    } else {
+      setOverlayImageIndex(prev => 
+        prev > 0 ? prev - 1 : prev
+      );
+    }
+  };
+  
   // Handle downloading the image
   const handleDownload = async (url: string) => {
     try {
@@ -146,6 +163,10 @@ export default function JaimeModelPage() {
     }
   };
 
+  // Get current overlay image
+  const currentOverlayImage = imageUrls[overlayImageIndex] || '';
+  const currentOverlayProxiedUrl = currentOverlayImage ? (proxiedUrls[currentOverlayImage] || currentOverlayImage) : '';
+
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
@@ -157,22 +178,96 @@ export default function JaimeModelPage() {
         <h2 className="text-2xl font-bold">Jaime Model Test</h2>
       </div>
       
-      {/* Success popup that appears when image generation is complete */}
-      {showSuccessPopup && imageUrls.length > 0 && (
-        <div className="fixed bottom-4 right-4 bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-lg shadow-lg z-50 animate-fade-in flex items-center">
-          <Check className="h-5 w-5 text-green-600 mr-2" />
-          <div className="flex-1">
-            <p className="font-medium">Image generated successfully!</p>
-            <p className="text-sm">Scroll down to view your image.</p>
-          </div>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="ml-4 bg-white"
-            onClick={() => setShowSuccessPopup(false)}
+      {/* Full-screen Generated Image Overlay */}
+      {showGeneratedOverlay && imageUrls.length > 0 && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex flex-col justify-center items-center p-4 animate-fade-in-fast">
+          {/* Close button */}
+          <button 
+            onClick={dismissGeneratedOverlay}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            aria-label="Close overlay"
           >
-            Dismiss
-          </Button>
+            <XCircle className="h-8 w-8" />
+          </button>
+          
+          {/* Success indicator */}
+          <div className="bg-green-500/90 text-white px-6 py-3 rounded-full mb-6 flex items-center">
+            <Check className="h-5 w-5 mr-2" />
+            <span className="text-lg font-medium">Image Generated Successfully!</span>
+          </div>
+          
+          {/* Main image container */}
+          <div className="relative bg-gray-900 rounded-lg overflow-hidden max-w-5xl w-full max-h-[70vh]">
+            <img 
+              src={currentOverlayProxiedUrl} 
+              alt="Generated image" 
+              className="w-full h-full object-contain max-h-[70vh]"
+              loading="eager"
+            />
+            
+            {/* Navigation arrows for multiple images */}
+            {imageUrls.length > 1 && (
+              <>
+                <button 
+                  onClick={() => navigateOverlayImage('prev')}
+                  disabled={overlayImageIndex === 0}
+                  className={`absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 p-2 rounded-full ${overlayImageIndex === 0 ? 'opacity-30 cursor-not-allowed' : 'opacity-70'}`}
+                  aria-label="Previous image"
+                >
+                  <ArrowLeft className="h-6 w-6 text-white" />
+                </button>
+                <button 
+                  onClick={() => navigateOverlayImage('next')}
+                  disabled={overlayImageIndex === imageUrls.length - 1}
+                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 p-2 rounded-full ${overlayImageIndex === imageUrls.length - 1 ? 'opacity-30 cursor-not-allowed' : 'opacity-70'}`}
+                  aria-label="Next image"
+                >
+                  <ArrowRight className="h-6 w-6 text-white" />
+                </button>
+              </>
+            )}
+          </div>
+          
+          {/* Image info and actions */}
+          <div className="bg-white rounded-lg p-4 mt-4 w-full max-w-5xl flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-4 md:mb-0 text-center md:text-left">
+              <h3 className="font-medium text-lg mb-1">Generated Image {overlayImageIndex + 1} of {imageUrls.length}</h3>
+              <p className="text-sm text-gray-600">
+                Based on prompt: "{prompt.length > 60 ? prompt.substring(0, 60) + '...' : prompt}"
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={dismissGeneratedOverlay}
+                variant="outline"
+                className="flex items-center"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Close
+              </Button>
+              <Button
+                onClick={() => handleDownload(currentOverlayImage)}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Image
+              </Button>
+            </div>
+          </div>
+          
+          {/* Image counter for multiple images */}
+          {imageUrls.length > 1 && (
+            <div className="mt-4 flex gap-1">
+              {imageUrls.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setOverlayImageIndex(index)}
+                  className={`w-2.5 h-2.5 rounded-full transition-colors ${index === overlayImageIndex ? 'bg-white' : 'bg-white/30 hover:bg-white/50'}`}
+                  aria-label={`View image ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
       
@@ -198,7 +293,7 @@ export default function JaimeModelPage() {
       <AdBlockerDetector />
       
       {/* Display the progress bar when generation is in progress */}
-      {progress.status !== 'starting' && (
+      {progress.status !== 'starting' && progress.status !== 'succeeded' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
           <ProgressBar
             status={progress.status}
@@ -256,96 +351,57 @@ export default function JaimeModelPage() {
         </div>
       )}
       
-      {/* Results section with ref for scrolling */}
+      {/* Results section with gallery */}
       {imageUrls.length > 0 && (
         <div ref={resultsSectionRef} className="space-y-4 pt-4 border-t border-gray-200">
-          <h3 className="text-xl font-semibold">Generated Image</h3>
+          <h3 className="text-xl font-semibold">Generated Images</h3>
           
-          {/* Display the most recent image prominently */}
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-            <div className="relative aspect-square max-h-[600px]">
-              <img 
-                src={proxiedUrls[imageUrls[0]] || imageUrls[0]} 
-                alt="Generated image" 
-                className="w-full h-full object-contain"
-                loading="eager"
-                onError={(e) => {
-                  console.error(`Failed to load image: ${imageUrls[0]}`);
-                  e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='10' text-anchor='middle' alignment-baseline='middle' fill='%23999999'%3EImage failed to load%3C/text%3E%3C/svg%3E";
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+            {imageUrls.map((url, index) => (
+              <div 
+                key={index} 
+                className="group overflow-hidden rounded-lg border bg-card cursor-pointer relative"
+                onClick={() => {
+                  setOverlayImageIndex(index);
+                  setShowGeneratedOverlay(true);
                 }}
-              />
-            </div>
-            <div className="p-4 flex justify-between items-center bg-gray-50">
-              <div className="flex items-center">
-                <span className="text-sm font-medium">Generated from: "{prompt.length > 30 ? prompt.substring(0, 30) + '...' : prompt}"</span>
-              </div>
-              <div className="flex space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => openImageModal(imageUrls[0])}
-                >
-                  <ImageIcon className="h-4 w-4 mr-2" />
-                  Preview
-                </Button>
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  onClick={() => handleDownload(imageUrls[0])}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-              </div>
-            </div>
-          </div>
-          
-          {/* If there are multiple images, show them in a grid */}
-          {imageUrls.length > 1 && (
-            <div className="mt-6">
-              <h4 className="text-lg font-medium mb-3">Additional Images</h4>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {imageUrls.slice(1).map((url, index) => (
-                  <div key={index + 1} className="group overflow-hidden rounded-lg border bg-card cursor-pointer relative" onClick={() => openImageModal(url)}>
-                    <div className="relative aspect-square">
-                      <img 
-                        src={proxiedUrls[url] || url} 
-                        alt={`Generated image ${index + 2}`} 
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        onError={(e) => {
-                          console.error(`Failed to load thumbnail: ${url}`);
-                          e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='10' text-anchor='middle' alignment-baseline='middle' fill='%23999999'%3EImage failed to load%3C/text%3E%3C/svg%3E";
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <button 
-                          className="bg-white rounded-full p-2 shadow-lg"
-                          aria-label="View full size image"
-                        >
-                          <ImageIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="p-3 border-t flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Click to view</span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownload(url);
-                        }}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
+              >
+                <div className="relative aspect-square">
+                  <img 
+                    src={proxiedUrls[url] || url} 
+                    alt={`Generated image ${index + 1}`} 
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      console.error(`Failed to load thumbnail: ${url}`);
+                      e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='10' text-anchor='middle' alignment-baseline='middle' fill='%23999999'%3EImage failed to load%3C/text%3E%3C/svg%3E";
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <button 
+                      className="bg-white rounded-full p-2 shadow-lg"
+                      aria-label="View full size image"
+                    >
+                      <ImageIcon className="h-5 w-5" />
+                    </button>
                   </div>
-                ))}
+                </div>
+                <div className="p-3 border-t flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Image {index + 1}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(url);
+                    }}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       )}
       
@@ -356,6 +412,17 @@ export default function JaimeModelPage() {
           onClose={closeImageModal} 
         />
       )}
+      
+      <style jsx global>{`
+        @keyframes fade-in-fast {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        .animate-fade-in-fast {
+          animation: fade-in-fast 0.3s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 } 
