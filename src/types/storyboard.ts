@@ -15,6 +15,7 @@ export interface Character {
   emotion: EmotionType;
   position: CharacterPosition;
   features?: string[]; // Persistent features to maintain consistency
+  imageUrl?: string; // URL to character image (for uploaded images)
 }
 
 export interface Scene {
