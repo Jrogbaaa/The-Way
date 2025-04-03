@@ -175,6 +175,31 @@ function generateProsAndCons(caption: string, engagementAnalysis: any) {
   
   // ===== DETAILED PROS ANALYSIS =====
   
+  // Content Pillar 1: Performance/Professional Excellence
+  if (lowerCaption.includes('performance') || lowerCaption.includes('professional') || 
+      lowerCaption.includes('practice') || lowerCaption.includes('training') ||
+      lowerCaption.includes('milestone') || lowerCaption.includes('achievement') ||
+      lowerCaption.includes('behind the scenes') || lowerCaption.includes('work')) {
+    pros.push('Professional excellence content (40% of ideal content mix) demonstrates expertise and creates aspirational connection');
+  }
+  
+  // Content Pillar 2: Authentic Personal Moments
+  if (lowerCaption.includes('family') || lowerCaption.includes('home') || 
+      lowerCaption.includes('personal') || lowerCaption.includes('emotion') ||
+      lowerCaption.includes('challenge') || lowerCaption.includes('victory') ||
+      lowerCaption.includes('natural') || lowerCaption.includes('everyday') ||
+      lowerCaption.includes('lifestyle')) {
+    pros.push('Authentic personal moments (30% of ideal content mix) build relatability and emotional connection with audience');
+  }
+  
+  // Content Pillar 3: Team/Peer Interactions
+  if (lowerCaption.includes('team') || lowerCaption.includes('colleague') || 
+      lowerCaption.includes('friend') || lowerCaption.includes('collaboration') ||
+      lowerCaption.includes('partnership') || lowerCaption.includes('together') ||
+      lowerCaption.includes('celebration') || lowerCaption.includes('group')) {
+    pros.push('Team/peer interaction content (30% of ideal content mix) expands reach and authenticates personal brand');
+  }
+  
   // People content analysis
   if (lowerCaption.includes('person') || lowerCaption.includes('people') || 
       lowerCaption.includes('face') || lowerCaption.includes('woman') || 
@@ -195,68 +220,54 @@ function generateProsAndCons(caption: string, engagementAnalysis: any) {
     pros.push('Vibrant, colorful images generate 24% higher click-through rates and a 17% increase in session duration');
   }
   
+  // Format optimization - Multi-image potential
+  if (lowerCaption.includes('series') || lowerCaption.includes('multiple') || 
+      lowerCaption.includes('collection') || lowerCaption.includes('set of')) {
+    pros.push('Multi-image carousels (3-5 images) increase dwell time and drive 2.5x more engagement than single images');
+  }
+  
+  // Format optimization - Video/motion potential
+  if (lowerCaption.includes('video') || lowerCaption.includes('motion') || 
+      lowerCaption.includes('moving') || lowerCaption.includes('action')) {
+    pros.push('Short video clips (15-30 seconds) perform exceptionally well across platforms, especially on TikTok and Instagram Reels');
+  }
+  
+  // Authenticity indicators
+  if (lowerCaption.includes('authentic') || lowerCaption.includes('real') || 
+      lowerCaption.includes('raw') || lowerCaption.includes('unfiltered') ||
+      lowerCaption.includes('natural')) {
+    pros.push('Raw, authentic content builds stronger audience connections and performs better on TikTok and Instagram Stories');
+  }
+  
+  // Travel/Location content
+  if (lowerCaption.includes('travel') || lowerCaption.includes('destination') || 
+      lowerCaption.includes('vacation') || lowerCaption.includes('beach') ||
+      lowerCaption.includes('mountain') || lowerCaption.includes('landscape')) {
+    pros.push('Travel/destination content typically generates 56% higher audience retention and 43% increased profile visits');
+  }
+  
   // Composition analysis
   if (lowerCaption.includes('composition') || lowerCaption.includes('professional') || 
       lowerCaption.includes('well-framed') || lowerCaption.includes('balanced')) {
     pros.push('Well-composed imagery increases viewer retention by 26% and boosts conversion rates by 18%');
   }
   
-  // Food content analysis
+  // Food content
   if (lowerCaption.includes('food') || lowerCaption.includes('meal') || 
       lowerCaption.includes('dish') || lowerCaption.includes('restaurant')) {
-    
-    if (lowerCaption.includes('dessert') || lowerCaption.includes('cake') || lowerCaption.includes('sweet')) {
-      pros.push('Dessert content typically outperforms other food categories by 27% in engagement metrics, with 36% higher save rates');
-    } else if (lowerCaption.includes('healthy') || lowerCaption.includes('fresh')) {
-      pros.push('Healthy food content aligns with current wellness trends, generating 41% more saves and 23% higher sharing');
-    } else {
-      pros.push('Food content generates 43% higher engagement on platforms like Instagram and TikTok compared to average posts');
-    }
+    pros.push('Food content generates 34% more saves and sharing than average posts on Instagram and Pinterest');
   }
   
-  // Animal content analysis
+  // Animal content
   if (lowerCaption.includes('animal') || lowerCaption.includes('dog') || 
       lowerCaption.includes('cat') || lowerCaption.includes('pet')) {
-    
-    if (lowerCaption.includes('dog') || lowerCaption.includes('puppy')) {
-      pros.push('Dog content receives 52% more likes than other pet categories and drives 38% longer viewing sessions');
-    } else if (lowerCaption.includes('cat') || lowerCaption.includes('kitten')) {
-      pros.push('Cat content generates 47% higher share rates on most platforms with 63% higher comment engagement');
-    } else if (lowerCaption.includes('cute') || lowerCaption.includes('baby')) {
-      pros.push('Cute animal content drives 63% higher engagement than standard animal imagery, particularly on Facebook');
-    } else {
-      pros.push('Animal content performs 52% above platform averages for engagement metrics and has 40% higher viral potential');
-    }
+    pros.push('Animal content drives 63% higher emotional response and 2.3x more commenting behavior than average posts');
   }
   
-  // Aesthetic quality analysis
-  if (lowerCaption.includes('beautiful') || lowerCaption.includes('stunning') || 
-      lowerCaption.includes('gorgeous')) {
-    pros.push('Aesthetically pleasing imagery tends to receive 35% higher save rates and 28% improved follower growth');
-  }
-  
-  // Location/travel content
-  if (lowerCaption.includes('beach') || lowerCaption.includes('mountain') || 
-      lowerCaption.includes('travel') || lowerCaption.includes('vacation')) {
-    pros.push('Travel/destination content typically generates 56% higher audience retention and 43% increased profile visits');
-  }
-  
-  // Nature content
-  if (lowerCaption.includes('nature') || lowerCaption.includes('landscape') || 
-      lowerCaption.includes('sunset') || lowerCaption.includes('outdoor')) {
-    pros.push('Natural landscapes drive 37% higher engagement during high-stress news cycles and 29% better brand recall');
-  }
-  
-  // Seasonal content
-  if (lowerCaption.includes('holiday') || lowerCaption.includes('christmas') || 
-      lowerCaption.includes('halloween') || lowerCaption.includes('seasonal')) {
-    pros.push('Seasonal content receives 45% higher engagement when posted within 7-10 days of the relevant event');
-  }
-  
-  // Action shots
-  if (lowerCaption.includes('action') || lowerCaption.includes('moving') || 
-      lowerCaption.includes('running') || lowerCaption.includes('jumping')) {
-    pros.push('Action imagery drives 31% higher engagement than static shots and increases story shares by 46%');
+  // Nature/outdoors
+  if (lowerCaption.includes('nature') || lowerCaption.includes('outdoor') || 
+      lowerCaption.includes('scenery') || lowerCaption.includes('landscape')) {
+    pros.push('Nature and outdoor content performs exceptionally well for reach metrics and cross-platform shareability');
   }
   
   // ===== DETAILED CONS ANALYSIS =====
@@ -264,73 +275,69 @@ function generateProsAndCons(caption: string, engagementAnalysis: any) {
   // Visual quality issues
   if (lowerCaption.includes('dark') || lowerCaption.includes('blurry') || 
       lowerCaption.includes('fuzzy')) {
-    cons.push('Low-quality visuals result in 45% lower impression rates and 68% higher bounce rates from linked content');
+    cons.push('Dark or blurry images reduce engagement by up to 61%, particularly on visually-driven platforms like Instagram');
   }
   
-  // Text readability issues
+  // Text issues
   if (lowerCaption.includes('text') && lowerCaption.includes('small')) {
-    cons.push('Small text reduces mobile engagement by 38% as 81% of users browse on mobile devices, causing immediate scroll-past');
+    cons.push('Small text in images is difficult to read on mobile devices (87% of social media is consumed on mobile)');
   }
   
-  // Complex content issues
+  // Complexity issues
   if (lowerCaption.includes('complex') || lowerCaption.includes('complicated')) {
-    cons.push('Overly complex visuals increase scroll-past rates by 27% and reduce message retention by 42% after 24 hours');
+    cons.push('Overly complex images perform 43% worse on quick-scrolling platforms like TikTok and Instagram');
   }
   
-  // Cluttered composition
-  if (lowerCaption.includes('busy') || lowerCaption.includes('crowded') || 
-      lowerCaption.includes('cluttered')) {
-    cons.push('Cluttered compositions reduce message retention by 34% compared to minimalist content and decrease shares by 26%');
+  // Missing strong emotional element
+  if (!lowerCaption.includes('emotion') && !lowerCaption.includes('happy') && 
+      !lowerCaption.includes('excited') && !lowerCaption.includes('inspiring') &&
+      !lowerCaption.includes('surprising') && !lowerCaption.includes('amazing')) {
+    cons.push('Content without clear emotional elements receives 27% less engagement and 52% fewer shares');
   }
   
-  // Generic/stock photo appearance
-  if (lowerCaption.includes('generic') || lowerCaption.includes('stock')) {
-    cons.push('Generic imagery performs 36% below authentic content for trust metrics and reduces brand differentiation by 42%');
+  // Missing story/narrative potential
+  if (!lowerCaption.includes('story') && !lowerCaption.includes('journey') && 
+      !lowerCaption.includes('experience') && !lowerCaption.includes('adventure')) {
+    cons.push('Images that lack storytelling potential make it harder to create compelling captions that drive engagement');
   }
   
-  // Time-sensitive content
-  if (lowerCaption.includes('event') || lowerCaption.includes('concert') || 
-     lowerCaption.includes('show')) {
-    cons.push('Time-bound content has 43% shorter engagement lifespan than evergreen alternatives, limiting long-term value');
+  // Platform-specific feedback
+  if ((lowerCaption.includes('polished') || lowerCaption.includes('perfect')) && 
+      !lowerCaption.includes('authentic') && !lowerCaption.includes('raw')) {
+    cons.push('Overly polished content without authentic elements may underperform on TikTok where raw authenticity is valued');
   }
   
-  // Logo or branding issues
-  if ((lowerCaption.includes('logo') || lowerCaption.includes('brand')) && 
-      (lowerCaption.includes('large') || lowerCaption.includes('prominent'))) {
-    cons.push('Overly prominent branding reduces organic sharing by 29% and decreases perceived authenticity by 37%');
+  if (lowerCaption.includes('low quality') || lowerCaption.includes('unprofessional')) {
+    cons.push('Unprofessional imagery may underperform on Instagram and LinkedIn where visual quality matters significantly');
   }
   
-  // Lack of contrast
-  if (lowerCaption.includes('similar colors') || lowerCaption.includes('low contrast')) {
-    cons.push('Low contrast imagery receives 33% less engagement on fast-scrolling platforms and 51% lower completion rates');
-  }
-  
-  // Oversaturated market content
-  if (lowerCaption.includes('selfie') || (lowerCaption.includes('product') && lowerCaption.includes('flat lay'))) {
-    cons.push('Oversaturated content types (like standard selfies) see 24% lower engagement rates compared to unique compositions');
+  // Missing call-to-action potential
+  if (!lowerCaption.includes('question') && !lowerCaption.includes('interactive') && 
+      !lowerCaption.includes('participate') && !lowerCaption.includes('join')) {
+    cons.push('Content without clear call-to-action potential reduces comment rates by up to 38%');
   }
   
   // Engagement score-based factors
   if (engagementAnalysis.score >= 75) {
-    pros.push(`Content with this engagement profile (${engagementAnalysis.score}/100) typically outperforms 85% of social media posts across all major platforms`);
+    pros.push('Content has characteristics of high-performing social media posts that typically fall in the top 20% of engagement');
   } else if (engagementAnalysis.score <= 35) {
-    cons.push(`Content with this engagement profile (${engagementAnalysis.score}/100) falls in the bottom 30% of performance metrics, needing significant optimization`);
+    cons.push('Content lacks elements typically found in viral social media posts, potentially limiting organic reach');
   }
   
   // Add more generic pros/cons if we don't have enough
   if (pros.length === 0) {
     if (engagementAnalysis.score > 50) {
-      pros.push('Content has balanced visual elements that tend to perform 22% above platform averages and drive 17% higher follower growth');
+      pros.push('Image has good general appeal for social sharing across platforms');
     } else {
-      pros.push('Image clarity and composition meet basic standards for social media visibility and brand recognition');
+      pros.push('Content appears clear and understandable, providing a good foundation to build upon');
     }
   }
   
   if (cons.length === 0) {
     if (engagementAnalysis.score < 50) {
-      cons.push('Content lacks distinctive elements that drive viral sharing patterns (present in top 20% of posts), reducing potential reach by 35%');
+      cons.push('May benefit from incorporating more of the 20% of content types that drive 80% of engagement');
     } else {
-      cons.push('Consider adding platform-specific captions that can increase engagement by up to 48% and drive 38% more profile visits');
+      cons.push('Consider adding a compelling caption with the first 125 characters telling the key story to maximize engagement');
     }
   }
   
@@ -352,48 +359,89 @@ function getEngagementLevel(score: number): string {
  * Generate a recommendation based on engagement analysis
  */
 function getRecommendation(score: number, pros: string[], cons: string[]): string {
-  const platforms = [];
-  let timing = '';
-  let contentStrategy = '';
-  let hashtags = '';
+  // Determine the primary content type based on pros
+  let contentType = "general";
+  let platforms: string[] = [];
+  let timing = "optimal times based on your analytics";
+  let hashtags = "relevant hashtags";
   
-  // Determine recommended platforms based on score and pros
-  if (score >= 75) {
-    platforms.push('Instagram', 'TikTok', 'Pinterest');
-    timing = 'between 7-9pm on weekdays or 11am-1pm on weekends for 26% higher reach';
-    contentStrategy = 'Create a series of 3-5 related posts to maximize algorithmic preference, potentially increasing reach by 43%';
-    hashtags = '5-9 highly targeted hashtags (mix of broad and niche terms)';
-  } else if (score >= 60) {
-    platforms.push('Instagram', 'Facebook');
-    timing = 'during peak hours (8-10am or 6-8pm) when engagement rates are typically 18% higher';
-    contentStrategy = 'Pair with storytelling in your caption (150-220 characters ideal) to boost engagement by 31%';
-    hashtags = '3-7 moderately popular hashtags with 10K-500K posts each';
-  } else if (score >= 45) {
-    platforms.push('Facebook', 'LinkedIn');
-    timing = 'during mid-day (11am-2pm) when professional browsing increases by 27%';
-    contentStrategy = 'Add a clear call-to-action that can increase conversion rates by 34% despite moderate visual engagement';
-    hashtags = '2-5 industry-specific hashtags to reach relevant audiences';
-  } else {
-    platforms.push('Facebook', 'Twitter');
-    timing = 'when your specific audience is most active based on your analytics data';
-    contentStrategy = 'Use as supporting content in a carousel or multi-image post rather than a standalone, increasing retention by 38%';
-    hashtags = 'Minimal hashtags (1-3) focusing on your specific niche';
+  // Identify content type from pros
+  if (pros.some(p => p.includes('Professional excellence'))) {
+    contentType = "professional";
+    platforms = score >= 65 ? ['LinkedIn', 'Instagram'] : ['LinkedIn'];
+    hashtags = '3-5 industry and expertise hashtags';
+    timing = 'weekday mornings or lunch breaks when professionals are most active';
+  } else if (pros.some(p => p.includes('Authentic personal'))) {
+    contentType = "authentic";
+    platforms = score >= 55 ? ['Instagram', 'TikTok'] : ['Instagram Stories'];
+    hashtags = 'minimal hashtags to preserve authenticity';
+    timing = 'evenings and weekends when emotional connections peak';
+  } else if (pros.some(p => p.includes('Team/peer'))) {
+    contentType = "collaboration";
+    platforms = score >= 60 ? ['Instagram', 'LinkedIn'] : ['Instagram'];
+    hashtags = 'collaboration and community hashtags';
+    timing = 'mid-week when professional networking peaks';
+  } else if (pros.some(p => p.includes('Food'))) {
+    contentType = "food";
+    platforms = score >= 70 ? ['Instagram', 'Pinterest', 'TikTok'] : ['Instagram', 'Pinterest'];
+    hashtags = 'cuisine and foodie community hashtags';
+    timing = 'meal times (breakfast 7-9am, lunch 12-1pm, dinner 6-8pm)';
+  } else if (pros.some(p => p.includes('Travel'))) {
+    contentType = "travel";
+    platforms = score >= 65 ? ['Instagram', 'Pinterest'] : ['Instagram'];
+    hashtags = 'location and travel community hashtags';
+    timing = 'Sunday and Monday evenings when travel planning peaks';
+  } else if (pros.some(p => p.includes('Animal'))) {
+    contentType = "animal";
+    platforms = score >= 55 ? ['Instagram', 'TikTok', 'Facebook'] : ['Instagram', 'Facebook'];
+    hashtags = 'pet and animal community hashtags';
+    timing = 'mid-day and weekends when lighthearted content performs best';
+  } else if (pros.some(p => p.includes('Nature'))) {
+    contentType = "nature";
+    platforms = score >= 60 ? ['Instagram', 'Pinterest'] : ['Instagram'];
+    hashtags = 'nature photography and location hashtags';
+    timing = 'early morning and sunset hours';
+  } else if (pros.some(p => p.includes('people'))) {
+    contentType = "people";
+    platforms = score >= 45 ? ['Instagram', 'Facebook'] : ['Facebook'];
+    hashtags = 'community and lifestyle hashtags';
+    timing = 'evenings when social browsing peaks';
   }
   
-  // Build a detailed recommendation
-  let recommendation = '';
+  // Generate platform-specific recommendations
+  let platformAdvice = '';
+  if (platforms.includes('Instagram')) {
+    platformAdvice += ' For Instagram, use 3-5 images in a carousel or create a Reel for 2x the reach.';
+  }
+  if (platforms.includes('TikTok')) {
+    platformAdvice += ' On TikTok, focus on authentic, raw delivery with trending sounds.';
+  }
+  if (platforms.includes('LinkedIn')) {
+    platformAdvice += ' For LinkedIn, add professional context and industry insights in your caption.';
+  }
+  if (platforms.includes('Pinterest')) {
+    platformAdvice += ' On Pinterest, use vertical format and descriptive text for search visibility.';
+  }
+  if (platforms.includes('Facebook')) {
+    platformAdvice += ' For Facebook, encourage discussion by adding a question in your caption.';
+  }
   
+  // Build timing and engagement advice
+  let engagementAdvice = '';
   if (score >= 75) {
-    recommendation = `This content has excellent viral potential, ranking in the top ${100-score}% of analyzed posts. For maximum impact, post ${timing} on ${platforms.join(' or ')}. ${contentStrategy}. Leverage ${pros[0]?.toLowerCase().split('.')[0] || 'visual impact'} and use ${hashtags}. Ideal for top-of-funnel awareness with expected engagement rates 35-45% above your account average.`;
+    engagementAdvice = `This ${contentType} content has excellent potential. Post during ${timing} and respond to comments within the first 30 minutes to maximize viral potential.`;
   } else if (score >= 60) {
-    recommendation = `This content has good engagement potential with solid performance indicators. Post ${timing} on ${platforms.join(' or ')} for optimal results. ${contentStrategy}. Using ${hashtags} will enhance discoverability. To further improve, address: ${cons[0]?.toLowerCase().split('.')[0] || 'visual clarity'}, which could boost performance by an additional 15-20%.`;
+    engagementAdvice = `This ${contentType} content shows good promise. Share on ${platforms.join(' and ')} using ${hashtags}. Post during ${timing} for optimal reach.`;
   } else if (score >= 40) {
-    recommendation = `This content has moderate engagement potential, likely to perform near your account average. Consider posting ${timing} on ${platforms.join(' or ')}. ${contentStrategy}. With ${hashtags}, you may see modest improvement. To significantly increase performance, focus on addressing: ${cons.slice(0, 1).map(con => con.toLowerCase().split('.')[0]).join(' and ') || 'visual impact and clarity'}.`;
+    engagementAdvice = `This ${contentType} content has moderate potential. To improve, address: ${cons[0]?.toLowerCase() || 'visual clarity and appeal'}. Consider sharing on ${platforms.join(' and ')} with ${hashtags}.`;
   } else {
-    recommendation = `Based on analysis, this content may underperform on most platforms, potentially reaching 25-40% below average engagement. ${contentStrategy}, or consider significant revisions to address: ${cons.slice(0, 2).map(con => con.toLowerCase().split('.')[0]).join(' and ')}. If using as-is, test on ${platforms.join(' or ')} with ${hashtags} and targeted audience parameters to maximize limited reach potential.`;
+    engagementAdvice = `Consider adjusting this content to better align with high-performing ${contentType} content. Ideally, post similar content during ${timing} using ${hashtags}.`;
   }
   
-  return recommendation;
+  // Add caption advice for all recommendations
+  const captionAdvice = " Craft a caption where the first 125 characters tell the key story with a clear call-to-action.";
+  
+  return engagementAdvice + platformAdvice + captionAdvice;
 }
 
 /**
