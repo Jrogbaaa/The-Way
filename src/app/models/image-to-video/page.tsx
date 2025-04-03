@@ -1,16 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Metadata } from 'next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ImageToVideoConverter from '@/components/video/ImageToVideoConverter';
 import { Film, Info, Link } from 'lucide-react';
 import MarkdownContent from '@/components/ui/markdown-content';
-
-export const metadata: Metadata = {
-  title: 'Image to Video Conversion | The Way',
-  description: 'Convert still images into high-quality videos with motion using AI',
-};
 
 const IMAGE_TO_VIDEO_INFO = `
 # Image to Video Conversion
