@@ -25,6 +25,15 @@ export const API_CONFIG = {
   runwayApiUrl: "https://api.runwayml.com/v1",
   dIdApiUrl: "https://api.d-id.com/v1",
   
+  // Hugging Face
+  huggingFaceApiKey: process.env.HUGGING_FACE_API_KEY || "",
+  huggingFaceApiUrl: "https://api-inference.huggingface.co/models",
+  videoGenerationModels: {
+    stableVideoDiffusion: "stabilityai/stable-video-diffusion-img2vid-xt",
+    zeroscopeXL: "cerspense/zeroscope_v2_XL",
+    animateAnyone: "ByteDance/AnimateAnyone"
+  },
+  
   // App URLs
   appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
 };
@@ -45,6 +54,7 @@ export const ROUTES = {
   uploadPost: "/posts/upload",
   socialAnalyzer: "/social-analyzer",
   storyboardCreator: "/storyboard-creator",
+  videoDemo: "/video-demo",
 };
 
 export const AI_MODELS = {

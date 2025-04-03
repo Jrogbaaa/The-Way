@@ -217,6 +217,27 @@ const Sidebar = () => {
       color: 'red',
     },
     {
+      name: 'Video Demo',
+      href: ROUTES.videoDemo,
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-5 w-5"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <polygon points="10 8 16 12 10 16 10 8" />
+        </svg>
+      ),
+      label: 'Simple AI video generation',
+      color: 'teal',
+    },
+    {
       name: 'Profile',
       href: ROUTES.profile,
       icon: (
@@ -331,7 +352,15 @@ const Sidebar = () => {
           active: 'text-red-600 dark:text-red-400',
           inactive: 'text-red-500 group-hover:text-red-600 dark:text-red-400'
         }
-      }
+      },
+      teal: {
+        active: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300 border-l-4 border-teal-500',
+        hover: 'hover:bg-teal-50 hover:text-teal-700 dark:hover:bg-teal-900/20 dark:hover:text-teal-300 hover:border-l-4 hover:border-teal-500',
+        icon: {
+          active: 'text-teal-600 dark:text-teal-400',
+          inactive: 'text-teal-500 group-hover:text-teal-600 dark:text-teal-400'
+        }
+      },
     };
 
     return {
