@@ -5,7 +5,19 @@ import { Button } from '@/components/ui/button';
 import { runSdxlModel } from '@/lib/api/replicate';
 import { ImageModal } from '@/components/ui/image-modal';
 import Link from 'next/link';
-import { ImageIcon, Download, Check, X, ArrowLeft, ArrowRight, XCircle } from 'lucide-react';
+import { 
+  ImageIcon, 
+  Download, 
+  Check, 
+  X, 
+  ArrowLeft, 
+  ArrowRight, 
+  XCircle, 
+  Loader2, 
+  Sparkles,
+  AlertCircle,
+  MessageSquare
+} from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/utils';
 import ProgressBar from '@/components/ProgressBar';
 import { useGenerationProgress } from '@/hooks/useGenerationProgress';
@@ -23,6 +35,7 @@ export default function SdxlModelPage() {
   
   // Refs for content
   const resultsSectionRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Use our generation progress hook
   const {
@@ -168,18 +181,26 @@ export default function SdxlModelPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-2">
-        <Button asChild variant="outline" size="sm">
-          <Link href="/models">
-            ← Back to Models
-          </Link>
-        </Button>
-        <h2 className="text-2xl font-bold">Standard Generations Model Test</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-200">
+        <div>
+          <Button asChild variant="outline" size="sm" className="mb-2">
+            <Link href="/models" className="flex items-center">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Models
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold text-gray-900">Stable Diffusion XL</h1>
+          <p className="text-gray-500 mt-1">High-quality image generation with the latest SDXL model</p>
+        </div>
+        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center shadow-md">
+          <Sparkles className="h-4 w-4 mr-2" />
+          Public Model
+        </div>
       </div>
       
       {/* Full-screen Generated Image Overlay */}
       {showGeneratedOverlay && imageUrls.length > 0 && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex flex-col justify-center items-center p-4 animate-fade-in-fast">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex flex-col justify-center items-center p-4 animate-fade-in-fast">
           {/* Close button */}
           <button 
             onClick={dismissGeneratedOverlay}
@@ -190,13 +211,13 @@ export default function SdxlModelPage() {
           </button>
           
           {/* Success indicator */}
-          <div className="bg-green-500/90 text-white px-6 py-3 rounded-full mb-6 flex items-center">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-full mb-6 flex items-center shadow-md">
             <Check className="h-5 w-5 mr-2" />
             <span className="text-lg font-medium">Image Generated Successfully!</span>
           </div>
           
           {/* Main image container */}
-          <div className="relative bg-gray-900 rounded-lg overflow-hidden max-w-5xl w-full max-h-[70vh]">
+          <div className="relative bg-gray-900 rounded-xl overflow-hidden max-w-5xl w-full max-h-[70vh] shadow-2xl">
             <img 
               src={currentOverlayProxiedUrl} 
               alt="Generated image" 
@@ -228,9 +249,9 @@ export default function SdxlModelPage() {
           </div>
           
           {/* Image info and actions */}
-          <div className="bg-white rounded-lg p-4 mt-4 w-full max-w-5xl flex flex-col md:flex-row justify-between items-center">
+          <div className="bg-white rounded-xl p-4 mt-4 w-full max-w-5xl flex flex-col md:flex-row justify-between items-center shadow-lg">
             <div className="mb-4 md:mb-0 text-center md:text-left">
-              <h3 className="font-medium text-lg mb-1">Generated Image {overlayImageIndex + 1} of {imageUrls.length}</h3>
+              <h3 className="font-semibold text-lg mb-1">Generated Image {overlayImageIndex + 1} of {imageUrls.length}</h3>
               <p className="text-sm text-gray-600">
                 Based on prompt: "{prompt.length > 60 ? prompt.substring(0, 60) + '...' : prompt}"
               </p>
@@ -239,14 +260,14 @@ export default function SdxlModelPage() {
               <Button
                 onClick={dismissGeneratedOverlay}
                 variant="outline"
-                className="flex items-center"
+                className="flex items-center hover:bg-gray-100 transition-colors"
               >
                 <X className="h-4 w-4 mr-2" />
                 Close
               </Button>
               <Button
                 onClick={() => handleDownload(currentOverlayImage)}
-                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center"
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white flex items-center shadow-md hover:shadow-lg transition-all"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Download Image
@@ -269,81 +290,145 @@ export default function SdxlModelPage() {
           )}
         </div>
       )}
-      
-      <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4" role="alert">
-        <h3 className="text-lg font-semibold mb-1">Standard Generations Test</h3>
-        <p>This is a test page using the public Stable Diffusion XL model to verify our API integration.</p>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2">
+          {/* Model Tips Card */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 mb-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-blue-800 mb-3 flex items-center">
+              <MessageSquare className="w-5 h-5 mr-2 text-blue-600" />
+              Model Tips
+            </h3>
+            <div className="text-blue-700 space-y-3">
+              <p>This is a test page using the public Stable Diffusion XL model. Here are some tips for best results:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Be specific about what you want in the image</li>
+                <li>Include style descriptions like "digital art", "oil painting", or "photorealistic"</li>
+                <li>Add lighting details like "cinematic lighting" or "golden hour"</li>
+                <li>Use negative prompts to avoid unwanted elements</li>
+              </ul>
+              <p className="text-sm text-blue-600 italic mt-2">Example: "A majestic lion on a cliff at sunset, detailed fur, golden hour lighting, 4k, detailed"</p>
+            </div>
+          </div>
+          
+          {/* Display the progress bar when generation is in progress */}
+          {(progress.status !== 'starting' && progress.status !== 'succeeded') && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6 animate-fade-in">
+              <ProgressBar
+                status={progress.status}
+                progress={progress.progress}
+                processingTimeMs={processingTimeMs}
+                estimatedTotalTimeMs={estimatedTotalTimeMs}
+                modelName="SDXL"
+              />
+            </div>
+          )}
+          
+          {/* Form */}
+          <form ref={formRef} onSubmit={handleGenerate} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm space-y-5">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Generate an Image</h3>
+            
+            <div>
+              <label htmlFor="prompt" className="block text-sm font-medium text-gray-700 mb-1">
+                Prompt
+              </label>
+              <textarea
+                id="prompt"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 focus:border-blue-500 focus:ring-blue-500 focus:outline-none transition-colors"
+                rows={3}
+                placeholder="A photo of an astronaut riding a horse on mars, detailed, 4k, cinematic lighting"
+                required
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="negative-prompt" className="block text-sm font-medium text-gray-700 mb-1">
+                Negative Prompt (Optional)
+              </label>
+              <textarea
+                id="negative-prompt"
+                value={negativePrompt}
+                onChange={(e) => setNegativePrompt(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 focus:border-blue-500 focus:ring-blue-500 focus:outline-none transition-colors"
+                rows={2}
+                placeholder="blurry, bad quality, distorted, deformed, low resolution"
+              />
+            </div>
+            
+            <Button 
+              type="submit" 
+              disabled={loading} 
+              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
+              aria-label={loading ? 'Generating image...' : 'Generate image'}
+            >
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Generating...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Generate Image
+                </span>
+              )}
+            </Button>
+            
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start" role="alert">
+                <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+          </form>
+        </div>
+        
+        <div className="md:col-span-1">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 p-5 shadow-sm h-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">About SDXL</h3>
+            <div className="space-y-4 text-gray-700">
+              <p>
+                Stable Diffusion XL is an advanced text-to-image model capable of generating high-quality images from descriptive prompts.
+              </p>
+              <div>
+                <h4 className="font-medium text-gray-900 mb-1">Key Features:</h4>
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  <li>High resolution output (1024x1024)</li>
+                  <li>Better composition and details</li>
+                  <li>Improved text rendering</li>
+                  <li>Enhanced aesthetic quality</li>
+                  <li>Better prompt following</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 mb-1">Best Used For:</h4>
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  <li>Concept art and illustrations</li>
+                  <li>Creative content and ideation</li>
+                  <li>Visual storytelling</li>
+                  <li>Product visualization</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      
-      {/* Display the progress bar when generation is in progress */}
-      {progress.status !== 'starting' && progress.status !== 'succeeded' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
-          <ProgressBar
-            status={progress.status}
-            progress={progress.progress}
-            processingTimeMs={processingTimeMs}
-            estimatedTotalTimeMs={estimatedTotalTimeMs}
-            modelName="SDXL"
-          />
-        </div>
-      )}
-      
-      <form onSubmit={handleGenerate} className="space-y-4">
-        <div>
-          <label htmlFor="prompt" className="block text-sm font-medium mb-1">
-            Prompt
-          </label>
-          <textarea
-            id="prompt"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            rows={3}
-            placeholder="A photo of an astronaut riding a horse on mars"
-            required
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="negative-prompt" className="block text-sm font-medium mb-1">
-            Negative Prompt (Optional)
-          </label>
-          <textarea
-            id="negative-prompt"
-            value={negativePrompt}
-            onChange={(e) => setNegativePrompt(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            rows={2}
-            placeholder="blurry, bad quality, distorted"
-          />
-        </div>
-        
-        <Button 
-          type="submit" 
-          disabled={loading} 
-          className="w-full"
-          aria-label={loading ? 'Generating image...' : 'Generate image'}
-        >
-          {loading ? 'Generating...' : 'Generate Image'}
-        </Button>
-      </form>
-      
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded" role="alert">
-          {error}
-        </div>
-      )}
       
       {/* Results section with gallery */}
       {imageUrls.length > 0 && (
-        <div ref={resultsSectionRef} className="space-y-4 pt-4 border-t border-gray-200">
-          <h3 className="text-xl font-semibold">Generated Images</h3>
+        <div ref={resultsSectionRef} className="pt-6 mt-6 border-t border-gray-200">
+          <h3 className="text-xl font-semibold mb-5 flex items-center">
+            <ImageIcon className="w-5 h-5 mr-2 text-indigo-600" />
+            Generated Images
+          </h3>
           
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {imageUrls.map((url, index) => (
               <div 
                 key={index} 
-                className="group overflow-hidden rounded-lg border bg-card cursor-pointer relative"
+                className="group overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer relative"
                 onClick={() => {
                   setOverlayImageIndex(index);
                   setShowGeneratedOverlay(true);
@@ -360,20 +445,21 @@ export default function SdxlModelPage() {
                       e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='10' text-anchor='middle' alignment-baseline='middle' fill='%23999999'%3EImage failed to load%3C/text%3E%3C/svg%3E";
                     }}
                   />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <button 
-                      className="bg-white rounded-full p-2 shadow-lg"
-                      aria-label="View full size image"
-                    >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute bottom-3 left-3 right-3 text-white">
+                      <span className="text-sm font-medium">Click to view full size</span>
+                    </div>
+                    <div className="bg-white rounded-full p-2 shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform">
                       <ImageIcon className="h-5 w-5" />
-                    </button>
+                    </div>
                   </div>
                 </div>
-                <div className="p-3 border-t flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Image {index + 1}</span>
+                <div className="p-3 border-t flex justify-between items-center bg-gray-50">
+                  <span className="text-sm font-medium text-gray-700">Image {index + 1}</span>
                   <Button 
                     variant="ghost" 
                     size="sm" 
+                    className="hover:bg-gray-200 rounded-full p-2 h-auto w-auto"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDownload(url);
@@ -404,6 +490,15 @@ export default function SdxlModelPage() {
         
         .animate-fade-in-fast {
           animation: fade-in-fast 0.3s ease-in-out;
+        }
+        
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.5s ease-in-out;
         }
       `}</style>
     </div>
