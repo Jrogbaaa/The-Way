@@ -121,7 +121,7 @@ export const AI_MODELS = {
   // Add the Wan 2.1 image-to-video model
   wan2_i2v: {
     id: "wavespeedai/wan-2.1-i2v-720p",
-    version: "ea2e7fcc71ab2cfd5a22680dbfe1b643bb4a2f3086be895a7be78a32dec55a3b",
+    version: "aa535ad6050bb18feee0e0ba99f345b0807b28baa81c95adfc4777f61f3ac41f",
     name: "Wan 2.1 Image-to-Video",
     description: "High-quality 720p image-to-video conversion",
     defaultParams: {
