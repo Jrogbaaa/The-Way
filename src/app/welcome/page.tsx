@@ -16,6 +16,27 @@ export default function WelcomePage() {
     router.push('/create/intent');
   };
 
+  // Add specific handlers for each feature card
+  const handleMakeAIImages = () => {
+    router.push(ROUTES.createModel);
+  };
+
+  const handleUseModels = () => {
+    router.push(ROUTES.models);
+  };
+
+  const handleAnalyzeContent = () => {
+    router.push(ROUTES.socialAnalyzer);
+  };
+
+  const handleContentCalendar = () => {
+    router.push(ROUTES.dashboard);
+  };
+
+  const handleRepurposeContent = () => {
+    router.push(ROUTES.dashboard);
+  };
+
   return (
     <MainLayout showSidebar={false}>
       <div className="max-w-5xl mx-auto px-4 py-12">
@@ -113,28 +134,40 @@ export default function WelcomePage() {
               <div className="grid grid-cols-2 gap-4">
                 <button
                   className="flex flex-col items-center justify-center p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 text-center"
-                  onClick={handleStartWorkflow}
+                  onClick={handleMakeAIImages}
+                  aria-label="Make AI Images of You"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && handleMakeAIImages()}
                 >
                   <ImageIcon className="h-8 w-8 mb-2 text-indigo-600 dark:text-indigo-400" />
                   <span className="text-sm font-medium">Social Post</span>
                 </button>
                 <button
                   className="flex flex-col items-center justify-center p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 text-center"
-                  onClick={handleStartWorkflow}
+                  onClick={handleContentCalendar}
+                  aria-label="Create Content Calendar"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && handleContentCalendar()}
                 >
                   <Calendar className="h-8 w-8 mb-2 text-violet-600 dark:text-violet-400" />
                   <span className="text-sm font-medium">Content Calendar</span>
                 </button>
                 <button
                   className="flex flex-col items-center justify-center p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 text-center"
-                  onClick={handleStartWorkflow}
+                  onClick={handleAnalyzeContent}
+                  aria-label="Analyze Content"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAnalyzeContent()}
                 >
                   <BarChart2 className="h-8 w-8 mb-2 text-blue-600 dark:text-blue-400" />
                   <span className="text-sm font-medium">Analyze Content</span>
                 </button>
                 <button
                   className="flex flex-col items-center justify-center p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 text-center"
-                  onClick={handleStartWorkflow}
+                  onClick={handleRepurposeContent}
+                  aria-label="Repurpose Content"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && handleRepurposeContent()}
                 >
                   <RefreshCcw className="h-8 w-8 mb-2 text-emerald-600 dark:text-emerald-400" />
                   <span className="text-sm font-medium">Repurpose Content</span>
@@ -155,10 +188,10 @@ export default function WelcomePage() {
           
           <Button
             variant="outline"
-            onClick={() => router.push(ROUTES.dashboard)}
+            onClick={handleUseModels}
             className="px-8 py-3 text-base"
           >
-            Explore dashboard
+            Explore models
           </Button>
         </div>
         
