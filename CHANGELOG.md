@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2024-04-06
+
+### Changed
+- Improved onboarding UI with proper spacing and positioning
+- Added responsive sizing to onboarding modal for better display across devices
+- Updated navigation flows in onboarding to correctly direct users to appropriate features
+- Fixed "Make AI Images of You" option to take users to the models page
+- Enhanced modal positioning with proper margins from browser edges
+- Added automatic height adjustment for smaller viewports
+
 ## [1.2.0] - 2024-04-05
 
 ### Added

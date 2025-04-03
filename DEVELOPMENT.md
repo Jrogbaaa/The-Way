@@ -4,6 +4,59 @@
 
 The Content AI Agent is a platform for optimizing social media content using AI. This guide covers development practices, architecture, and guidelines for maintaining and extending the codebase.
 
+## Table of Contents
+
+- [Development Environment](#development-environment)
+- [Architecture](#architecture)
+  - [Frontend](#frontend)
+  - [Backend Integration](#backend-integration)
+- [UI Components](#ui-components)
+  - [Core Components](#core-components)
+  - [Model Interface UI Pattern](#model-interface-ui-pattern)
+  - [Onboarding UI Pattern](#onboarding-ui-pattern)
+- [Image Generation](#image-generation)
+- [Image Analysis](#image-analysis)
+- [Code Style and Best Practices](#code-style-and-best-practices)
+- [Testing](#testing)
+- [Deployment](#deployment)
+
+## Development Environment
+
+The application is built using:
+
+- **NextJS** - React framework
+- **TypeScript** - For type safety
+- **TailwindCSS** - For styling
+- **Google Vertex AI** - For image analysis
+- **Google Gemini** - For social media expert chat functionality
+- **Hugging Face Models** - For open-source social media content analysis
+
+### Directory Structure
+
+```
+the-way/
+├── src/
+│   ├── app/                   # Next.js app router
+│   │   ├── api/               # API endpoints
+│   │   │   ├── imagen/        # Image generation API
+│   │   │   ├── chat/          # Chat API for social media expert
+│   │   │   ├── analyze-image/ # Vertex AI image analysis API
+│   │   │   ├── analyze-social-post/ # Hugging Face social analysis API
+│   │   ├── chat/              # Chat interface page
+│   │   ├── social-analyzer/   # Social media content analyzer page
+│   │   ├── onboarding/        # Onboarding component
+│   ├── components/            # React components
+│   │   ├── SocialMediaAnalyzer.tsx # Hugging Face-powered analyzer component
+│   ├── lib/                   # Utility functions & API clients
+│   │   ├── api/               # API integration code
+│   │   │   ├── gemini.ts      # Google Gemini integration
+│   │   │   ├── replicate.ts   # Replicate integration
+│   │   │   ├── vision.ts      # Google Vision integration
+│   │   ├── vertex.ts          # Google Vertex AI integration
+│   ├── types/                 # TypeScript type definitions
+│   └── public/                # Static assets
+```
+
 ## Architecture
 
 The application is built using:
@@ -28,6 +81,7 @@ the-way/
 │   │   │   ├── analyze-social-post/ # Hugging Face social analysis API
 │   │   ├── chat/              # Chat interface page
 │   │   ├── social-analyzer/   # Social media content analyzer page
+│   │   ├── onboarding/        # Onboarding component
 │   ├── components/            # React components
 │   │   ├── SocialMediaAnalyzer.tsx # Hugging Face-powered analyzer component
 │   ├── lib/                   # Utility functions & API clients
@@ -95,6 +149,39 @@ All model interfaces in The Way follow a consistent UI pattern to ensure a unifo
 - **Full-screen View**: Modal with success message, navigation controls, and download option
 
 This consistent pattern ensures users have a familiar experience across all model interfaces, whether using standard or custom models.
+
+### Onboarding UI Pattern
+
+The onboarding experience appears after a user successfully signs up. It introduces the key features of the platform and guides users to their first action. The UI follows these design principles:
+
+#### Layout Structure
+- **Modal Overlay**: Positioned with proper spacing from browser edges (minimum 20-30px)
+- **Responsive Container**: Adjusts based on viewport size with maximum width constraints
+- **Visual Hierarchy**: Header with welcome message, followed by feature cards, then footer actions
+- **High Z-index**: Ensures visibility above all other elements on the page
+
+#### Feature Options
+- **Card-based Design**: Each feature option presented in its own card
+- **Clear Visuals**: Icons, headings, and descriptions that clearly communicate each feature
+- **Action Buttons**: Consistent button styling with appropriate call-to-action text
+- **Navigation Flows**: Each feature directs users to the appropriate destination:
+  - "Make AI Images of You" directs to the models page
+  - "Browse Models" takes users to the models overview
+  - "Analyze Content" navigates to the post analysis page
+
+#### Responsive Behavior
+- **Auto Height Adjustment**: Dynamically calculates appropriate height based on viewport size
+- **Scrollable Content**: Internal scrolling for smaller screens while maintaining fixed positioning
+- **Grid Layout**: Single-column on mobile, two-column on desktop for feature options
+- **Space Management**: Appropriate margins and padding to prevent content from touching edges
+
+#### Implementation Notes
+- `OnboardingWelcome` component accepts a `userName` prop for personalization
+- Uses React's `useEffect` to handle viewport sizing and responsive adjustments
+- Backdrop with blur effect creates visual separation from the background
+- Entrance animation for a smoother user experience
+
+This onboarding experience serves as the user's first interaction with the platform after signup, guiding them toward key features while maintaining a clean, accessible, and responsive design.
 
 ### API Integration
 
@@ -232,3 +319,21 @@ The application requires the following environment variables:
 - `GEMINI_API_KEY` - Google Gemini API key for chat functionality
 - `GOOGLE_API_KEY` - Google API key for other Google services
 - `VERTEX_API_KEY` - Google Vertex AI API key
+
+## UI Components
+
+### Core Components
+
+// ... existing code ...
+
+### Model Interface UI Pattern
+
+// ... existing code ...
+
+### Onboarding UI Pattern
+
+// ... existing code ...
+
+## Image Generation
+
+// ... existing code ...

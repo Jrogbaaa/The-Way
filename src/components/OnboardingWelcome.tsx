@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/config';
@@ -16,11 +16,29 @@ const OnboardingWelcome = ({ userName = 'there', onClose }: OnboardingWelcomePro
   const [isVisible, setIsVisible] = useState(true);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [modalHeight, setModalHeight] = useState('auto');
+
+  // Add effect to check viewport and adjust modal sizing
+  useEffect(() => {
+    const checkHeight = () => {
+      const viewportHeight = window.innerHeight;
+      // If viewport is small, set a max-height with scrolling
+      if (viewportHeight < 700) {
+        setModalHeight(`${viewportHeight - 80}px`);
+      } else {
+        setModalHeight('auto');
+      }
+    };
+
+    checkHeight();
+    window.addEventListener('resize', checkHeight);
+    return () => window.removeEventListener('resize', checkHeight);
+  }, []);
 
   const handleMakeAIImages = () => {
     setIsVisible(false);
     if (onClose) onClose();
-    router.push(ROUTES.cristinaModel); // Direct to Cristina model for AI images of you
+    router.push(ROUTES.models); // Redirect to models tab
   };
 
   const handleUseExistingModels = () => {
@@ -54,12 +72,15 @@ const OnboardingWelcome = ({ userName = 'there', onClose }: OnboardingWelcomePro
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-xl bg-white dark:bg-gray-900 shadow-2xl overflow-hidden animate-fade-in-up">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-y-auto py-8">
+      <div 
+        className="w-full max-w-2xl mx-auto my-6 rounded-xl bg-white dark:bg-gray-900 shadow-2xl overflow-hidden animate-fade-in-up"
+        style={{ maxHeight: modalHeight, overflowY: modalHeight !== 'auto' ? 'auto' : 'visible' }}
+      >
         <div className="relative">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-violet-600 to-indigo-600"></div>
           
-          <div className="p-5">
+          <div className="p-5 pt-7">
             <div className="mb-4 flex items-start">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/30">
                 <Sparkles className="h-5 w-5 text-violet-600 dark:text-violet-400" />
