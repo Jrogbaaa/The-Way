@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useUIStore } from '@/lib/store';
 import { ROUTES } from '@/lib/config';
 import Logo from '@/components/ui/Logo';
@@ -17,6 +17,7 @@ type NavItem = {
 const Sidebar = () => {
   const pathname = usePathname();
   const { sidebarOpen, toggleSidebar } = useUIStore();
+  const router = useRouter();
 
   const navItems: NavItem[] = [
     {
@@ -279,17 +280,33 @@ const Sidebar = () => {
 
   // Add function to navigate and close sidebar on mobile
   const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>, href: string) => {
-    // Check if this is a mobile device (based on window width or user agent)
-    const isMobile = window.innerWidth < 768;
+    // Check if this is a mobile device
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     
-    // If we're on mobile, close the sidebar
+    // If on mobile and sidebar is open, handle the navigation with animation
     if (isMobile && sidebarOpen) {
       e.preventDefault(); // Prevent default navigation
-      toggleSidebar(); // Close the sidebar
       
-      // Use a short timeout to ensure the sidebar animation plays before navigating
+      // First close the sidebar
+      toggleSidebar();
+      
+      // Then navigate after a short delay to allow the animation to play
       setTimeout(() => {
-        window.location.href = href;
+        // Force hide the sidebar element as a fallback for any state issues
+        const sidebarElement = document.querySelector('aside.fixed.left-0');
+        if (sidebarElement) {
+          sidebarElement.classList.add('-translate-x-full');
+          sidebarElement.classList.remove('translate-x-0');
+        }
+        
+        // Remove backdrop if present
+        const backdropElement = document.querySelector('div.fixed.inset-0.bg-black\\/30');
+        if (backdropElement) {
+          backdropElement.remove();
+        }
+        
+        // Navigate to the new page
+        router.push(href);
       }, 300);
     }
   };

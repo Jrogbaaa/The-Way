@@ -48,7 +48,7 @@ export default function ImageToVideoPage() {
     <div className="container mx-auto py-6 px-4 max-w-6xl">
       <header className="mb-8">
         {/* Back button for mobile view */}
-        <div className="mb-4 md:hidden">
+        <div className="mb-4">
           <Button 
             variant="outline" 
             size="sm" 
@@ -57,7 +57,7 @@ export default function ImageToVideoPage() {
             aria-label="Go back"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back</span>
+            <span>Back to Image Creator</span>
           </Button>
         </div>
         
