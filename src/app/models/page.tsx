@@ -23,6 +23,20 @@ interface Model {
   isFeatured: boolean;
 }
 
+// Helper function to get the correct route for each model
+const getModelRoute = (modelId: string) => {
+  switch (modelId) {
+    case 'image-to-video':
+      return '/models/image-to-video';
+    case 'cristina':
+      return '/models/cristina';
+    case 'jaime':
+      return '/models/jaime';
+    default:
+      return '/models/sdxl';
+  }
+};
+
 export default function ModelsPage() {
   // Sample data for models (would be fetched from an API in a real app)
   const [models, setModels] = useState<Model[]>([
@@ -353,7 +367,7 @@ export default function ModelsPage() {
               </div>
               
               <div className="mt-5">
-                <Link href={model.id === 'image-to-video' ? '/models/image-to-video' : '/models/sdxl'}>
+                <Link href={getModelRoute(model.id)}>
                   <Button 
                     className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white flex items-center justify-center transition-all duration-300"
                   >
