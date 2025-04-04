@@ -189,9 +189,9 @@ export default function ModelsPage() {
           <div className="pb-2">
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center mb-2">
               <Sparkles className="h-6 w-6 mr-3 text-indigo-600" />
-              My AI Models
+              Image Creator
             </h1>
-            <p className="text-gray-600 text-sm">Manage and use your custom AI models</p>
+            <p className="text-gray-600 text-sm">Create custom images with various AI models</p>
           </div>
           
           <div className="flex gap-3 sm:gap-4">

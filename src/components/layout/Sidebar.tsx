@@ -43,7 +43,7 @@ const Sidebar = () => {
       color: 'blue',
     },
     {
-      name: 'Models',
+      name: 'Image Creator',
       href: ROUTES.models,
       icon: (
         <svg
@@ -62,8 +62,29 @@ const Sidebar = () => {
           <path d="M22 12h-10v10h10V12Z" />
         </svg>
       ),
-      label: 'Explore AI models',
+      label: 'Create images with AI models',
       color: 'purple',
+    },
+    {
+      name: 'Video Creator',
+      href: ROUTES.imageToVideo,
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-5 w-5"
+        >
+          <polygon points="23 7 16 12 23 17 23 7" />
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+        </svg>
+      ),
+      label: 'Convert images to videos',
+      color: 'red',
     },
     {
       name: 'Create Model',
@@ -150,27 +171,6 @@ const Sidebar = () => {
       ),
       label: 'Browse content gallery',
       color: 'amber',
-    },
-    {
-      name: 'Video Creator',
-      href: ROUTES.imageToVideo,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <polygon points="23 7 16 12 23 17 23 7" />
-          <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-        </svg>
-      ),
-      label: 'Convert images to videos',
-      color: 'red',
     },
     {
       name: 'Profile',
