@@ -50,6 +50,7 @@ export const ROUTES = {
   jaimeModel: "/models/jaime",
   imageToVideo: "/models/image-to-video",
   videoGenerator: "/video-generator",
+  quickVideoTest: "/quick-video-test",
   chat: "/chat",
   gallery: "/gallery",
   targeting: "/targeting",

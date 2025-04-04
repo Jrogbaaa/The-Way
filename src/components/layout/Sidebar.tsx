@@ -34,14 +34,33 @@ const Sidebar = () => {
           strokeLinejoin="round"
           className="h-5 w-5"
         >
-          <rect width="7" height="9" x="3" y="3" rx="1" />
-          <rect width="7" height="5" x="14" y="3" rx="1" />
-          <rect width="7" height="9" x="14" y="12" rx="1" />
-          <rect width="7" height="5" x="3" y="16" rx="1" />
+          <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" />
+          <path d="m3 9 2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9" />
+          <path d="M12 3v6" />
         </svg>
       ),
-      label: 'View your dashboard',
+      label: 'Go to dashboard',
       color: 'blue',
+    },
+    {
+      name: 'Quick Video Test',
+      href: '/quick-video-test',
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-5 w-5"
+        >
+          <path d="m21 12-7-7v4H7a4 4 0 0 0-4 4v6h4v-4h7v4l7-7Z" />
+        </svg>
+      ),
+      label: 'Test simple video generation',
+      color: 'indigo',
     },
     {
       name: 'Image Creator',
