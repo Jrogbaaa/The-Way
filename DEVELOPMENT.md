@@ -94,6 +94,52 @@ the-way/
 │   └── public/                # Static assets
 ```
 
+### Navigation Structure
+
+The application follows a carefully organized navigation structure, which is implemented in the `Sidebar` component and reflected in the routes configuration:
+
+#### Main Navigation Items
+1. **Dashboard** - Home page showing activity summary
+2. **Image Creator** - Create images with various AI models (formerly "Models")
+3. **Video Creator** - Convert still images to videos
+4. **Create Model** - Create and train new custom models
+5. **Analyze Post** - Analyze images for social media optimization
+6. **Chat** - Interact with the Social Media Expert Agent
+7. **Gallery** - View and manage generated content
+8. **Profile** - User account management
+
+#### Navigation Components
+- `Sidebar.tsx` - Main navigation component with mobile responsiveness
+- `Navbar.tsx` - Top navigation bar for secondary actions
+- `MainLayout.tsx` - Layout wrapper that includes both navigation components
+
+#### Mobile Navigation Features
+- Automatic sidebar closing after navigation
+- Back buttons for nested pages
+- Responsive design with proper touch targets
+
+#### Route Configuration
+All routes are centralized in `src/lib/config.ts` in the `ROUTES` object:
+
+```typescript
+export const ROUTES = {
+  home: "/",
+  login: "/auth/login",
+  signup: "/auth/signup",
+  dashboard: "/dashboard",
+  profile: "/profile",
+  models: "/models",             // Image Creator
+  createModel: "/create-model",
+  imageToVideo: "/models/image-to-video", // Video Creator
+  chat: "/chat",
+  gallery: "/gallery",
+  uploadPost: "/posts/upload",   // Analyze Post
+  socialAnalyzer: "/social-analyzer",
+};
+```
+
+When adding new features, use the existing route configuration and update the `Sidebar.tsx` component to maintain navigation consistency.
+
 ## Development Guidelines
 
 ### Type Safety

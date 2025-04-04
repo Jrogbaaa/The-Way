@@ -4,11 +4,16 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Features
 
-- 🖼️ **Multiple Image Generation Models**: 
+- 🖌️ **Image Creator** (formerly Models):
   - Cristina Model (via Replicate)
   - Jaime Model (via Replicate)
   - Standard Generations Model (via Replicate SDXL)
   - Google Vertex AI Imagen (fully implemented)
+  
+- 🎬 **Video Creator**:
+  - Convert still images to high-quality videos
+  - Uses Replicate's Wan 2.1 Image-to-Video model
+  - Customizable motion parameters
   
 - 🤖 **AI Assistant**: 
   - Chat with a Social Media Expert Agent (powered by Google Gemini)
@@ -24,6 +29,21 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 - 🧩 **Robust API Integration**: Seamless communication with Replicate API, Google AI services, and Hugging Face
 
 - 🛡️ **Error Handling**: Graceful error handling and fallbacks for API failures
+
+## Navigation Structure
+
+The application has been organized for intuitive access to all features:
+
+- **Dashboard**: View activity summary and recent content
+- **Image Creator**: Create custom images with various AI models
+  - All models are accessible from this section
+  - Includes Cristina, Jaime, and SDXL models
+- **Video Creator**: Transform still images into high-quality videos
+- **Create Model**: Create and train new custom AI models
+- **Analyze Post**: Analyze images for social media optimization
+- **Chat**: Interact with the Social Media Expert Agent
+- **Gallery**: View and manage generated content
+- **Profile**: Manage your account settings
 
 ## New Features
 

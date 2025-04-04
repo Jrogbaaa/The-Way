@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2024-04-07
+
+### Changed
+- Reorganized navigation structure for better user experience
+- Renamed "Models" to "Image Creator" for clearer functionality
+- Repositioned "Video Creator" to appear directly beneath "Image Creator"
+- Added back button to mobile views for improved navigation
+- Fixed sidebar menu to close automatically after selection on mobile
+- Fixed SDXL image display issues by improving URL handling
+- Restored "Content AI Agent" title to sidebar for consistent branding
+
 ## [1.2.1] - 2024-04-06
 
 ### Changed
