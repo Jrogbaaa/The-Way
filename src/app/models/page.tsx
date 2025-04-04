@@ -40,6 +40,32 @@ export default function ModelsPage() {
       isFeatured: true
     },
     {
+      id: 'cristina',
+      name: 'Cristina Model',
+      description: 'Generate realistic images of Cristina with customizable parameters',
+      category: 'Image',
+      tags: ['Generation', 'Photos', 'AI Model'],
+      stars: 4.8,
+      lastUsed: '1 day ago',
+      image: '/placeholder-model.jpg',
+      status: 'ready',
+      isNew: false,
+      isFeatured: true
+    },
+    {
+      id: 'jaime',
+      name: 'Jaime Model',
+      description: 'Create customized images of Jaime for various contexts and styles',
+      category: 'Image',
+      tags: ['Generation', 'Photos', 'AI Model'],
+      stars: 4.7,
+      lastUsed: '3 days ago',
+      image: '/placeholder-model.jpg',
+      status: 'ready',
+      isNew: false,
+      isFeatured: true
+    },
+    {
       id: '1',
       name: 'Content Generator',
       description: 'Creates compelling blog posts and social media content',

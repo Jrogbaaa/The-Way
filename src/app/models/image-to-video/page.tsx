@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ImageToVideoConverter from '@/components/video/ImageToVideoConverter';
-import { Film, Info, Link } from 'lucide-react';
+import { Film, Info, Link, ArrowLeft } from 'lucide-react';
 import MarkdownContent from '@/components/ui/markdown-content';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 const IMAGE_TO_VIDEO_INFO = `
 # Image to Video Conversion
@@ -36,10 +38,29 @@ This feature uses the [Wan 2.1 Image-to-Video model](https://replicate.com/waves
 
 export default function ImageToVideoPage() {
   const [activeTab, setActiveTab] = useState('converter');
+  const router = useRouter();
+  
+  const handleBack = () => {
+    router.back();
+  };
   
   return (
     <div className="container mx-auto py-6 px-4 max-w-6xl">
       <header className="mb-8">
+        {/* Back button for mobile view */}
+        <div className="mb-4 md:hidden">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleBack}
+            className="flex items-center gap-1 hover:bg-gray-100 transition-colors"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </Button>
+        </div>
+        
         <h1 className="text-3xl font-bold text-gray-900 flex items-center mb-2">
           <Film className="w-8 h-8 mr-3 text-indigo-600" />
           Image to Video Conversion

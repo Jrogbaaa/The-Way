@@ -109,50 +109,6 @@ const Sidebar = () => {
       color: 'green',
     },
     {
-      name: 'Cristina Model',
-      href: ROUTES.cristinaModel,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-          <path d="M12 17h.01" />
-        </svg>
-      ),
-      label: 'Use the Cristina model',
-      color: 'pink',
-    },
-    {
-      name: 'Jaime Model',
-      href: ROUTES.jaimeModel,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-          <path d="M12 17h.01" />
-        </svg>
-      ),
-      label: 'Use the Jaime model',
-      color: 'indigo',
-    },
-    {
       name: 'Chat',
       href: ROUTES.chat,
       icon: (
@@ -251,182 +207,173 @@ const Sidebar = () => {
 
   // Helper function to get the appropriate color classes based on nav item's color
   const getColorClasses = (color: string, isActive: boolean) => {
-    const colorMap: Record<string, { active: string, hover: string, icon: { active: string, inactive: string } }> = {
-      blue: {
-        active: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-l-4 border-blue-500',
-        hover: 'hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20 dark:hover:text-blue-300 hover:border-l-4 hover:border-blue-500',
-        icon: {
-          active: 'text-blue-600 dark:text-blue-400',
-          inactive: 'text-blue-500 group-hover:text-blue-600 dark:text-blue-400'
-        }
-      },
-      purple: {
-        active: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-l-4 border-purple-500',
-        hover: 'hover:bg-purple-50 hover:text-purple-700 dark:hover:bg-purple-900/20 dark:hover:text-purple-300 hover:border-l-4 hover:border-purple-500',
-        icon: {
-          active: 'text-purple-600 dark:text-purple-400',
-          inactive: 'text-purple-500 group-hover:text-purple-600 dark:text-purple-400'
-        }
-      },
-      violet: {
-        active: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 border-l-4 border-violet-500',
-        hover: 'hover:bg-violet-50 hover:text-violet-700 dark:hover:bg-violet-900/20 dark:hover:text-violet-300 hover:border-l-4 hover:border-violet-500',
-        icon: {
-          active: 'text-violet-600 dark:text-violet-400',
-          inactive: 'text-violet-500 group-hover:text-violet-600 dark:text-violet-400'
-        }
-      },
-      green: {
-        active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-l-4 border-green-500',
-        hover: 'hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-900/20 dark:hover:text-green-300 hover:border-l-4 hover:border-green-500',
-        icon: {
-          active: 'text-green-600 dark:text-green-400',
-          inactive: 'text-green-500 group-hover:text-green-600 dark:text-green-400'
-        }
-      },
-      pink: {
-        active: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300 border-l-4 border-pink-500',
-        hover: 'hover:bg-pink-50 hover:text-pink-700 dark:hover:bg-pink-900/20 dark:hover:text-pink-300 hover:border-l-4 hover:border-pink-500',
-        icon: {
-          active: 'text-pink-600 dark:text-pink-400',
-          inactive: 'text-pink-500 group-hover:text-pink-600 dark:text-pink-400'
-        }
-      },
-      indigo: {
-        active: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 border-l-4 border-indigo-500',
-        hover: 'hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-300 hover:border-l-4 hover:border-indigo-500',
-        icon: {
-          active: 'text-indigo-600 dark:text-indigo-400',
-          inactive: 'text-indigo-500 group-hover:text-indigo-600 dark:text-indigo-400'
-        }
-      },
-      cyan: {
-        active: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300 border-l-4 border-cyan-500',
-        hover: 'hover:bg-cyan-50 hover:text-cyan-700 dark:hover:bg-cyan-900/20 dark:hover:text-cyan-300 hover:border-l-4 hover:border-cyan-500',
-        icon: {
-          active: 'text-cyan-600 dark:text-cyan-400',
-          inactive: 'text-cyan-500 group-hover:text-cyan-600 dark:text-cyan-400'
-        }
-      },
-      amber: {
-        active: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-l-4 border-amber-500',
-        hover: 'hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-300 hover:border-l-4 hover:border-amber-500',
-        icon: {
-          active: 'text-amber-600 dark:text-amber-400',
-          inactive: 'text-amber-500 group-hover:text-amber-600 dark:text-amber-400'
-        }
-      },
-      orange: {
-        active: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 border-l-4 border-orange-500',
-        hover: 'hover:bg-orange-50 hover:text-orange-700 dark:hover:bg-orange-900/20 dark:hover:text-orange-300 hover:border-l-4 hover:border-orange-500',
-        icon: {
-          active: 'text-orange-600 dark:text-orange-400',
-          inactive: 'text-orange-500 group-hover:text-orange-600 dark:text-orange-400'
-        }
-      },
-      red: {
-        active: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-l-4 border-red-500',
-        hover: 'hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20 dark:hover:text-red-300 hover:border-l-4 hover:border-red-500',
-        icon: {
-          active: 'text-red-600 dark:text-red-400',
-          inactive: 'text-red-500 group-hover:text-red-600 dark:text-red-400'
-        }
-      },
-      teal: {
-        active: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300 border-l-4 border-teal-500',
-        hover: 'hover:bg-teal-50 hover:text-teal-700 dark:hover:bg-teal-900/20 dark:hover:text-teal-300 hover:border-l-4 hover:border-teal-500',
-        icon: {
-          active: 'text-teal-600 dark:text-teal-400',
-          inactive: 'text-teal-500 group-hover:text-teal-600 dark:text-teal-400'
-        }
-      },
-    };
+    switch (color) {
+      case 'blue':
+        return {
+          active: 'bg-blue-600',
+          hover: 'hover:text-blue-600',
+          iconBg: 'bg-blue-100 text-blue-600'
+        };
+      case 'purple':
+        return {
+          active: 'bg-purple-600',
+          hover: 'hover:text-purple-600',
+          iconBg: 'bg-purple-100 text-purple-600'
+        };
+      case 'violet':
+        return {
+          active: 'bg-violet-600',
+          hover: 'hover:text-violet-600',
+          iconBg: 'bg-violet-100 text-violet-600'
+        };
+      case 'green':
+        return {
+          active: 'bg-green-600',
+          hover: 'hover:text-green-600',
+          iconBg: 'bg-green-100 text-green-600'
+        };
+      case 'pink':
+        return {
+          active: 'bg-pink-600',
+          hover: 'hover:text-pink-600',
+          iconBg: 'bg-pink-100 text-pink-600'
+        };
+      case 'indigo':
+        return {
+          active: 'bg-indigo-600',
+          hover: 'hover:text-indigo-600',
+          iconBg: 'bg-indigo-100 text-indigo-600'
+        };
+      case 'cyan':
+        return {
+          active: 'bg-cyan-600',
+          hover: 'hover:text-cyan-600',
+          iconBg: 'bg-cyan-100 text-cyan-600'
+        };
+      case 'amber':
+        return {
+          active: 'bg-amber-600',
+          hover: 'hover:text-amber-600',
+          iconBg: 'bg-amber-100 text-amber-600'
+        };
+      case 'red':
+        return {
+          active: 'bg-red-600',
+          hover: 'hover:text-red-600',
+          iconBg: 'bg-red-100 text-red-600'
+        };
+      case 'orange':
+        return {
+          active: 'bg-orange-600',
+          hover: 'hover:text-orange-600',
+          iconBg: 'bg-orange-100 text-orange-600'
+        };
+      default:
+        return {
+          active: 'bg-gray-600',
+          hover: 'hover:text-gray-600',
+          iconBg: 'bg-gray-100 text-gray-600'
+        };
+    }
+  };
 
-    return {
-      linkClasses: isActive ? colorMap[color].active : colorMap[color].hover,
-      iconClasses: isActive ? colorMap[color].icon.active : colorMap[color].icon.inactive
-    };
+  // Add function to navigate and close sidebar on mobile
+  const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>, href: string) => {
+    // Check if this is a mobile device (based on window width or user agent)
+    const isMobile = window.innerWidth < 768;
+    
+    // If we're on mobile, close the sidebar
+    if (isMobile && sidebarOpen) {
+      e.preventDefault(); // Prevent default navigation
+      toggleSidebar(); // Close the sidebar
+      
+      // Use a short timeout to ensure the sidebar animation plays before navigating
+      setTimeout(() => {
+        window.location.href = href;
+      }, 300);
+    }
   };
 
   return (
-    <div
-      className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-200 bg-gradient-to-b from-white to-gray-50 transition-transform duration-300 dark:border-gray-800 dark:from-gray-900 dark:to-gray-950 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } md:translate-x-0`}
-    >
-      <div className="flex h-16 items-center justify-between border-b border-gray-200 px-4 dark:border-gray-800">
-        <Link 
-          href={ROUTES.home}
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity focus:outline-none focus:ring-0"
-          style={{ textDecoration: 'none', outline: 'none' }}
-          tabIndex={0}
-          aria-label="Go to home page"
-        >
-          <Logo size="md" />
-          <span className="text-lg font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Content AI Agent</span>
-        </Link>
-        <button
-          type="button"
-          className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
+    <>
+      {/* Backdrop overlay for mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-40 md:hidden"
           onClick={handleToggleSidebar}
-          onKeyDown={handleKeyDown}
-          tabIndex={0}
-          aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-6 w-6"
+        />
+      )}
+
+      {/* Sidebar container */}
+      <aside
+        className={`fixed left-0 top-0 z-50 h-screen w-64 transform border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0 md:shadow-none`}
+      >
+        {/* Logo and close button */}
+        <div className="flex h-16 items-center justify-between border-b border-gray-200 px-4">
+          <Logo />
+          
+          <button
+            type="button"
+            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 md:hidden"
+            onClick={handleToggleSidebar}
           >
-            <path d="m18 6-12 12" />
-            <path d="m6 6 12 12" />
-          </svg>
-        </button>
-      </div>
-      <nav className="flex-1 overflow-y-auto px-2 py-4">
-        <div className="mb-4 px-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Navigation</h2>
+            <span className="sr-only">Close sidebar</span>
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
         </div>
-        <ul className="space-y-1">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            const { linkClasses, iconClasses } = getColorClasses(item.color, isActive);
-            return (
-              <li key={item.name}>
+
+        {/* Navigation menu */}
+        <nav className="h-[calc(100vh-4rem)] overflow-y-auto p-4">
+          <div className="flex flex-col space-y-1">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const colorClasses = getColorClasses(item.color, isActive);
+              
+              return (
                 <Link
+                  key={item.name}
                   href={item.href}
-                  className={`group flex items-center gap-3 rounded-md px-3 py-2.5 transition-all duration-200 ${linkClasses} ${isActive ? 'shadow-sm' : ''}`}
-                  tabIndex={0}
-                  aria-label={item.label}
+                  onClick={(e) => handleNavigation(e, item.href)}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all duration-200 ${
+                    isActive
+                      ? `${colorClasses.active} text-white`
+                      : `text-gray-500 hover:bg-gray-100 ${colorClasses.hover}`
+                  }`}
                 >
-                  <div className={`transition-transform duration-200 group-hover:scale-110 ${iconClasses}`}>
+                  <span
+                    className={`flex h-7 w-7 items-center justify-center rounded-lg ${
+                      isActive ? 'bg-white/20' : colorClasses.iconBg
+                    }`}
+                  >
                     {item.icon}
-                  </div>
+                  </span>
                   <span className="font-medium">{item.name}</span>
+                  
                   {isActive && (
-                    <span className="ml-auto h-1.5 w-1.5 rounded-full bg-current"></span>
+                    <span className="ml-auto h-2 w-2 rounded-full bg-white" />
                   )}
                 </Link>
-              </li>
-            );
-          })}
-        </ul>
-        
-        <div className="mt-8 px-3">
-          <div className="rounded-md bg-gradient-to-r from-violet-500/20 to-indigo-500/20 p-3 dark:from-violet-600/10 dark:to-indigo-600/10">
-            <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">Need Help?</h3>
-            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-              Check out our documentation or contact support for assistance.
-            </p>
+              );
+            })}
           </div>
-        </div>
-      </nav>
-    </div>
+        </nav>
+      </aside>
+    </>
   );
 };
 
