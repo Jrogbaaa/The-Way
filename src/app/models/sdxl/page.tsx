@@ -57,9 +57,13 @@ export default function SdxlModelPage() {
     if (imageUrls.length) {
       const newProxiedUrls: Record<string, string> = {};
       
-      // Filter out non-string URLs
-      imageUrls.filter(url => typeof url === 'string').forEach(url => {
-        newProxiedUrls[url] = getProxiedImageUrl(url);
+      // Process each URL to ensure it's a valid string
+      imageUrls.forEach(url => {
+        if (typeof url === 'string' && url.length > 0) {
+          newProxiedUrls[url] = getProxiedImageUrl(url);
+        } else {
+          console.warn('Skipping invalid URL:', url);
+        }
       });
       
       setProxiedUrls(newProxiedUrls);
@@ -93,22 +97,43 @@ export default function SdxlModelPage() {
         num_outputs: 1,
       });
       
-      // The output is typically an array of image URLs
+      // Process the output to ensure we always have valid URLs
+      let validUrls: string[] = [];
+      
       if (Array.isArray(output)) {
-        setImageUrls(output);
-        // Complete the progress with the first image URL
-        if (output.length > 0) {
-          completeGeneration(output[0]);
-        } else {
-          failGeneration('No images were generated');
-        }
+        // If output is an array, process each item to ensure it's a valid URL string
+        validUrls = output
+          .map(item => {
+            if (typeof item === 'string') return item;
+            if (typeof item === 'object' && item !== null) {
+              // If the item is an object, try to extract a URL
+              if (item.url) return item.url;
+              if (item.image) return item.image;
+              // Log the object structure to help with debugging
+              console.log('Unexpected output item structure:', JSON.stringify(item));
+            }
+            return null;
+          })
+          .filter((url): url is string => typeof url === 'string' && url.length > 0);
       } else if (typeof output === 'string') {
-        setImageUrls([output]);
-        completeGeneration(output);
+        validUrls = [output];
+      } else if (typeof output === 'object' && output !== null) {
+        // If output is a single object, try to extract URL
+        const url = output.url || output.image;
+        if (typeof url === 'string') {
+          validUrls = [url];
+        } else {
+          console.error('Unable to extract URL from output object:', output);
+        }
+      }
+      
+      if (validUrls.length > 0) {
+        setImageUrls(validUrls);
+        completeGeneration(validUrls[0]);
       } else {
-        console.error('Unexpected output format:', output);
-        setImageUrls([]);
-        failGeneration('Unexpected output format');
+        console.error('No valid image URLs found in output:', output);
+        failGeneration('No valid image URLs were generated');
+        setError('No valid image URLs were generated. Please try again.');
       }
     } catch (err) {
       console.error('Error generating image:', err);
@@ -121,16 +146,20 @@ export default function SdxlModelPage() {
 
   const openImageModal = (url: string) => {
     try {
-      // Check if the URL is valid before opening the modal
-      if (typeof url !== 'string' || !url) {
+      // Validate URL before processing
+      if (typeof url !== 'string' || !url || url === 'undefined' || url === '[object Object]') {
         console.error('Invalid URL provided to openImageModal:', url);
+        setError('Cannot display this image - invalid URL format');
         return;
       }
       
-      console.log('Opening image modal for URL:', url);
-      setSelectedImage(url);
+      // Use proxied URL if available
+      const displayUrl = proxiedUrls[url] || url;
+      console.log('Opening image modal for URL:', displayUrl);
+      setSelectedImage(displayUrl);
     } catch (error) {
       console.error('Error opening image modal:', error);
+      setError('Failed to open image preview');
     }
   };
 

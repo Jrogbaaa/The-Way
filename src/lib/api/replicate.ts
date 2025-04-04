@@ -144,13 +144,42 @@ export const runSdxlModel = async (input: PredictionInput) => {
         throw new Error('Invalid response format: missing output field');
       }
       
-      // Validate that the output contains at least one URL
-      if (Array.isArray(data.output) && data.output.length === 0) {
-        throw new Error('No images were generated');
+      // Log the output type and structure to help with debugging
+      console.log('SDXL output type:', typeof data.output);
+      console.log('SDXL output is array:', Array.isArray(data.output));
+      
+      // Process the output to ensure it's in a valid format
+      let processedOutput = data.output;
+      
+      if (Array.isArray(data.output)) {
+        // Filter array to only include string values
+        processedOutput = data.output.filter((item: any) => {
+          if (typeof item === 'string') return true;
+          // Log non-string items for debugging
+          console.log('Non-string item in output array:', item);
+          return false;
+        });
+        
+        if (processedOutput.length === 0) {
+          throw new Error('No valid image URLs were generated');
+        }
+      } else if (typeof data.output === 'object' && data.output !== null) {
+        // If we get an object, try to extract the URL
+        if (data.output.url) {
+          processedOutput = [data.output.url];
+        } else if (data.output.image) {
+          processedOutput = [data.output.image];
+        } else {
+          console.log('Unexpected output format (object without url):', data.output);
+          throw new Error('Invalid output format: no URL found in response object');
+        }
+      } else if (typeof data.output !== 'string') {
+        console.log('Unexpected output format:', data.output);
+        throw new Error(`Invalid output format: expected string or array, got ${typeof data.output}`);
       }
 
       console.log('SDXL model generated output successfully');
-      return data.output;
+      return processedOutput;
     } catch (error) {
       console.error(`Error running SDXL model (attempt ${attempt + 1}/${maxRetries + 1}):`, error);
       lastError = error instanceof Error ? error : new Error(String(error));
