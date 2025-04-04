@@ -49,6 +49,7 @@ export const ROUTES = {
   cristinaModel: "/models/cristina",
   jaimeModel: "/models/jaime",
   imageToVideo: "/models/image-to-video",
+  quickVideoTest: "/quick-video-test",
   chat: "/chat",
   gallery: "/gallery",
   targeting: "/targeting",

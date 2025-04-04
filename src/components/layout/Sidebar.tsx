@@ -44,6 +44,26 @@ const Sidebar = () => {
       color: 'blue',
     },
     {
+      name: 'Quick Video Test',
+      href: ROUTES.quickVideoTest,
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-5 w-5"
+        >
+          <path d="m21 12-7-7v4H7a4 4 0 0 0-4 4v6h4v-4h7v4l7-7Z" />
+        </svg>
+      ),
+      label: 'Test simple video generation',
+      color: 'indigo',
+    },
+    {
       name: 'Image Creator',
       href: ROUTES.models,
       icon: (
