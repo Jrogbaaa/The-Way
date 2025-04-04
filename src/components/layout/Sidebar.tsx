@@ -88,6 +88,30 @@ const Sidebar = () => {
       color: 'red',
     },
     {
+      name: '30-Second Videos',
+      href: ROUTES.videoGenerator,
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-5 w-5"
+        >
+          <path d="m3 8 4-4 4 4" />
+          <path d="M7 4v16" />
+          <path d="M11 12h4" />
+          <path d="M15 8h4" />
+          <path d="M15 16h4" />
+        </svg>
+      ),
+      label: 'Generate 30-second AI videos',
+      color: 'pink',
+    },
+    {
       name: 'Create Model',
       href: ROUTES.createModel,
       icon: (
