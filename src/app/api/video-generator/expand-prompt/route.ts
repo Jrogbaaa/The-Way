@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { OpenAIStream } from 'ai';
 import OpenAI from 'openai';
-import { KeyframePrompt } from '@/src/types/video-generator';
+import { KeyframePrompt } from '@/types/video-generator';
 
 // Input validation schema
 const expandPromptSchema = z.object({
@@ -16,5 +16,38 @@ const openai = new OpenAI({
 });
 
 export async function POST(req: Request) {
-  // ... rest of the file remains unchanged ...
+  try {
+    const body = await req.json();
+    const validatedData = expandPromptSchema.parse(body);
+    
+    // For now, return mock data
+    const keyframePrompts: KeyframePrompt[] = [
+      {
+        scene: 1,
+        prompt: `Opening scene: ${validatedData.prompt}`,
+        cameraAngle: "Medium shot",
+        lighting: "Bright and clear"
+      },
+      {
+        scene: 2,
+        prompt: `Middle scene: ${validatedData.prompt} continues`,
+        cameraAngle: "Close-up",
+        lighting: "Dynamic"
+      },
+      {
+        scene: 3,
+        prompt: `Final scene: ${validatedData.prompt} concludes`,
+        cameraAngle: "Wide shot",
+        lighting: "Dramatic"
+      }
+    ];
+    
+    return NextResponse.json({ keyframePrompts });
+  } catch (error) {
+    console.error('Error expanding prompt:', error);
+    return NextResponse.json(
+      { error: 'Failed to expand prompt' },
+      { status: 500 }
+    );
+  }
 } 

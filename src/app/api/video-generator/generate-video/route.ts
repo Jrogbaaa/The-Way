@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { GeneratedFrame, GeneratedVideo } from '@/src/types/video-generator';
+import { GeneratedVideo } from '@/types/video-generator';
 
 // Input validation schema
 const generateVideoSchema = z.object({
@@ -20,4 +20,32 @@ const generateVideoSchema = z.object({
   }).optional()
 });
 
-// ... rest of the file remains unchanged ... 
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const validatedData = generateVideoSchema.parse(body);
+    
+    // For now, return mock data
+    // In a real implementation, this would process frames and generate a video
+    const video: GeneratedVideo = {
+      videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+      thumbnailUrl: validatedData.frames[0].imageUrl,
+      metadata: {
+        duration: validatedData.options?.duration || 30,
+        frameCount: validatedData.frames.length * 30, // Assuming 30 frames per scene
+        keyframeCount: validatedData.frames.length
+      }
+    };
+    
+    // Simulate processing time
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    return NextResponse.json(video);
+  } catch (error) {
+    console.error('Error generating video:', error);
+    return NextResponse.json(
+      { error: 'Failed to generate video' },
+      { status: 500 }
+    );
+  }
+} 

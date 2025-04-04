@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
-import VideoGeneratorForm from "@/src/components/video-generator/VideoGeneratorForm";
-import StoryboardPreview from "@/src/components/video-generator/StoryboardPreview";
-import VideoPlayer from "@/src/components/video-generator/VideoPlayer";
-import { StoryboardFrame, GeneratedVideo, KeyframePrompt } from "@/src/types/video-generator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import VideoGeneratorForm from "@/components/video-generator/VideoGeneratorForm";
+import StoryboardPreview from "@/components/video-generator/StoryboardPreview";
+import VideoPlayer from "@/components/video-generator/VideoPlayer";
+import { StoryboardFrame, GeneratedVideo, KeyframePrompt } from "@/types/video-generator";
 
 export default function VideoGeneratorPage() {
   const [activeTab, setActiveTab] = useState("concept");
