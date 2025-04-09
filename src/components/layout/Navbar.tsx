@@ -135,6 +135,14 @@ const Navbar = () => {
               Chat
             </Link>
             <Link 
+              href={ROUTES.photoEditor}
+              className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+              tabIndex={0}
+              aria-label="Edit photos with AI"
+            >
+              Photo Editor
+            </Link>
+            <Link 
               href={ROUTES.uploadPost}
               className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
               tabIndex={0}
@@ -315,6 +323,15 @@ const Navbar = () => {
             onClick={() => setMobileMenuOpen(false)}
           >
             Chat
+          </Link>
+          <Link 
+            href={ROUTES.photoEditor}
+            className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+            tabIndex={mobileMenuOpen ? 0 : -1}
+            aria-label="Edit photos with AI"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Photo Editor
           </Link>
           <Link 
             href={ROUTES.uploadPost}
