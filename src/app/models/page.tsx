@@ -32,6 +32,8 @@ const getModelRoute = (modelId: string) => {
       return '/models/cristina';
     case 'jaime':
       return '/models/jaime';
+    case 'bea':
+      return '/models/bea';
     default:
       return '/models/sdxl';
   }
@@ -77,6 +79,19 @@ export default function ModelsPage() {
       image: '/placeholder-model.jpg',
       status: 'ready',
       isNew: false,
+      isFeatured: true
+    },
+    {
+      id: 'bea',
+      name: 'Bea Generator',
+      description: 'Generate realistic images of Bea in various settings and compositions',
+      category: 'Image',
+      tags: ['Generation', 'Photos', 'AI Model'],
+      stars: 4.9,
+      lastUsed: 'New',
+      image: '/placeholder-model.jpg',
+      status: 'ready',
+      isNew: true,
       isFeatured: true
     },
     {

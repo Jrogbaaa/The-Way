@@ -48,6 +48,7 @@ export const ROUTES = {
   createModel: "/create-model",
   cristinaModel: "/models/cristina",
   jaimeModel: "/models/jaime",
+  beaModel: "/models/bea",
   imageToVideo: "/models/image-to-video",
   quickVideoTest: "/quick-video-test",
   chat: "/chat",
@@ -55,6 +56,7 @@ export const ROUTES = {
   targeting: "/targeting",
   uploadPost: "/posts/upload",
   socialAnalyzer: "/social-analyzer",
+  photoEditor: "/photo-editor",
 };
 
 export const AI_MODELS = {
@@ -100,6 +102,27 @@ export const AI_MODELS = {
       output_quality: 80,
       prompt_strength: 0.8,
       extra_lora_scale: 1,
+      num_inference_steps: 28
+    }
+  },
+  bea: {
+    id: "jrogbaaa/beagenerator",
+    version: "16f9ef38ac2f6644b738abf98d13a2cef25gD40a6ae5b8d8e3e99a941e1a39bf",
+    name: "Bea Generator",
+    description: "Generate realistic images of Bea",
+    defaultParams: {
+      prompt: "BEA ",
+      negative_prompt: "male, man, masculine, boy, male features, beard, mustache",
+      model: "dev",
+      go_fast: false,
+      lora_scale: 1,
+      megapixels: "1",
+      num_outputs: 1,
+      aspect_ratio: "1:1",
+      output_format: "webp",
+      guidance_scale: 3,
+      output_quality: 80,
+      prompt_strength: 0.8,
       num_inference_steps: 28
     }
   },

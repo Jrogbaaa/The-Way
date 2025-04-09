@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- Added Meta's Creator & Influencer Strategy knowledge to the Social Media Expert Chatbot
+  - Included Meta's recommended 5-step creator strategy
+  - Added information about performance data (19% lower acquisition costs, 71% higher brand intent lift)
+  - Included details about Meta's key tools: Creator Content Recommender (CCR) and Partnership Ads Hub
+  - Added core message that creators are essential for marketing success
+
+### Fixed
+- Updated the Chat page to use the real API endpoint instead of displaying demo responses
+- The chatbot now properly leverages the defined system prompt including all knowledge
+
+### Updated
+- Updated documentation in `docs/chatbot.md` to reflect new capabilities
+- Enhanced Social Media Expert system prompt across all implementations:
+  - `src/app/api/chat/route.ts`
+  - `src/lib/api/replicateChat.ts`
+  - `src/lib/api/gemini.ts`
+
+## [0.1.0] - Initial Release
+
+### Features
+- Next.js application with TypeScript
+- Social Media Expert chatbot powered by Replicate's Llama 2 model
+- Video generation capabilities with AI-driven prompt processing
+
 ## [1.2.2] - 2024-04-07
 
 ### Changed

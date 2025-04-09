@@ -7,8 +7,14 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 - 🖌️ **Image Creator** (formerly Models):
   - Cristina Model (via Replicate)
   - Jaime Model (via Replicate)
+  - Bea Generator Model (via Replicate)
   - Standard Generations Model (via Replicate SDXL)
   - Google Vertex AI Imagen (fully implemented)
+  
+- 📷 **Photo Editor**:
+  - AI-powered photo editing with Google's Gemini 2.0 Pro model
+  - Preset editing options and custom prompt support
+  - Easy-to-use interface for quick enhancements
   
 - 🎬 **Video Creator**:
   - Convert still images to high-quality videos
@@ -30,11 +36,17 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 - 🛡️ **Error Handling**: Graceful error handling and fallbacks for API failures
 
+- 🎬 **Free Video Generation**:
+  - Image to Video conversion using Replicate's Stable Video Diffusion
+  - Simple one-click interface to animate any image
+  - Optimized for quality with minimal user configuration
+
 ## Navigation Structure
 
 The application has been organized for intuitive access to all features:
 
 - **Dashboard**: View activity summary and recent content
+- **Photo Editor**: Edit and enhance photos using AI
 - **Image Creator**: Create custom images with various AI models
   - All models are accessible from this section
   - Includes Cristina, Jaime, and SDXL models
@@ -64,7 +76,7 @@ We've integrated Google's Gemini AI to provide an expert social media strategist
 - Analytics interpretation and actionable insights
 - Current trend recommendations and forecasting
 
-For detailed documentation, see [Chat Bot Documentation](./docs/chatbot.md).
+For detailed documentation, see [Chat Bot Documentation](./the-way/docs/chatbot.md).
 
 ### Post Analysis with Vertex AI
 
@@ -83,7 +95,7 @@ We've integrated Google's Vertex AI to provide intelligent image analysis for so
 - Facial detection and analysis
 - Comprehensive social media suitability assessment
 
-For detailed documentation, see [Post Analysis Documentation](./docs/post-analysis.md).
+For detailed documentation, see [Post Analysis Documentation](./the-way/docs/post-analysis.md).
 
 ### Social Media Analyzer with Hugging Face (New)
 
@@ -101,7 +113,58 @@ We've added an alternative social media content analyzer powered by open-source 
 - Content-specific recommendations
 - No account required for quick analysis
 
-For detailed documentation, see [Post Analysis Documentation](./docs/post-analysis.md).
+For detailed documentation, see [Post Analysis Documentation](./the-way/docs/post-analysis.md).
+
+### Free Video Generation with Replicate
+
+We've integrated Replicate's implementation of Stable Video Diffusion to provide video generation capabilities. This feature allows you to animate any static image with just a few clicks.
+
+**How to Access:**
+1. Navigate to the Video Demo page at `/video-demo`
+2. Or scroll down to the "Free Video Generation" section in the Storyboard Creator
+3. Upload an image you want to animate
+4. Optionally add a description of the desired motion
+5. Click "Create Video" and watch your image come to life
+
+**Features:**
+- Convert any static image into a short animated video clip
+- Simple, streamlined interface focused on ease of use
+- Descriptive prompts for better motion control
+- Optimized default parameters for best results
+
+**Technical Implementation:**
+- Uses Stable Video Diffusion for image-to-video generation
+- Default parameters optimized for quality and performance
+- Simple REST API with error handling and fallbacks
+- Minimal input requirements for user convenience
+
+For detailed documentation, see [Free Video Generation Documentation](./the-way/docs/free-video-generation.md).
+
+### AI-Powered Photo Editor
+
+We've integrated Google's Gemini 2.0 Pro model to provide powerful photo editing capabilities. This feature allows you to enhance and edit your photos with AI using natural language prompts.
+
+**How to Access:**
+1. Click on "Photo Editor" in the sidebar
+2. Upload an image you want to edit
+3. Choose from preset editing options or enter a custom editing prompt
+4. Click "Apply" and see your edited photo appear
+5. Download the edited image when satisfied
+
+**Features:**
+- Multiple preset editing options (Enhance, Portrait, Retouch, Dramatic)
+- Custom prompt support for specific editing needs
+- Side-by-side comparison of original and edited images
+- One-click download of edited photos
+- Supports JPEG, PNG, and WebP formats
+
+**Technical Implementation:**
+- Uses Google's Gemini 2.0 Pro model for AI image editing
+- Integration with Google AI Studio API
+- Intuitive UI with real-time feedback
+- Minimal configuration required for users
+
+For detailed documentation, see [Photo Editor Documentation](./the-way/docs/photo-editor.md).
 
 ## Storyboard-to-Video System
 
@@ -181,7 +244,7 @@ To access the storyboard creator, navigate to:
 /storyboard-creator
 ```
 
-For more detailed documentation on the storyboard system, see the [Storyboard Documentation](./docs/storyboard.md).
+For more detailed documentation on the storyboard system, see the [Storyboard Documentation](./the-way/docs/storyboard.md).
 
 ## Getting Started
 
@@ -237,7 +300,7 @@ For more detailed information, see the following documentation files:
 
 - [Development Guide](./DEVELOPMENT.md): Coding standards and development practices
 - [API Reference](./API.md): Documentation for backend APIs
-- [Image Analysis Guide](./analyze-post-guide.md): How to use the image analysis features
+- [Image Analysis Guide](./the-way/docs/analyze-post-guide.md): How to use the image analysis features
 
 ## License
 
@@ -266,6 +329,13 @@ The application integrates with Replicate API for the following models, all feat
 - Includes custom parameters for optimal generation
 - Features the same professional UI as other models for a consistent experience
 - Includes enhanced form elements and loading states for better user feedback
+
+#### Bea Generator Model
+- Uses Replicate's custom model for generating realistic images of Bea
+- Model ID: `jrogbaaa/beagenerator:16f9ef38ac2f6644b738abf98d13a2cef25gD40a6ae5b8d8e3e99a941e1a39bf`
+- Includes custom parameters optimized for this model
+- Features the same consistent UI experience as other models
+- Provides a clean, user-friendly interface for generating images
 
 #### Standard Generations Model (SDXL)
 - Uses Replicate's public Stable Diffusion XL model
@@ -333,8 +403,10 @@ the-way/
 │   │   │   ├── chat/       # Gemini Chat API
 │   │   │   ├── analyze-image/ # Vertex AI image analysis API
 │   │   │   ├── analyze-social-post/ # Hugging Face social media analysis
+│   │   │   ├── edit-image/ # Gemini photo editing API
 │   │   │   └── proxy/      # Image proxy to avoid CORS issues
 │   │   ├── chat/           # Chat interface with social media expert
+│   │   ├── photo-editor/   # AI-powered photo editing interface
 │   │   ├── social-analyzer/ # Social media post analyzer (Hugging Face)
 │   │   ├── models/         # Model testing pages
 │   │   │   ├── cristina/   # Cristina model page
@@ -366,6 +438,9 @@ Handles image generation requests using Google Vertex AI Imagen, fully implement
 
 ### `/api/chat`
 Handles conversations with the social media expert agent powered by Google Gemini, providing professional social media advice and strategies.
+
+### `/api/edit-image`
+Handles photo editing requests using Google's Gemini 2.0 Pro model, transforming images based on user prompts and editing instructions.
 
 ### `/api/imagen/check-config`
 Checks if the Google Cloud credentials are properly configured.
