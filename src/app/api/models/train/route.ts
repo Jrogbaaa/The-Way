@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Replicate from 'replicate';
 import { API_CONFIG } from '@/lib/config';
+import JSZip from 'jszip';
 
 // Initialize Replicate client
 const replicate = new Replicate({
@@ -13,7 +14,7 @@ const FLUX_TRAINER_VERSION = "a1ee9969b59eabda5054606095f5513696cbbb3ce9e63ffcde
 
 /**
  * Process and start model training with Replicate Flux LoRA trainer
- * Handles multipart form data with training images 
+ * Handles multipart form data with training images or a zip file
  */
 export async function POST(request: Request) {
   try {
@@ -28,7 +29,47 @@ export async function POST(request: Request) {
     const parameters = JSON.parse(parametersJson);
     
     // Get all the training images
-    const trainingImages = formData.getAll('training_data') as File[];
+    let trainingImages: File[] = [];
+    const formFiles = formData.getAll('training_data') as File[];
+    
+    // Check if we have a zip file
+    const zipFile = formFiles.find(file => file.type === 'application/zip' || file.name.endsWith('.zip'));
+    
+    if (zipFile) {
+      console.log('Zip file detected, extracting images...');
+      // Extract images from the zip file
+      const zipBuffer = await zipFile.arrayBuffer();
+      const zip = new JSZip();
+      const zipContent = await zip.loadAsync(zipBuffer);
+      
+      // Process each file in the zip
+      const imagePromises: Promise<File>[] = [];
+      zipContent.forEach((relativePath: string, zipEntry: JSZip.JSZipObject) => {
+        if (!zipEntry.dir) {
+          const lowercasePath = relativePath.toLowerCase();
+          // Check if file is an image
+          if (lowercasePath.endsWith('.jpg') || lowercasePath.endsWith('.jpeg') || 
+              lowercasePath.endsWith('.png') || lowercasePath.endsWith('.webp')) {
+            
+            const promise = zipEntry.async('blob').then((blob: Blob) => {
+              // Convert blob to File object
+              return new File([blob], relativePath, { type: getFileType(relativePath) });
+            });
+            imagePromises.push(promise);
+          }
+        }
+      });
+      
+      trainingImages = await Promise.all(imagePromises);
+      console.log(`Extracted ${trainingImages.length} images from zip file`);
+    } else {
+      // Use individual image files
+      trainingImages = formFiles.filter(file => 
+        file.type === 'image/jpeg' || 
+        file.type === 'image/png' || 
+        file.type === 'image/webp'
+      );
+    }
     
     if (!name) {
       return NextResponse.json(
@@ -39,7 +80,7 @@ export async function POST(request: Request) {
     
     if (trainingImages.length === 0) {
       return NextResponse.json(
-        { error: 'At least one training image is required' },
+        { error: 'No training images found. Please upload images or a zip file containing images.' },
         { status: 400 }
       );
     }
@@ -119,4 +160,19 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Helper function to determine file type from file name
+ */
+function getFileType(filename: string): string {
+  const lowercaseName = filename.toLowerCase();
+  if (lowercaseName.endsWith('.jpg') || lowercaseName.endsWith('.jpeg')) {
+    return 'image/jpeg';
+  } else if (lowercaseName.endsWith('.png')) {
+    return 'image/png';
+  } else if (lowercaseName.endsWith('.webp')) {
+    return 'image/webp';
+  }
+  return 'application/octet-stream';
 } 

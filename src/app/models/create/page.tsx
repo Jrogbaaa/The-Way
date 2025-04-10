@@ -173,7 +173,8 @@ export default function CreateModelPage() {
     accept: {
       'image/jpeg': [],
       'image/png': [],
-      'image/webp': []
+      'image/webp': [],
+      'application/zip': []
     },
     maxSize: 10 * 1024 * 1024, // 10MB max
   });
@@ -222,13 +223,71 @@ export default function CreateModelPage() {
 
   // Calculate estimated time based on parameters
   const estimatedTrainingTime = () => {
-    const { resolution, num_train_epochs } = formData.parameters;
+    const { resolution = 512, num_train_epochs = 1 } = formData.parameters || {};
     const baseTime = 15; // Base time in minutes
     const resolutionFactor = resolution / 512;
     const epochFactor = num_train_epochs;
     
     const estimatedMinutes = Math.round(baseTime * resolutionFactor * epochFactor);
     return estimatedMinutes;
+  };
+
+  /**
+   * Handle form submission to start model training
+   */
+  const handleSubmit = async () => {
+    if (!formData.name || files.length === 0) {
+      setError('Please provide a name and upload training images');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Create FormData for API request
+      const apiFormData = new FormData();
+      
+      // Add form fields
+      apiFormData.append('name', formData.name);
+      if (formData.description) {
+        apiFormData.append('description', formData.description);
+      }
+      apiFormData.append('is_public', formData.is_public.toString());
+      apiFormData.append('base_model_id', formData.base_model_id || 'stability-ai/stable-diffusion-xl-base-1.0');
+      apiFormData.append('parameters', JSON.stringify(formData.parameters || {}));
+      
+      // Add all training files
+      files.forEach(file => {
+        apiFormData.append('training_data', file);
+      });
+      
+      // Call the API to start training
+      const response = await fetch('/api/models/train', {
+        method: 'POST',
+        body: apiFormData,
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to start model training');
+      }
+      
+      // Success - show message and provide info
+      setSuccess(`Model "${formData.name}" is now training. This will take approximately ${estimatedTrainingTime()} minutes.`);
+      
+      // Optionally, redirect to a status page or dashboard after a delay
+      setTimeout(() => {
+        router.push(ROUTES.models);
+      }, 5000);
+      
+    } catch (err) {
+      console.error('Error starting model training:', err);
+      setError(err instanceof Error ? err.message : 'Failed to start model training');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -351,11 +410,14 @@ export default function CreateModelPage() {
                 <input {...getInputProps()} />
                 <Upload className="mx-auto h-12 w-12 text-gray-400" />
                 <p className="mt-2 text-sm text-gray-700">
-                  Drag and drop your training images here, or{' '}
+                  Drag and drop your training images or zip file here, or{' '}
                   <span className="text-indigo-600 font-medium">browse</span> to select files
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  JPG, PNG, or WebP files up to 10MB each. 15-20 images recommended.
+                  Preferred: ZIP file containing 10-20 images of your subject
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Alternatively: JPG, PNG, or WebP files up to 10MB each
                 </p>
               </div>
               
@@ -440,7 +502,7 @@ export default function CreateModelPage() {
                   <select
                     id="parameters.resolution"
                     name="parameters.resolution"
-                    value={formData.parameters.resolution}
+                    value={formData.parameters?.resolution || 512}
                     onChange={handleChange}
                     className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-200"
                   >
@@ -459,7 +521,7 @@ export default function CreateModelPage() {
                   <select
                     id="parameters.num_train_epochs"
                     name="parameters.num_train_epochs"
-                    value={formData.parameters.num_train_epochs}
+                    value={formData.parameters?.num_train_epochs || 1}
                     onChange={handleChange}
                     className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-200"
                   >
@@ -487,6 +549,7 @@ export default function CreateModelPage() {
                 type="button"
                 className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white py-3 font-medium rounded-lg shadow-sm transition-all duration-300 hover:-translate-y-1"
                 disabled={isLoading || files.length === 0 || !formData.name}
+                onClick={handleSubmit}
               >
                 {isLoading ? (
                   <>
