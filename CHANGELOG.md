@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Enhanced Model Gallery UI with custom model previews, animations, and improved styling
+- Added responsive card layout with hover effects to the models page
+- Added visual category tags and status indicators to model cards
+
+### Removed
+- Removed "Create Images of You" feature due to persistent technical issues and API reliability problems
+- Removed related API endpoints, store files, and components for the custom model training feature
+
+### Fixed
+- Fixed Link component error in Dashboard page causing prop type errors
+- Updated the Dashboard to use valid routes after feature removal
+- Updated documentation to reflect feature removal and UI improvements
+
+### Updated
+- Updated documentation in README.md to explain feature removal and UI enhancements
+- Updated documentation in docs/custom-model-training.md and docs/user-guide-custom-models.md to reflect feature removal
+
+### Added (Previous)
 - Added Meta's Creator & Influencer Strategy knowledge to the Social Media Expert Chatbot
   - Included Meta's recommended 5-step creator strategy
   - Added information about performance data (19% lower acquisition costs, 71% higher brand intent lift)

@@ -47,17 +47,38 @@ The application has been organized for intuitive access to all features:
 
 - **Dashboard**: View activity summary and recent content
 - **Photo Editor**: Edit and enhance photos using AI
+- **Quick Video Test**: Test simple video generation functionality
 - **Image Creator**: Create custom images with various AI models
   - All models are accessible from this section
   - Includes Cristina, Jaime, and SDXL models
 - **Video Creator**: Transform still images into high-quality videos
-- **Create Model**: Create and train new custom AI models
 - **Analyze Post**: Analyze images for social media optimization
 - **Chat**: Interact with the Social Media Expert Agent
 - **Gallery**: View and manage generated content
 - **Profile**: Manage your account settings
 
 ## New Features
+
+### ⚠️ Feature Removal Notice: Custom AI Model Training
+
+> The "Create Images of You" functionality has been removed due to persistent technical issues causing page unresponsiveness. This feature used Replicate's API for custom model training but was unreliable in the current implementation.
+>
+> All other AI features remain fully functional, including pre-trained models, image-to-video conversion, and content analysis tools.
+>
+> We apologize for any inconvenience and may reintroduce this feature in a future update with a more stable implementation.
+
+### Enhanced Model Gallery UI
+
+We've completely redesigned the model gallery with an improved visual experience:
+
+**Features:**
+- Custom representative images for each model type
+- Responsive card layout with hover animations
+- Visual category tags and star ratings
+- Clear model status indicators
+- Gradient effects and modern styling elements
+
+Access the enhanced model gallery via the "Models" section in the sidebar.
 
 ### Social Media Expert Agent Chat
 
@@ -76,7 +97,7 @@ We've integrated Google's Gemini AI to provide an expert social media strategist
 - Analytics interpretation and actionable insights
 - Current trend recommendations and forecasting
 
-For detailed documentation, see [Chat Bot Documentation](./the-way/docs/chatbot.md).
+For detailed documentation, see [Chat Bot Documentation](./docs/chatbot.md).
 
 ### Post Analysis with Vertex AI
 
@@ -95,7 +116,7 @@ We've integrated Google's Vertex AI to provide intelligent image analysis for so
 - Facial detection and analysis
 - Comprehensive social media suitability assessment
 
-For detailed documentation, see [Post Analysis Documentation](./the-way/docs/post-analysis.md).
+For detailed documentation, see [Post Analysis Documentation](./docs/post-analysis.md).
 
 ### Social Media Analyzer with Hugging Face (New)
 
