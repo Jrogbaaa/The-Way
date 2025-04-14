@@ -26,6 +26,8 @@ All notable changes to this project will be documented in this file.
 - Integrated Longform Video feature within the Video Creator interface
 - Improved documentation for video generation capabilities
 - Removed standalone Longform Video from sidebar to reduce navigation clutter
+- Enhanced Photo Editor UI with professional styling and added back button for improved navigation
+- Improved Photo Editor component to match the application's design system
 
 ### Added (Previous)
 - Added Meta's Creator & Influencer Strategy knowledge to the Social Media Expert Chatbot
