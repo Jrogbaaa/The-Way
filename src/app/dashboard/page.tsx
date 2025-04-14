@@ -8,6 +8,10 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/config';
 import Link from 'next/link';
+import ContentCalendar from '@/components/ContentCalendar';
+import SocialMediaTrends from '@/components/SocialMediaTrends';
+import ActionItems from '@/components/ActionItems';
+import ABTestingContentSuggestions from '@/components/ABTestingContentSuggestions';
 
 // Mark page as dynamic to prevent static generation during build
 export const dynamic = 'force-dynamic';
@@ -68,26 +72,55 @@ const recentActivities: ActivityItem[] = [
 
 // Suggested actions based on user data
 const suggestedActions = [
-  "Try training a custom model for your brand style",
-  "Analyze your top-performing posts for insights",
-  "Schedule your next week's content calendar"
+  {
+    id: 'sug1',
+    title: "Try generating images with different styles",
+    options: [
+      "Create minimalist product photos with neutral backgrounds",
+      "Try lifestyle shots featuring your products in real settings",
+      "Generate abstract art that represents your brand values"
+    ],
+    route: ROUTES.models
+  },
+  {
+    id: 'sug2',
+    title: "Analyze your top-performing content",
+    options: [
+      "Compare engagement metrics across different content types",
+      "Identify patterns in your most successful posts",
+      "See which hashtags drive the most reach"
+    ],
+    route: ROUTES.uploadPost
+  },
+  {
+    id: 'sug3',
+    title: "Create video content from your images",
+    options: [
+      "Turn product photos into animated showcases",
+      "Create slideshow stories from multiple images",
+      "Add motion effects to static photos for more engagement"
+    ],
+    route: ROUTES.imageToVideo
+  }
 ];
 
 export default function Dashboard() {
   const [currentSuggestion, setCurrentSuggestion] = useState(0);
   const [statsLoaded, setStatsLoaded] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
+  const [expandedSuggestion, setExpandedSuggestion] = useState(false);
   const router = useRouter();
 
-  // Switch suggestions every 8 seconds
+  // Switch suggestions every 10 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setFadeIn(false);
       setTimeout(() => {
         setCurrentSuggestion(prev => (prev + 1) % suggestedActions.length);
         setFadeIn(true);
+        setExpandedSuggestion(false);
       }, 500);
-    }, 8000);
+    }, 10000);
     
     setFadeIn(true);
     
@@ -232,22 +265,49 @@ export default function Dashboard() {
         
         {/* AI Assistant Suggestion */}
         <div
-          className={`p-4 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white flex items-center justify-between transition-opacity duration-500 ease-in-out ${fadeIn ? 'opacity-100' : 'opacity-0'}`}
+          className={`rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white overflow-hidden transition-opacity duration-500 ease-in-out ${fadeIn ? 'opacity-100' : 'opacity-0'}`}
         >
-          <div className="flex items-center">
-            <Zap className="h-5 w-5 mr-3" />
-            <p className="font-medium">AI Suggestion: {suggestedActions[currentSuggestion]}</p>
+          <div className="p-4 flex items-center justify-between">
+            <div className="flex items-center">
+              <Zap className="h-5 w-5 mr-3" />
+              <p className="font-medium">AI Suggestion: {suggestedActions[currentSuggestion].title}</p>
+            </div>
+            <div className="flex space-x-2">
+              <button 
+                onClick={() => setExpandedSuggestion(!expandedSuggestion)}
+                className="px-3 py-1 rounded-full bg-white/20 text-sm hover:bg-white/30 transition-colors"
+              >
+                {expandedSuggestion ? 'Hide Options' : 'Show Options'}
+              </button>
+              <Link
+                href={suggestedActions[currentSuggestion].route}
+                className="px-3 py-1 rounded-full bg-white/20 text-sm hover:bg-white/30 transition-colors"
+              >
+                Get Started
+              </Link>
+            </div>
           </div>
-          <Link
-            href={
-              currentSuggestion === 0 ? ROUTES.createModel :
-              currentSuggestion === 1 ? ROUTES.uploadPost :
-              '/calendar'
-            }
-            className="px-3 py-1 rounded-full bg-white/20 text-sm hover:bg-white/30 transition-colors"
-          >
-            Try now
-          </Link>
+          
+          {/* Expanded options */}
+          {expandedSuggestion && (
+            <div className="bg-indigo-900/20 p-4 border-t border-white/10">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {suggestedActions[currentSuggestion].options.map((option, idx) => (
+                  <div 
+                    key={idx} 
+                    className="bg-white/10 p-3 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-start">
+                      <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-medium mr-2 mt-0.5">
+                        {idx + 1}
+                      </div>
+                      <p className="text-sm">{option}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Stats overview */}
@@ -280,6 +340,50 @@ export default function Dashboard() {
             trendValue={22}
             color="amber"
           />
+        </div>
+        
+        {/* Content Calendar */}
+        <div 
+          className="opacity-0 animate-fade-in"
+          style={{
+            animationDelay: '0.4s',
+            animationFillMode: 'forwards'
+          }}
+        >
+          <ContentCalendar />
+        </div>
+        
+        {/* Action Items */}
+        <div 
+          className="opacity-0 animate-fade-in"
+          style={{
+            animationDelay: '0.45s',
+            animationFillMode: 'forwards'
+          }}
+        >
+          <ActionItems />
+        </div>
+        
+        {/* AB Testing Content Suggestions */}
+        <div 
+          className="opacity-0 animate-fade-in"
+          style={{
+            animationDelay: '0.5s',
+            animationFillMode: 'forwards'
+          }}
+        >
+          <ABTestingContentSuggestions />
+        </div>
+        
+        {/* Social Media Trends */}
+        <div 
+          className="opacity-0 animate-fade-in"
+          style={{
+            animationDelay: '0.5s',
+            animationFillMode: 'forwards'
+          }}
+        >
+          <SocialMediaTrends />
         </div>
         
         {/* Recent Activity */}
