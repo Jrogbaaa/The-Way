@@ -22,7 +22,7 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
   - Customizable motion parameters
   
 - 🤖 **AI Assistant**: 
-  - Chat with a Social Media Expert Agent (powered by Google Gemini)
+  - Chat with a Social Media Expert Agent (powered by Replicate's Llama 2)
   - Get professional advice on social media strategy, content creation, and analytics
   
 - 📊 **Social Media Content Analysis**:
@@ -59,6 +59,53 @@ The application has been organized for intuitive access to all features:
 
 ## New Features
 
+### Social Media Trends with Web Intelligence
+
+We've added a comprehensive social media trends system that automatically tracks industry trends relevant for talent agencies managing celebrity social media accounts.
+
+**Features:**
+- Automated weekly web scraping of industry sources for current social media trends
+- AI-powered trend extraction and categorization by platform and content type
+- Interactive trend explorer with filtering by platform and category
+- Search functionality to find specific trend topics
+- Relevance scoring to highlight the most important trends
+- Integration with the dashboard for immediate visibility
+
+**Technical Implementation:**
+- Scheduled web scraping system using Firecrawl MCP for efficient data collection
+- Intelligent content extraction from various industry sources
+- Supabase database integration for trend storage and retrieval
+- API endpoints for trend management and retrieval
+- Server-side job scheduler for recurring data updates
+- Real-time trend filtering and search capabilities
+
+**How It Benefits Talent Agencies:**
+- Stay informed about platform-specific algorithm changes affecting celebrity content
+- Discover trending content formats that drive higher engagement
+- Learn optimal posting strategies based on industry data
+- Track cross-platform trends to optimize multi-channel celebrity presence
+- Receive weekly updates without manual research
+
+### Content Calendar with AI-Optimized Posting Times
+
+We've added a new Content Calendar feature that helps users determine the optimal times to post different types of content on social media platforms based on audience activity patterns.
+
+**Features:**
+- Platform-specific optimal posting times for Instagram Reels, Instagram Stories, and TikTok
+- Day-by-day breakdown of audience activity patterns
+- Visual identification of recommended posting slots
+- Hourly activity breakdown with engagement percentages
+- Best time highlights for each day and platform
+
+**How to Access:**
+The Content Calendar is prominently displayed on the Dashboard, providing immediate access to optimized posting schedules.
+
+**Technical Implementation:**
+- Optimized with React hooks for performance and state management
+- Implements data fetching patterns to support future API integration
+- Uses memoization to prevent unnecessary recalculations
+- Responsive design with proper scrolling behavior for mobile devices
+
 ### ⚠️ Feature Removal Notice: Custom AI Model Training
 
 > The "Create Images of You" functionality has been removed due to persistent technical issues causing page unresponsiveness. This feature used Replicate's API for custom model training but was unreliable in the current implementation.
@@ -82,7 +129,7 @@ Access the enhanced model gallery via the "Models" section in the sidebar.
 
 ### Social Media Expert Agent Chat
 
-We've integrated Google's Gemini AI to provide an expert social media strategist chatbot. This agent offers professional advice on social media strategy, content creation, audience engagement, analytics interpretation, and trend forecasting.
+We've integrated Replicate's Llama 2 model to provide an expert social media strategist chatbot. This agent offers professional advice on social media strategy, content creation, audience engagement, analytics interpretation, and trend forecasting.
 
 **How to Access:**
 1. Click on "Chat" in the sidebar or top navigation bar
@@ -398,12 +445,12 @@ For detailed setup instructions, see `docs/IMAGEN_SETUP.md`.
 
 ### Google Gemini
 
-The application integrates with Google's Gemini AI for advanced chat functionality:
+The application integrates with Google's Gemini AI for advanced photo editing functionality:
 
-- Uses the Gemini API to power the social media expert chatbot
-- Leverages the latest gemini-2.0-pro model for high-quality AI responses
-- Maintains conversation context for personalized assistance
-- Offers platform-specific social media expertise and actionable advice
+- Uses the Gemini API to power the AI-driven photo editor
+- Leverages the latest gemini-2.0-pro model for high-quality image transformations
+- Supports both preset editing options and custom prompt-based editing
+- Maintains the original image quality while applying AI-driven enhancements
 
 Setup instructions:
 1. Obtain a Google Gemini API key from Google AI Studio
@@ -458,7 +505,7 @@ Handles image generation requests using the Replicate API for Cristina, Jaime, a
 Handles image generation requests using Google Vertex AI Imagen, fully implemented with the latest Vertex AI client.
 
 ### `/api/chat`
-Handles conversations with the social media expert agent powered by Google Gemini, providing professional social media advice and strategies.
+Handles conversations with the social media expert agent powered by Replicate's Llama 2 model, providing professional social media advice and strategies.
 
 ### `/api/edit-image`
 Handles photo editing requests using Google's Gemini 2.0 Pro model, transforming images based on user prompts and editing instructions.
