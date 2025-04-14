@@ -17,10 +17,15 @@ All notable changes to this project will be documented in this file.
 - Fixed Link component error in Dashboard page causing prop type errors
 - Updated the Dashboard to use valid routes after feature removal
 - Updated documentation to reflect feature removal and UI improvements
+- Fixed 404 error when clicking on the Video Creator tab by updating route path to point directly to "/models/image-to-video"
 
 ### Updated
 - Updated documentation in README.md to explain feature removal and UI enhancements
 - Updated documentation in docs/custom-model-training.md and docs/user-guide-custom-models.md to reflect feature removal
+- Consolidated video generation features into a single Video Creator tab
+- Integrated Longform Video feature within the Video Creator interface
+- Improved documentation for video generation capabilities
+- Removed standalone Longform Video from sidebar to reduce navigation clutter
 
 ### Added (Previous)
 - Added Meta's Creator & Influencer Strategy knowledge to the Social Media Expert Chatbot
@@ -46,6 +51,11 @@ All notable changes to this project will be documented in this file.
 - Next.js application with TypeScript
 - Social Media Expert chatbot powered by Replicate's Llama 2 model
 - Video generation capabilities with AI-driven prompt processing
+- Initial release with basic functionality
+- Image generation using AI models
+- Video generation from images
+- Content analysis and recommendations
+- Dashboard for content overview
 
 ## [1.2.2] - 2024-04-07
 
