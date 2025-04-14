@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 - Updated the Dashboard to use valid routes after feature removal
 - Updated documentation to reflect feature removal and UI improvements
 - Fixed 404 error when clicking on the Video Creator tab by updating route path to point directly to "/models/image-to-video"
+- Fixed metadata error in Photo Editor page by separating client and server components
 
 ### Updated
 - Updated documentation in README.md to explain feature removal and UI enhancements
