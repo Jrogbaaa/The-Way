@@ -41,10 +41,16 @@ the-way/
 │   │   │   ├── imagen/        # Image generation API
 │   │   │   ├── chat/          # Chat API for social media expert
 │   │   │   ├── analyze-image/ # Vertex AI image analysis API
-│   │   │   ├── analyze-social-post/ # Hugging Face social analysis API
+│   │   │   ├── models/        # Model management API endpoints
+│   │   │   │   ├── train/     # Model training API
+│   │   │   │   ├── status/    # Training status API
+│   │   │   │   ├── save/      # Model saving API
+│   │   │   ├── webhook/       # Webhook endpoints
+│   │   │   │   ├── replicate/ # Replicate webhook handler
 │   │   ├── chat/              # Chat interface page
+│   │   ├── models/            # Model pages
+│   │   │   ├── create/        # Custom model training page
 │   │   ├── social-analyzer/   # Social media content analyzer page
-│   │   ├── onboarding/        # Onboarding component
 │   ├── components/            # React components
 │   │   ├── SocialMediaAnalyzer.tsx # Hugging Face-powered analyzer component
 │   ├── lib/                   # Utility functions & API clients
@@ -64,6 +70,8 @@ The application is built using:
 - **NextJS** - React framework
 - **TypeScript** - For type safety
 - **TailwindCSS** - For styling
+- **Supabase** - For database and authentication
+- **Replicate** - For AI model inference and training
 - **Google Vertex AI** - For image analysis
 - **Google Gemini** - For social media expert chat functionality
 - **Hugging Face Models** - For open-source social media content analysis
@@ -78,18 +86,28 @@ the-way/
 │   │   │   ├── imagen/        # Image generation API
 │   │   │   ├── chat/          # Chat API for social media expert
 │   │   │   ├── analyze-image/ # Vertex AI image analysis API
-│   │   │   ├── analyze-social-post/ # Hugging Face social analysis API
+│   │   │   ├── models/        # Model management API endpoints
+│   │   │   │   ├── train/     # Model training API
+│   │   │   │   ├── status/    # Training status API
+│   │   │   │   ├── save/      # Model saving API
+│   │   │   ├── webhook/       # Webhook endpoints
+│   │   │   │   ├── replicate/ # Replicate webhook handler
 │   │   ├── chat/              # Chat interface page
+│   │   ├── models/            # Model pages
+│   │   │   ├── create/        # Custom model training page
 │   │   ├── social-analyzer/   # Social media content analyzer page
-│   │   ├── onboarding/        # Onboarding component
 │   ├── components/            # React components
 │   │   ├── SocialMediaAnalyzer.tsx # Hugging Face-powered analyzer component
+│   │   ├── ProgressBar.tsx    # Progress visualization component
 │   ├── lib/                   # Utility functions & API clients
 │   │   ├── api/               # API integration code
 │   │   │   ├── gemini.ts      # Google Gemini integration
 │   │   │   ├── replicate.ts   # Replicate integration
-│   │   │   ├── vision.ts      # Google Vision integration
-│   │   ├── vertex.ts          # Google Vertex AI integration
+│   │   │   ├── replicateModels.ts # Replicate custom model operations
+│   │   ├── store/             # State management
+│   │   │   ├── models.ts      # Trained models store
+│   │   ├── hooks/             # Custom React hooks
+│   │   │   ├── useGenerationProgress.ts # Progress tracking hook
 │   ├── types/                 # TypeScript type definitions
 │   └── public/                # Static assets
 ```
@@ -129,7 +147,7 @@ export const ROUTES = {
   dashboard: "/dashboard",
   profile: "/profile",
   models: "/models",             // Image Creator
-  createModel: "/create-model",
+  createModel: "/models/create",
   imageToVideo: "/models/image-to-video", // Video Creator
   chat: "/chat",
   gallery: "/gallery",
@@ -139,6 +157,34 @@ export const ROUTES = {
 ```
 
 When adding new features, use the existing route configuration and update the `Sidebar.tsx` component to maintain navigation consistency.
+
+### Model Training Architecture
+
+The model training system is implemented with a client-server architecture:
+
+#### Client-Side Components
+- `models/create/page.tsx` - Main UI for model creation
+- `useTrainedModelsStore` - Zustand store for model state management
+- `useGenerationProgress` - Hook for tracking training progress
+
+#### Server-Side Components
+- `/api/models/train` - Processes form data and starts training
+- `/api/models/status` - Checks training job status
+- `/api/models/save` - Persists model data to database
+- `/api/webhook/replicate` - Handles training completion webhooks
+
+#### Data Flow
+1. User submits form with model details and training images
+2. Frontend sends data to `/api/models/train` endpoint
+3. Server uploads images to Replicate and starts training job
+4. Frontend polls `/api/models/status` for updates
+5. When training completes:
+   - In development: Status endpoint detects completion and saves model
+   - In production: Webhook endpoint receives notification and saves model
+6. Model appears in user's models list
+
+#### Database Schema
+Models are stored in a Supabase `trained_models` table with RLS policies.
 
 ## Development Guidelines
 
@@ -383,3 +429,114 @@ The application requires the following environment variables:
 ## Image Generation
 
 // ... existing code ...
+
+### Content Calendar Component
+
+The Content Calendar component provides users with AI-optimized posting times for social media content. It follows these key design principles:
+
+#### Architecture
+- Uses a custom hook pattern (`useContentCalendar`) to separate logic from presentation
+- Implements simulated data fetching to support future API integration
+- Utilizes memoization for performance optimization
+
+#### Key Files
+- `src/components/ContentCalendar.tsx` - Main component implementation
+- Future: `src/hooks/useContentCalendar.ts` - Extracted hook for data and state management
+- Future: `src/lib/api/contentCalendar.ts` - API integration for data fetching
+
+#### Implementation Details
+- Data structures for platform types, time slots, and schedules
+- Loading state handling with skeleton UI
+- Responsive design with proper overflow handling
+- Accessibility support with aria attributes and keyboard navigation
+
+#### Styling Pattern
+- Card-based container with consistent border and shadow styling
+- Segmented sections with clear visual hierarchy
+- Interactive elements with proper hover and active states
+- Optimized for both desktop and mobile viewing
+
+This component serves as an example of how to structure scalable features with separation of concerns, data fetching patterns, and performance optimizations.
+
+## Scalability Best Practices
+
+To ensure the application scales effectively as more features are added, follow these best practices:
+
+### State Management
+
+1. **Custom Hooks Pattern**
+   - Extract data fetching and state management into custom hooks
+   - Separate business logic from presentation components
+   - Example: `useContentCalendar` hook in the Content Calendar component
+
+2. **Centralized Data Stores**
+   - Use Zustand for global state management where appropriate
+   - Create domain-specific stores rather than one large global store
+   - Example: Create a dedicated store for calendar data when it grows more complex
+
+3. **Data Fetching Patterns**
+   - Implement consistent patterns for API calls across the application
+   - Use loading, error, and success states consistently
+   - Consider implementing a data cache layer for frequently accessed data
+
+### Performance Optimization
+
+1. **Component Optimization**
+   - Use React.memo for pure components that render frequently
+   - Implement useMemo and useCallback to prevent unnecessary recalculations
+   - Example: Memoized calculations in the ContentCalendar component
+
+2. **Code Splitting**
+   - Implement dynamic imports for route-based code splitting
+   - Lazy load heavy components that aren't needed on initial page load
+   - Example: Lazy load complex visualization components
+
+3. **Asset Optimization**
+   - Optimize images and other static assets
+   - Use Next.js Image component for automatic optimization
+   - Consider implementing webp format for better compression
+
+### Code Organization
+
+1. **Folder Structure**
+   - Organize code by feature domain rather than technical type
+   - Create dedicated directories for related components, hooks, and utilities
+   - Example structure:
+     ```
+     src/
+     ├── features/
+     │   ├── content-calendar/
+     │   │   ├── components/
+     │   │   ├── hooks/
+     │   │   ├── api/
+     │   │   ├── types/
+     ```
+
+2. **Modular Components**
+   - Build components that are focused on a single responsibility
+   - Create composition patterns rather than complex monolithic components
+   - Example: Break down large components into smaller, focused pieces
+
+3. **Type Safety**
+   - Use TypeScript interfaces for all component props and API responses
+   - Create reusable type definitions in domain-specific type files
+   - Example: Detailed type definitions for ContentCalendar data structures
+
+### Testing Strategies
+
+1. **Component Testing**
+   - Write tests for critical component functionality
+   - Test loading, error, and success states
+   - Mock API calls to test different data scenarios
+
+2. **Hook Testing**
+   - Create dedicated tests for custom hooks
+   - Test state transitions and side effects
+   - Example: Test `useContentCalendar` state changes with different inputs
+
+3. **Integration Testing**
+   - Test how components work together within a feature
+   - Focus on user flows rather than implementation details
+   - Example: Test the complete user journey through the content calendar
+
+By following these scalability best practices, you can ensure The Way platform continues to perform well and remains maintainable as new features are added.
