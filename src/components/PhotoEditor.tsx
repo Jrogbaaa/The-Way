@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, ChangeEvent, FormEvent } from 'react';
-import Image from 'next/image';
-import { Loader2, Upload, ArrowLeft, Download, Sparkles, Undo, Camera, Pencil, RotateCw, Trash } from 'lucide-react';
+import { useState, useRef, ChangeEvent } from 'react';
+import { Loader2, Upload, ArrowLeft, Download, Sparkles, Undo, Camera, Pencil, RotateCw, Trash, Image as ImageIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // Define common editing presets
 const EDITING_PRESETS = [
@@ -173,15 +173,23 @@ const PhotoEditor = () => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 bg-white rounded-xl shadow-sm">
-      <h1 className="text-2xl font-bold text-center mb-6">Photo Editor</h1>
+    <div className="w-full max-w-full">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center mb-2">
+          <ImageIcon className="w-8 h-8 mr-3 text-indigo-600" />
+          AI-Powered Photo Editor
+        </h1>
+        <p className="text-gray-600 text-lg">
+          Enhance your photos with AI and transform them with just a few clicks
+        </p>
+      </header>
       
       <div className="space-y-6">
         {/* Image upload area */}
         {!selectedImage && (
           <div 
             onClick={handleUploadClick}
-            className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-blue-500 transition-colors cursor-pointer"
+            className="border-2 border-dashed border-gray-300 rounded-xl p-16 text-center hover:border-indigo-400 transition-colors cursor-pointer bg-gray-50"
           >
             <input
               type="file"
@@ -190,50 +198,61 @@ const PhotoEditor = () => {
               accept="image/jpeg,image/png,image/jpg,image/webp"
               className="hidden"
             />
-            <Upload className="h-12 w-12 mx-auto text-gray-400" />
-            <p className="mt-2 text-sm text-gray-600">Click to upload or drag and drop</p>
-            <p className="text-xs text-gray-500">PNG, JPG or WEBP (max. 10MB)</p>
+            <Upload className="h-16 w-16 mx-auto text-indigo-400" />
+            <p className="mt-4 text-base text-gray-600">Click to upload or drag and drop</p>
+            <p className="text-sm text-gray-500 mt-2">PNG, JPG or WEBP (max. 10MB)</p>
+            <Button 
+              onClick={handleUploadClick} 
+              className="mt-6 bg-indigo-600 hover:bg-indigo-700"
+            >
+              Select Image
+            </Button>
           </div>
         )}
         
         {/* Error message */}
         {error && (
-          <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm">
-            {error}
+          <div className="bg-red-50 text-red-700 p-4 rounded-lg text-sm border border-red-200">
+            <p className="font-medium">Error</p>
+            <p>{error}</p>
           </div>
         )}
         
         {/* Image editing area */}
         {selectedImage && (
-          <div className="space-y-6">
-            {/* Back button and reset */}
+          <div className="space-y-8">
+            {/* Controls */}
             <div className="flex justify-between items-center">
-              <button
+              <Button
+                variant="outline"
                 onClick={handleReset}
-                className="text-gray-600 hover:text-gray-900 flex items-center space-x-1 text-sm"
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
               >
                 <Trash className="h-4 w-4" />
                 <span>Reset</span>
-              </button>
+              </Button>
               
               {editedImage && (
-                <button
+                <Button
+                  variant="outline"
                   onClick={handleBackToOriginal}
-                  className="text-gray-600 hover:text-gray-900 flex items-center space-x-1 text-sm"
+                  className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   <span>Back to original</span>
-                </button>
+                </Button>
               )}
             </div>
             
             {/* Image preview */}
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="flex-1">
-                <p className="text-sm text-gray-600 mb-2">Original Image</p>
-                <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-gray-100">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">Original Image</h3>
+                </div>
+                <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
                   {imagePreview && (
-                    <div className="relative w-full h-full">
+                    <div className="absolute inset-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={imagePreview}
@@ -245,16 +264,19 @@ const PhotoEditor = () => {
                 </div>
               </div>
               
-              <div className="flex-1">
-                <p className="text-sm text-gray-600 mb-2">Edited Image</p>
-                <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-gray-100">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">Edited Image</h3>
+                </div>
+                <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
                   {isEditing ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
-                      <p className="mt-2 text-sm text-gray-600">Editing image...</p>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <Loader2 className="h-10 w-10 text-indigo-500 animate-spin mb-4" />
+                      <p className="text-base text-gray-600">Processing your image...</p>
+                      <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
                     </div>
                   ) : editedImage ? (
-                    <div className="relative w-full h-full">
+                    <div className="absolute inset-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={editedImage}
@@ -264,7 +286,7 @@ const PhotoEditor = () => {
                     </div>
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <p className="text-sm text-gray-500">Select an editing option below</p>
+                      <p className="text-base text-gray-500">Select an editing option below</p>
                     </div>
                   )}
                 </div>
@@ -272,47 +294,51 @@ const PhotoEditor = () => {
             </div>
             
             {/* Editing options */}
-            <div className="space-y-4">
-              <p className="text-sm font-medium text-gray-700">Choose an editing preset:</p>
+            <div className="space-y-5 bg-gray-50 p-6 rounded-xl border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Editing Options</h3>
               
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {EDITING_PRESETS.map((preset, index) => (
-                  <button
-                    key={preset.name}
-                    onClick={() => handleEditImage(index)}
-                    disabled={isEditing}
-                    className={`p-3 rounded-lg border ${
-                      selectedPreset === index
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-blue-200 hover:bg-blue-50'
-                    } transition-colors flex flex-col items-center justify-center text-center`}
-                  >
-                    <div className={`${selectedPreset === index ? 'text-blue-500' : 'text-gray-600'}`}>
-                      {preset.icon}
-                    </div>
-                    <p className={`text-sm font-medium mt-1 ${selectedPreset === index ? 'text-blue-700' : 'text-gray-700'}`}>
-                      {preset.name}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">{preset.description}</p>
-                  </button>
-                ))}
+              <div className="space-y-4">
+                <h4 className="text-base font-medium text-gray-700">Choose an editing preset:</h4>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {EDITING_PRESETS.map((preset, index) => (
+                    <button
+                      key={preset.name}
+                      onClick={() => handleEditImage(index)}
+                      disabled={isEditing}
+                      className={`p-4 rounded-xl transition-all ${
+                        selectedPreset === index
+                          ? 'bg-indigo-100 border-2 border-indigo-400 shadow-sm'
+                          : 'bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50'
+                      } flex flex-col items-center justify-center text-center`}
+                    >
+                      <div className={`p-3 rounded-full ${selectedPreset === index ? 'bg-indigo-200 text-indigo-700' : 'bg-gray-100 text-gray-700'}`}>
+                        {preset.icon}
+                      </div>
+                      <p className={`text-sm font-medium mt-2 ${selectedPreset === index ? 'text-indigo-700' : 'text-gray-700'}`}>
+                        {preset.name}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">{preset.description}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
               
-              <div className="mt-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">Or enter a custom editing prompt:</p>
-                <div className="flex space-x-2">
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h4 className="text-base font-medium text-gray-700 mb-3">Or enter a custom editing prompt:</h4>
+                <div className="flex space-x-3">
                   <input
                     type="text"
                     value={customPrompt}
                     onChange={(e) => setCustomPrompt(e.target.value)}
                     placeholder="e.g., Make the sky more blue, increase contrast"
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     disabled={isEditing}
                   />
-                  <button
+                  <Button
                     onClick={() => handleEditImage()}
                     disabled={isEditing || !customPrompt}
-                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-1"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
                   >
                     {isEditing ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -320,20 +346,20 @@ const PhotoEditor = () => {
                       <Sparkles className="h-4 w-4" />
                     )}
                     <span>Apply</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
               
               {/* Download button */}
               {editedImage && (
-                <div className="flex justify-center mt-4">
-                  <button
+                <div className="flex justify-center mt-8 pt-6 border-t border-gray-200">
+                  <Button
                     onClick={handleDownload}
-                    className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center space-x-2"
+                    className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-6 py-5 text-base"
                   >
-                    <Download className="h-4 w-4" />
+                    <Download className="h-5 w-5" />
                     <span>Download Edited Image</span>
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
