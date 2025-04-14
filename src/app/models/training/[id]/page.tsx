@@ -213,7 +213,7 @@ export default function TrainingStatusPage({ params }: TrainingPageParams) {
             <p className="font-medium">Training Error</p>
             <p className="text-sm">{error}</p>
             <button 
-              onClick={() => router.push(ROUTES.createModel)}
+              onClick={() => router.push(ROUTES.models)}
               className="mt-2 text-sm text-red-600 hover:text-red-800 font-medium"
             >
               Try Again with Different Settings

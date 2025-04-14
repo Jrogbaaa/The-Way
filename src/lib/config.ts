@@ -45,18 +45,20 @@ export const ROUTES = {
   dashboard: "/dashboard",
   profile: "/profile",
   models: "/models",
-  createModel: "/create-model",
   cristinaModel: "/models/cristina",
   jaimeModel: "/models/jaime",
   beaModel: "/models/bea",
-  imageToVideo: "/models/image-to-video",
-  quickVideoTest: "/quick-video-test",
+  imageToVideo: "/image-to-video",
+  longformVideo: "/quick-video-test",
   chat: "/chat",
   gallery: "/gallery",
   targeting: "/targeting",
-  uploadPost: "/posts/upload",
+  uploadPost: "/upload-post",
   socialAnalyzer: "/social-analyzer",
   photoEditor: "/photo-editor",
+  terms: "/terms",
+  privacy: "/privacy",
+  help: "/help"
 };
 
 export const AI_MODELS = {

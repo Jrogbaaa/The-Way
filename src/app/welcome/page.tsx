@@ -18,7 +18,7 @@ export default function WelcomePage() {
 
   // Add specific handlers for each feature card
   const handleMakeAIImages = () => {
-    router.push(ROUTES.createModel);
+    router.push(ROUTES.models);
   };
 
   const handleUseModels = () => {

@@ -68,26 +68,6 @@ const Sidebar = () => {
       color: 'pink',
     },
     {
-      name: 'Quick Video Test',
-      href: ROUTES.quickVideoTest,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <path d="m21 12-7-7v4H7a4 4 0 0 0-4 4v6h4v-4h7v4l7-7Z" />
-        </svg>
-      ),
-      label: 'Test simple video generation',
-      color: 'indigo',
-    },
-    {
       name: 'Image Creator',
       href: ROUTES.models,
       icon: (
@@ -128,29 +108,8 @@ const Sidebar = () => {
           <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
         </svg>
       ),
-      label: 'Convert images to videos',
+      label: 'Create videos with AI',
       color: 'red',
-    },
-    {
-      name: 'Create Model',
-      href: ROUTES.createModel,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <path d="M12 2v20" />
-          <path d="M2 12h20" />
-        </svg>
-      ),
-      label: 'Create a new AI model',
-      color: 'violet',
     },
     {
       name: 'Analyze Post',
@@ -270,6 +229,12 @@ const Sidebar = () => {
           active: 'bg-violet-600',
           hover: 'hover:text-violet-600',
           iconBg: 'bg-violet-100 text-violet-600'
+        };
+      case 'teal':
+        return {
+          active: 'bg-teal-600',
+          hover: 'hover:text-teal-600',
+          iconBg: 'bg-teal-100 text-teal-600'
         };
       case 'green':
         return {

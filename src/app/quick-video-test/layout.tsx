@@ -1,6 +1,6 @@
 import MainLayout from '@/components/layout/MainLayout';
 
-export default function QuickVideoTestLayout({
+export default function LongformVideoLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
