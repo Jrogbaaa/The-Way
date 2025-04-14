@@ -38,122 +38,170 @@ export async function POST(request: NextRequest) {
     const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
 
     // Get Google AI Studio API key from environment variable
-    const apiKey = process.env.GOOGLE_AI_STUDIO_API_KEY;
+    const apiKey = process.env.GOOGLE_AI_STUDIO_API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'Google AI Studio API key not configured' }, { status: 500 });
+      console.error('API key not found in environment variables');
+      return NextResponse.json({ 
+        error: 'API service unavailable',
+        details: 'Image editing service is not properly configured',
+      }, { status: 503 });
     }
-
-    // Initialize the Gemini API
-    const genAI = new GoogleGenerativeAI(apiKey);
-
-    // For models that support image editing features
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-pro-001" });
 
     // Convert buffer to base64
     const base64Image = imageBuffer.toString('base64');
     const mimeType = imageFile.type;
 
-    // Prepare the prompt with the image
-    const prompt = `${promptText}. Make the edited image look natural and professional.`;
+    // Prepare the prompt
+    const prompt = `Please edit this image based on the following instruction: "${promptText}". Make the edited image look natural and professional.`;
 
-    // Create image part from base64 data
-    const imageParts = [
-      {
-        inlineData: {
-          data: base64Image,
-          mimeType: mimeType
-        }
-      }
-    ];
-
-    // Configure safety settings
-    const safetySettings = [
-      {
-        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-      },
-      {
-        category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-      },
-      {
-        category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-      },
-      {
-        category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-      }
-    ];
-
-    console.log('Generating image with Gemini...');
-
+    // Try the image editing with Gemini API first
     try {
-      // Generate content using the image and prompt
-      const result = await model.generateContent({
-        contents: [{ role: "user", parts: [...imageParts, { text: prompt }] }],
-        generationConfig: {
-          temperature: 0.4,
-          topK: 32,
-          topP: 1,
-          maxOutputTokens: 4096,
+      console.log('Using Gemini image generation API via REST...');
+      
+      // Configure safety settings
+      const safetySettings = [
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
         },
-        safetySettings
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+        }
+      ];
+      
+      // Create a REST API call directly to the image generation model
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`;
+      
+      // Prepare the request body with image and text
+      const requestBody = {
+        contents: [{
+          parts: [
+            { text: prompt },
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: base64Image
+              }
+            }
+          ]
+        }],
+        generation_config: {
+          temperature: 0.4,
+          top_k: 32,
+          top_p: 1,
+          max_output_tokens: 4096,
+          responseModalities: ["TEXT", "IMAGE"]
+        },
+        safety_settings: safetySettings.map(setting => ({
+          category: setting.category,
+          threshold: setting.threshold
+        }))
+      };
+      
+      console.log('Sending request to Gemini image editing endpoint...');
+      
+      const response = await axios.post(apiUrl, requestBody, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 60000 // Add timeout to avoid DEADLINE_EXCEEDED errors
       });
       
-      const response = result.response;
-      console.log('Gemini response received');
-
-      // Extract the image data from the response
-      const responseText = response.text();
-      if (!responseText || !response.candidates || response.candidates.length === 0) {
-        throw new Error('No valid response from Gemini API');
-      }
+      console.log('Gemini API response received');
+      console.log('Response status:', response.status);
       
-      // Check if there are any images in the response
-      if (!response.candidates[0].content.parts ||
-          !response.candidates[0].content.parts.some(part => part.inlineData?.mimeType?.startsWith('image/'))) {
-        // If no images found, check if there's a URL to an image
-        const urls = extractImageUrlsFromText(responseText);
-        if (urls.length > 0) {
-          // Download the first image and return it
-          console.log('Found image URL in response:', urls[0]);
-          const downloadedImage = await downloadImage(urls[0]);
-          return sendImageResponse(downloadedImage.buffer, downloadedImage.contentType);
-        } else {
-          throw new Error('No image found in Gemini response');
+      // Add more detailed logging to see what's in the response
+      if (response.data) {
+        console.log('Response has data');
+        if (response.data.candidates) {
+          console.log(`Found ${response.data.candidates.length} candidates`);
+          const candidate = response.data.candidates[0];
+          if (candidate && candidate.content) {
+            console.log('Candidate has content');
+            if (candidate.content.parts) {
+              console.log(`Found ${candidate.content.parts.length} parts`);
+              
+              // Detailed logging of parts content
+              candidate.content.parts.forEach((part: any, index: number) => {
+                console.log(`Part ${index} type:`, part.text ? 'text' : part.inline_data ? 'inline_data' : 'unknown');
+                if (part.text) {
+                  console.log(`Part ${index} text (first 50 chars):`, part.text.substring(0, 50));
+                }
+                if (part.inline_data) {
+                  console.log(`Part ${index} is inline_data with mime_type:`, part.inline_data.mime_type);
+                  console.log(`Part ${index} has data of length:`, part.inline_data.data.length);
+                }
+              });
+            }
+          }
         }
       }
       
-      // Get the first image from the response
-      const imagePart = response.candidates[0].content.parts.find(
-        part => part.inlineData?.mimeType?.startsWith('image/')
-      );
-      
-      if (!imagePart || !imagePart.inlineData) {
-        throw new Error('No image found in Gemini response');
+      // Process the response to extract the image
+      if (response.data.candidates && 
+          response.data.candidates[0] && 
+          response.data.candidates[0].content && 
+          response.data.candidates[0].content.parts) {
+        
+        const parts = response.data.candidates[0].content.parts;
+        console.log(`Found ${parts.length} parts in the response`);
+        
+        // Look for inline_data in the parts
+        for (const part of parts) {
+          if (part.inline_data && part.inline_data.mime_type.startsWith('image/')) {
+            console.log('Found image in API response');
+            const imageData = Buffer.from(part.inline_data.data, 'base64');
+            const imageMimeType = part.inline_data.mime_type;
+            return sendImageResponse(imageData, imageMimeType);
+          }
+        }
+        
+        // If no image found, check for URLs in text responses
+        for (const part of parts) {
+          if (part.text) {
+            console.log('Found text in response, checking for image URLs');
+            const urls = extractImageUrlsFromText(part.text);
+            if (urls.length > 0) {
+              console.log('Found image URL in text response:', urls[0]);
+              const { buffer, contentType } = await downloadImage(urls[0]);
+              return sendImageResponse(buffer, contentType);
+            }
+          }
+        }
       }
       
-      // Decode the base64 image data
-      const imageData = Buffer.from(imagePart.inlineData.data, 'base64');
-      const imageMimeType = imagePart.inlineData.mimeType;
+      // If no image found in response, throw error
+      console.error('No image found in Gemini API response');
+      throw new Error('No image found in Gemini API response');
       
-      // Return the image
-      return sendImageResponse(imageData, imageMimeType);
-    } catch (error) {
-      console.error('Error generating image with Gemini:', error);
+    } catch (geminiError) {
+      console.error('Error with Gemini API:', geminiError);
       
-      // Fallback to a different model or approach
-      // For now, we'll just return an error
+      // Return a more helpful error to the client
       return NextResponse.json({
-        error: error instanceof Error ? error.message : 'Error generating edited image',
-        details: 'The Gemini model may not fully support image generation capabilities needed for this edit.'
-      }, { status: 500 });
+        error: 'Image editing service temporarily unavailable',
+        details: 'The image editing service encountered an error processing your request.',
+        message: 'Please try again later or with a different prompt.',
+        technicalDetails: geminiError instanceof Error ? geminiError.message : 'Unknown error'
+      }, { status: 503 });
     }
   } catch (error) {
     console.error('Error editing image:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error editing image' },
+      { 
+        error: 'Image editing failed',
+        message: error instanceof Error ? error.message : 'Unknown error processing your request',
+        suggestion: 'Try using a different image or simplify your editing request'
+      },
       { status: 500 }
     );
   }
@@ -163,7 +211,7 @@ export async function POST(request: NextRequest) {
  * Extract image URLs from text response
  */
 function extractImageUrlsFromText(text: string): string[] {
-  const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
+  const urlRegex = /(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp)(?:[^\s]*)?)/gi;
   return (text.match(urlRegex) || []);
 }
 
