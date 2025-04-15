@@ -30,17 +30,24 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files - never commit these
+.env
+.env.*
 .env.local
+.env.development
+.env.test
+.env.production
 .env.development.local
 .env.test.local
 .env.production.local
+# Only allow the example env file
 !.env.example
 
 # credential files
 google-credentials.json
 *-credentials.json
+*-token.json
+*-key.json
 
 # vercel
 .vercel
@@ -52,3 +59,6 @@ next-env.d.ts
 # netlify
 .netlify/
 .temp/
+
+# npm logs
+.npm/

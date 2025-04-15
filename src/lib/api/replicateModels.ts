@@ -1,10 +1,9 @@
 import { API_CONFIG } from '../config';
 import Replicate from 'replicate';
 
-// Fallback token if API_CONFIG.replicateApiToken is not set
-const FALLBACK_TOKEN = '';
+// Initialize Replicate client
 const replicate = new Replicate({
-  auth: API_CONFIG.replicateApiToken || FALLBACK_TOKEN,
+  auth: API_CONFIG.replicateApiToken || '',
 });
 
 /**
@@ -143,15 +142,17 @@ export const listCustomModels = async () => {
  */
 export const checkTrainingStatus = async (predictionId: string) => {
   try {
-    const prediction = await replicate.predictions.get(predictionId);
-    return {
-      id: prediction.id,
-      status: prediction.status,
-      created_at: prediction.created_at,
-      completed_at: prediction.completed_at,
-      output: prediction.output,
-      error: prediction.error,
-    };
+    // Use server API to check status
+    const response = await fetch(`/api/models/status/${predictionId}`, {
+      method: 'GET',
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to check training status');
+    }
+    
+    return await response.json();
   } catch (error) {
     console.error("Error checking training status:", error);
     throw error;

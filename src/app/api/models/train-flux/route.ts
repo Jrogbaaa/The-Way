@@ -1,29 +1,30 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { API_CONFIG } from '@/lib/config';
+import { getReplicateClient } from '@/lib/replicate-client';
+import type Replicate from 'replicate';
 
-// A constant for the webhook URL
-const WEBHOOK_URL = process.env.REPLICATE_WEBHOOK_URL;
+// Base URL for webhooks, will be auto-populated with the app's URL
+const WEBHOOK_URL = API_CONFIG.appUrl || '';
+// Max duration for the request (5 minutes)
+const MAX_DURATION = 300;
 
-export const maxDuration = 300; // 5 minute timeout
-export const dynamic = 'force-dynamic';
+// Define the webhook event types
+type WebhookEventType = 'start' | 'output' | 'logs' | 'completed';
 
-export async function POST(req: Request) {
+/**
+ * Handles POST requests for model training
+ */
+export async function POST(request: NextRequest) {
   try {
-    // For now, we'll skip auth checking since the auth module is missing
-    // We'll just proceed with the request
+    console.log('Received train-flux request');
     
-    const formData = await req.formData();
+    // Parse form data
+    const formData = await request.formData();
     
-    // Log the form data for debugging
-    console.log('Form data received:', [...formData.entries()].map(([key, value]) => 
-      key === 'training_data' ? `${key}: [${(value as File).name}, ${(value as File).size} bytes]` : `${key}: ${value}`
-    ));
-    
-    // Extracting required form fields
+    // Extract training parameters
     const name = formData.get('name') as string;
-    const description = formData.get('description') as string;
     const keyword = formData.get('keyword') as string;
-    const trainingData = formData.get('training_data') as File;
+    const trainingData = formData.get('trainingData') as File;
     
     // Validate required fields
     if (!name) {
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     }
     
     if (!keyword) {
-      return NextResponse.json({ error: 'Keyword/trigger word is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Keyword is required' }, { status: 400 });
     }
     
     if (!trainingData) {
@@ -50,15 +51,15 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(arrayBuffer);
     const base64 = buffer.toString('base64');
     
-    // Get Replicate API token with fallback
-    const apiToken = process.env.REPLICATE_API_TOKEN || API_CONFIG.replicateApiToken || '';
+    // Get Replicate client
+    const replicate = getReplicateClient();
     
-    if (!apiToken) {
-      console.error('No Replicate API token available');
+    if (!replicate) {
+      console.error('Failed to initialize Replicate client');
       return NextResponse.json({ error: 'Replicate API token is not configured' }, { status: 500 });
     }
     
-    console.log('Using Replicate API token:', apiToken.substring(0, 5) + '...');
+    console.log('Replicate client initialized successfully');
     
     // Prepare input for the Flux model
     const trainingInput = {
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
         version: string;
         input: any;
         webhook?: string;
-        webhook_events_filter?: string[];
+        webhook_events_filter?: WebhookEventType[];
       } = {
         // Use a more accessible public Flux version
         version: "2b52459229a3e2d4574ece373a1fe04c51a4779661c553dfa0d33b579b50ea41",
@@ -104,32 +105,20 @@ export async function POST(req: Request) {
       // Only add webhook and webhook_events_filter if WEBHOOK_URL exists
       if (WEBHOOK_URL) {
         requestBody.webhook = `${WEBHOOK_URL}/api/webhook/replicate`;
-        requestBody.webhook_events_filter = ["completed"];
+        requestBody.webhook_events_filter = ["completed"] as WebhookEventType[];
         console.log('Using webhook URL:', WEBHOOK_URL);
       } else {
         console.log('No webhook URL provided, webhook configuration skipped');
       }
       
-      const response = await fetch('https://api.replicate.com/v1/predictions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Token ${apiToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
+      // Use replicate client for prediction creation
+      const prediction = await replicate.predictions.create({
+        version: requestBody.version,
+        input: requestBody.input,
+        webhook: requestBody.webhook,
+        webhook_events_filter: requestBody.webhook_events_filter,
       });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
-        console.error('Replicate API error:', errorData);
-        return NextResponse.json({
-          error: `Replicate API error: ${JSON.stringify(errorData)}`,
-          details: 'Failed to create model with Replicate',
-          status: response.status
-        }, { status: response.status || 500 });
-      }
-      
-      const prediction = await response.json();
       console.log('Training started:', prediction.id);
       
       return NextResponse.json({
