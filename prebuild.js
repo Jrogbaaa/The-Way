@@ -16,7 +16,7 @@ const createDummyEnvFile = () => {
 NEXT_PUBLIC_SUPABASE_URL=https://dummy-value-for-build.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-value-for-build
 SUPABASE_SERVICE_ROLE_KEY=dummy-value-for-build
-REPLICATE_API_TOKEN=dummy-value-for-build
+REPLICATE_API_TOKEN=r8_W6YHRCBleZjPLLmfyrQiWseStHtumUo4TBMzb
 GOOGLE_API_KEY=dummy-value-for-build
 GEMINI_API_KEY=dummy-value-for-build
 GOOGLE_CLOUD_VISION_CREDENTIALS=dummy-value-for-build
@@ -24,6 +24,7 @@ GOOGLE_CLOUD_PROJECT_ID=dummy-value-for-build
 NEXT_PUBLIC_APP_URL=https://dummy-value-for-build
 NEXTAUTH_SECRET=dummy-value-for-build
 NEXTAUTH_URL=https://dummy-value-for-build
+BRIA_AI_API_KEY=dummy-value-for-build
 VERTEX_AI_LOCATION=us-central1
     `;
     

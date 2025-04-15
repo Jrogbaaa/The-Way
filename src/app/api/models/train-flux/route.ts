@@ -3,10 +3,12 @@ import { API_CONFIG } from '@/lib/config';
 import { getReplicateClient } from '@/lib/replicate-client';
 import type Replicate from 'replicate';
 
+// Configure Next.js route segment config
+export const maxDuration = 60; // Limit to 60 seconds for Vercel hobby plan
+export const dynamic = 'force-dynamic';
+
 // Base URL for webhooks, will be auto-populated with the app's URL
 const WEBHOOK_URL = API_CONFIG.appUrl || '';
-// Max duration for the request (5 minutes)
-const MAX_DURATION = 300;
 
 // Define the webhook event types
 type WebhookEventType = 'start' | 'output' | 'logs' | 'completed';

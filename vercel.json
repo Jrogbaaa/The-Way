@@ -26,5 +26,13 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "src/app/api/**/*.ts": {
+      "maxDuration": 60
+    }
+  },
+  "env": {
+    "REPLICATE_API_TOKEN": "r8_W6YHRCBleZjPLLmfyrQiWseStHtumUo4TBMzb"
+  }
 } 
