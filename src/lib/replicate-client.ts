@@ -14,17 +14,17 @@ export const replicateClient = {
 
 // For server-side use only
 export function getReplicateClient() {
-  // Get token from environment
-  const token = process.env.REPLICATE_API_TOKEN || '';
+  // Get API key from environment
+  const apiKey = process.env.REPLICATE_API_TOKEN || '';
   
-  // Log status (but not the actual token)
-  if (!token) {
+  // Log status (but not the actual key)
+  if (!apiKey) {
     console.warn("REPLICATE_API_TOKEN is not set");
   } else {
     console.log("REPLICATE_API_TOKEN is configured");
   }
 
   return new Replicate({
-    auth: token,
+    auth: apiKey,
   });
 } 

@@ -15,7 +15,7 @@ This document explains how to properly deploy the application to Vercel, ensurin
 
 ### Required Environment Variables
 
-- `REPLICATE_API_TOKEN`: Set this to `r8_W6YHRCBleZjPLLmfyrQiWseStHtumUo4TBMzb`
+- `REPLICATE_API_TOKEN`: Your API key for Replicate service
 - `BRIA_AI_API_KEY`: Your Bria AI API key
 - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
