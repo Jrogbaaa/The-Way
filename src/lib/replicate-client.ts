@@ -7,7 +7,7 @@ export const replicateClient = new Replicate({
 });
 
 // If REPLICATE_API_TOKEN is not set, use this hardcoded token as fallback
-const FALLBACK_TOKEN = 'r8_H7A15ebpGoc5vXVn76lgmF14IQZmR5c3tNd93';
+const FALLBACK_TOKEN = '';
 
 /**
  * Returns a configured Replicate client for server-side use

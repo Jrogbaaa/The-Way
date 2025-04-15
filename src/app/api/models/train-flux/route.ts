@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     const base64 = buffer.toString('base64');
     
     // Get Replicate API token with fallback
-    const apiToken = process.env.REPLICATE_API_TOKEN || API_CONFIG.replicateApiToken || 'r8_H7A15ebpGoc5vXVn76lgmF14IQZmR5c3tNd93';
+    const apiToken = process.env.REPLICATE_API_TOKEN || API_CONFIG.replicateApiToken || '';
     
     if (!apiToken) {
       console.error('No Replicate API token available');

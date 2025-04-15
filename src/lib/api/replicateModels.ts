@@ -2,7 +2,7 @@ import { API_CONFIG } from '../config';
 import Replicate from 'replicate';
 
 // Fallback token if API_CONFIG.replicateApiToken is not set
-const FALLBACK_TOKEN = 'r8_H7A15ebpGoc5vXVn76lgmF14IQZmR5c3tNd93';
+const FALLBACK_TOKEN = '';
 const replicate = new Replicate({
   auth: API_CONFIG.replicateApiToken || FALLBACK_TOKEN,
 });
