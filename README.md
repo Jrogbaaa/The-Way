@@ -15,6 +15,10 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
   - AI-powered photo editing with Google's Gemini 2.0 Pro model
   - Preset editing options and custom prompt support
   - Easy-to-use interface for quick enhancements
+  - **NEW:** Outpainting functionality using Stability AI to extend images beyond their original boundaries
+  - **NEW:** Multi-directional outpainting support - extend in multiple directions at once
+  - **NEW:** Search & Replace feature to swap objects in images
+  - **NEW:** Recolor feature to change colors of specific objects while preserving everything else
   
 - 🎬 **Video Creator**:
   - Convert still images to high-quality videos
@@ -105,6 +109,45 @@ The Content Calendar is prominently displayed on the Dashboard, providing immedi
 - Implements data fetching patterns to support future API integration
 - Uses memoization to prevent unnecessary recalculations
 - Responsive design with proper scrolling behavior for mobile devices
+
+### Social Media Action Items
+
+The Action Items component provides a prioritized list of tasks to help content creators stay organized and focused on high-impact social media activities.
+
+**Features:**
+- Prioritized tasks with high, medium, and low importance levels
+- Filtering by priority level 
+- Task completion tracking
+- Category-based organization (content, engagement, growth, analytics)
+- Due date indicators for time-sensitive tasks
+- Platform-specific action items
+- Goal-oriented task descriptions
+
+**Technical Implementation:**
+- React state management for task filtering and completion status
+- Expandable task details for comprehensive information
+- Visual cues for priority levels and categories
+- Interactive completion toggles with status persistence
+
+### A/B Testing Content Suggestions
+
+The Content Suggestions component offers AI-driven recommendations for social media content with predicted engagement metrics to help creators make data-informed decisions.
+
+**Features:**
+- Multiple content variations for A/B testing
+- Engagement prediction scores for each suggestion
+- Platform-specific recommendations (Instagram, TikTok, Twitter, Facebook, LinkedIn)
+- Content categorization by type (image, video, carousel, text)
+- Caption and hashtag recommendations
+- Trend alignment indicators
+- Goal-oriented suggestion groups
+
+**Technical Implementation:**
+- Responsive UI with modern design patterns
+- Interactive selection mechanism for comparing alternatives
+- Visual engagement prediction scoring
+- Platform-specific icons and integrations
+- Support for multiple content formats
 
 ### ⚠️ Feature Removal Notice: Custom AI Model Training
 
@@ -589,3 +632,84 @@ For Google Cloud services (Vertex AI, Vision API), you need to handle the creden
    ```
 3. Store the encoded string in the `GOOGLE_CLOUD_VISION_CREDENTIALS` environment variable
 4. The application automatically decodes this string during runtime
+
+## Maintaining Application Functionality
+
+To ensure the application remains functional and stable during development, follow these maintenance guidelines:
+
+### Git Workflow & Push Frequency
+
+- **Commit frequently, push strategically**
+  - Make small, focused commits with clear messages
+  - Push completed features or bug fixes, not partial implementations
+  - Use descriptive branch names for features/fixes (e.g., `fix/image-api-connection`)
+  - Run the pre-push validation script before pushing: `node scripts/pre-push-check.js`
+
+- **Recommended push frequency**
+  - Push at natural completion points (feature complete, tests pass)
+  - Push at least once daily when actively developing
+  - Always push before stepping away from a project for more than a day
+
+### API Stability & Error Handling
+
+- **Error boundaries**
+  - Use the `ErrorBoundary` component for catching runtime errors
+  - Add specific error boundaries around components that interact with external APIs
+  - Example: `<ErrorBoundary><YourComponent /></ErrorBoundary>`
+
+- **API error fallbacks**
+  - For image generation, implement fallback images when APIs fail
+  - For data fetching, include default/cached data as fallbacks
+  - Add retry logic for transient API failures
+
+- **Environment variable management**
+  - Always check that API keys and endpoints are correctly configured
+  - Update `.env.example` when adding new environment variables
+  - Document required API permissions in the appropriate documentation
+
+### Route Management
+
+- **Handling route changes**
+  - When changing route paths, add redirects for old routes
+  - Update the `ROUTES` object in `src/lib/config.ts`
+  - Update any hardcoded references to routes in components
+
+- **Testing routes**
+  - Verify that all routes in the navigation components work
+  - Test deep links and direct URL access
+  - Confirm redirect paths function correctly
+
+### Testing Protocols
+
+- **Before each commit**
+  - Manually test affected components
+  - Verify API integrations still function
+  - Check for visual regressions
+
+- **Before each push**
+  - Run TypeScript type checking: `npx tsc --noEmit`
+  - Run ESLint: `npm run lint`
+  - Run pre-push validation script: `node scripts/pre-push-check.js`
+
+- **After API changes**
+  - Test all features that use the modified API
+  - Verify error handling works as expected
+  - Document any changes in behavior
+
+### Troubleshooting Common Issues
+
+- **API Connection Errors**
+  - Check environment variables are correctly set
+  - Verify API keys are valid and have required permissions
+  - Test API endpoints directly with tools like Postman
+  - Check for CORS issues in browser developer tools
+
+- **React Component Errors**
+  - Use React DevTools to inspect component state
+  - Check prop types and required props
+  - Look for state update issues on unmounted components
+
+- **Route/Navigation Issues**
+  - Verify route is correctly defined in ROUTES object
+  - Check if the page component exists at the expected path
+  - Ensure layout components are properly wrapping content

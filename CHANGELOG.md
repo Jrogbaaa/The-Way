@@ -8,6 +8,12 @@ All notable changes to this project will be documented in this file.
 - Enhanced Model Gallery UI with custom model previews, animations, and improved styling
 - Added responsive card layout with hover effects to the models page
 - Added visual category tags and status indicators to model cards
+- Implemented custom StabilityClient SDK for improved Stability AI integration
+- Added multi-directional outpainting support to the Photo Editor
+- Added Search & Replace feature to swap objects in images
+- Added Recolor feature to change colors of specific objects while preserving the rest of the image
+- Enhanced error handling and logging for Stability AI API interactions
+- Optimized image preparation pipeline with automatic resizing for API requirements
 
 ### Removed
 - Removed "Create Images of You" feature due to persistent technical issues and API reliability problems
