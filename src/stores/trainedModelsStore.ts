@@ -11,11 +11,16 @@ interface TrainedModel {
   status: 'training' | 'ready' | 'failed' | 'external';
   replicate_id?: string;
   category: string;
+  trigger_word?: string;
+  last_used?: Date;
   metadata?: {
     triggerWord?: string;
     modelType?: string;
     sampleImageUrl?: string;
     virtualModel?: boolean;
+    outputModel?: string;
+    trainingStarted?: string;
+    trainingJobId?: string;
   };
 }
 
@@ -23,6 +28,7 @@ interface TrainedModelsStore {
   trainedModels: TrainedModel[];
   addTrainedModel: (model: Omit<TrainedModel, 'id'>) => void;
   updateModelStatus: (id: string, status: TrainedModel['status'], metadata?: any) => void;
+  updateTrainedModel: (id: string, updates: Partial<TrainedModel>) => void;
   getModelById: (id: string) => TrainedModel | undefined;
 }
 
@@ -33,6 +39,9 @@ export const useTrainedModelsStore = create<TrainedModelsStore>((set, get) => ({
     console.warn('TrainedModelsStore: Feature has been removed');
   },
   updateModelStatus: () => {
+    console.warn('TrainedModelsStore: Feature has been removed');
+  },
+  updateTrainedModel: () => {
     console.warn('TrainedModelsStore: Feature has been removed');
   },
   getModelById: () => {

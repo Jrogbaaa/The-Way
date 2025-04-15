@@ -23,7 +23,7 @@ const MarkdownContent: React.FC<MarkdownContentProps> = ({
         rehypePlugins={[rehypeRaw]}
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ node, inline, className, children, ...props }) {
+          code({ node, inline, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             return !inline && match ? (
               <SyntaxHighlighter
@@ -40,7 +40,7 @@ const MarkdownContent: React.FC<MarkdownContentProps> = ({
               </code>
             );
           },
-          a: ({ node, ...props }) => (
+          a: ({ node, ...props }: any) => (
             <a 
               {...props} 
               target="_blank" 
@@ -48,31 +48,31 @@ const MarkdownContent: React.FC<MarkdownContentProps> = ({
               className="text-indigo-600 hover:text-indigo-800 hover:underline"
             />
           ),
-          h1: ({ node, ...props }) => (
+          h1: ({ node, ...props }: any) => (
             <h1 {...props} className="text-2xl font-bold text-gray-900 mt-6 mb-4" />
           ),
-          h2: ({ node, ...props }) => (
+          h2: ({ node, ...props }: any) => (
             <h2 {...props} className="text-xl font-semibold text-gray-800 mt-5 mb-3" />
           ),
-          h3: ({ node, ...props }) => (
+          h3: ({ node, ...props }: any) => (
             <h3 {...props} className="text-lg font-medium text-gray-800 mt-4 mb-2" />
           ),
-          p: ({ node, ...props }) => (
+          p: ({ node, ...props }: any) => (
             <p {...props} className="text-gray-700 mb-4" />
           ),
-          ul: ({ node, ...props }) => (
+          ul: ({ node, ...props }: any) => (
             <ul {...props} className="list-disc pl-6 mb-4 text-gray-700" />
           ),
-          ol: ({ node, ...props }) => (
+          ol: ({ node, ...props }: any) => (
             <ol {...props} className="list-decimal pl-6 mb-4 text-gray-700" />
           ),
-          li: ({ node, ...props }) => (
+          li: ({ node, ...props }: any) => (
             <li {...props} className="mb-1" />
           ),
-          blockquote: ({ node, ...props }) => (
+          blockquote: ({ node, ...props }: any) => (
             <blockquote {...props} className="border-l-4 border-indigo-300 pl-4 italic text-gray-700 my-4" />
           ),
-          hr: ({ node, ...props }) => (
+          hr: ({ node, ...props }: any) => (
             <hr {...props} className="my-6 border-gray-300" />
           ),
         }}

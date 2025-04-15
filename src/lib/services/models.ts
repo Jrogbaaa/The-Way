@@ -12,6 +12,22 @@ interface FluxLoraModel {
   error: string | null;
 }
 
+// Add model interface with the missing properties
+interface TrainedModel {
+  id: string;
+  name: string;
+  status: string;
+  replicate_id?: string;
+  trigger_word?: string;
+  last_used?: Date;
+  metadata?: {
+    triggerWord?: string;
+    outputModel?: string;
+    trainingStarted?: string;
+    trainingJobId?: string;
+  };
+}
+
 /**
  * Check the status of a Flux LoRA model in training
  * @param modelId The Replicate prediction ID
