@@ -41,6 +41,27 @@ Our Social Media Expert is now equipped with specialized knowledge of high-impac
    - Group celebrations
    - *Why:* Expands reach and authenticates personal brand
 
+### Meta's Creator & Influencer Strategy
+
+The chatbot has knowledge of Meta's recommended approach for working with creators and influencers:
+
+1. **Meta's 5-Step Creator Strategy**
+   - **Selection** – Try creators from outside your usual industry to bring fresh perspectives
+   - **Roles** – Use creators in creative ways beyond testimonials (hosts, collaborators, storytellers)
+   - **Briefing** – Focus on ideas and creative concepts, not just pushing products directly
+   - **Process** – Build long-term relationships with creators rather than one-off campaigns
+   - **Tools** – Use Meta's integrated tools to streamline creator partnerships
+
+2. **Partnership Performance Data**
+   - 19% lower acquisition costs when using creators
+   - 71% higher brand intent lift (increased positive brand perception)
+
+3. **Key Meta Tools**
+   - **Creator Content Recommender (CCR)** – AI tool that suggests best-performing creator content for ads using 130+ data points
+   - **Partnership Ads Hub** – Dedicated section in Ads Manager for managing permissions and running creator campaigns
+
+4. **Core Message** – Creators are no longer optional but essential to marketing success, with the right partnerships significantly improving performance and reducing ad costs.
+
 ### Optimal Timing & Frequency
 
 The expert can advise on scientifically-backed timing strategies:

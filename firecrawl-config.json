@@ -1,0 +1,13 @@
+{
+  "apiKey": "fc-c6e182fd637c40238d0b7362e1d91a5a",
+  "retry": {
+    "maxAttempts": 3,
+    "initialDelay": 1000,
+    "maxDelay": 10000,
+    "backoffFactor": 2
+  },
+  "credit": {
+    "warningThreshold": 1000,
+    "criticalThreshold": 100
+  }
+} 

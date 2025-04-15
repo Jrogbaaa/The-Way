@@ -2,8 +2,22 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { APP_NAME } from "@/lib/config";
+import { initializeScheduler } from '@/lib/services/scheduler';
+import ClientErrorBoundary from "@/components/ClientErrorBoundary";
 
 const inter = Inter({ subsets: ["latin"] });
+
+// Initialize server-side services
+if (typeof window === 'undefined') {
+  // Only run on the server-side
+  try {
+    console.log('Initializing server-side services...');
+    initializeScheduler();
+    console.log('Server-side services initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize server-side services:', error);
+  }
+}
 
 export const metadata: Metadata = {
   title: APP_NAME,
@@ -19,7 +33,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <div className="min-h-screen w-full bg-gray-50 dark:bg-gray-900">
-          {children}
+          <ClientErrorBoundary>
+            {children}
+          </ClientErrorBoundary>
         </div>
       </body>
     </html>

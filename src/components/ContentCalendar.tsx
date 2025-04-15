@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Calendar, Clock, Instagram, TrendingUp, Users, Video } from 'lucide-react';
+import { Calendar, Clock, Instagram, TrendingUp, Users, Video, UserIcon } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 
 // Platform type for which we show optimal posting times
@@ -28,6 +28,21 @@ type PlatformData = {
   name: string;
   icon: React.ReactNode;
   schedule: DailySchedule[];
+};
+
+// Client/Talent type with their individual optimal posting schedule
+type ClientSchedule = {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  platformSchedules: {
+    platform: Platform;
+    optimalTimes: {
+      day: DayOfWeek;
+      time: string;
+      audienceActivity: number;
+    }[];
+  }[];
 };
 
 // This would come from an API in a real implementation
@@ -254,6 +269,146 @@ const platformsData: Record<Platform, PlatformData> = {
   },
 };
 
+// Mock data for clients/talents optimal posting times
+const clientsData: ClientSchedule[] = [
+  {
+    id: '1',
+    name: 'Bea Archidona',
+    avatarUrl: 'https://i.pravatar.cc/150?img=23',
+    platformSchedules: [
+      {
+        platform: 'instagram_stories',
+        optimalTimes: [
+          { day: 'Monday', time: '12:00 PM', audienceActivity: 83 },
+          { day: 'Tuesday', time: '1:00 PM', audienceActivity: 79 },
+          { day: 'Wednesday', time: '12:00 PM', audienceActivity: 85 },
+          { day: 'Thursday', time: '12:00 PM', audienceActivity: 81 },
+          { day: 'Friday', time: '5:00 PM', audienceActivity: 92 },
+          { day: 'Saturday', time: '1:00 PM', audienceActivity: 87 },
+          { day: 'Sunday', time: '2:00 PM', audienceActivity: 89 }
+        ]
+      },
+      {
+        platform: 'instagram_reels',
+        optimalTimes: [
+          { day: 'Monday', time: '6:00 PM', audienceActivity: 92 },
+          { day: 'Tuesday', time: '7:00 PM', audienceActivity: 85 },
+          { day: 'Wednesday', time: '6:00 PM', audienceActivity: 88 },
+          { day: 'Thursday', time: '7:00 PM', audienceActivity: 94 },
+          { day: 'Friday', time: '6:00 PM', audienceActivity: 89 },
+          { day: 'Saturday', time: '8:00 PM', audienceActivity: 95 },
+          { day: 'Sunday', time: '7:00 PM', audienceActivity: 91 }
+        ]
+      }
+    ]
+  },
+  {
+    id: '2',
+    name: 'Jaime Lorente',
+    avatarUrl: 'https://i.pravatar.cc/150?img=32',
+    platformSchedules: [
+      {
+        platform: 'tiktok',
+        optimalTimes: [
+          { day: 'Monday', time: '7:00 PM', audienceActivity: 91 },
+          { day: 'Tuesday', time: '2:00 PM', audienceActivity: 82 },
+          { day: 'Wednesday', time: '7:00 PM', audienceActivity: 93 },
+          { day: 'Thursday', time: '2:00 PM', audienceActivity: 84 },
+          { day: 'Friday', time: '8:00 PM', audienceActivity: 96 },
+          { day: 'Saturday', time: '3:00 PM', audienceActivity: 89 },
+          { day: 'Sunday', time: '7:00 PM', audienceActivity: 94 }
+        ]
+      },
+      {
+        platform: 'instagram_reels',
+        optimalTimes: [
+          { day: 'Monday', time: '12:00 PM', audienceActivity: 84 },
+          { day: 'Tuesday', time: '1:00 PM', audienceActivity: 78 },
+          { day: 'Wednesday', time: '12:00 PM', audienceActivity: 86 },
+          { day: 'Thursday', time: '1:00 PM', audienceActivity: 82 },
+          { day: 'Friday', time: '1:00 PM', audienceActivity: 79 },
+          { day: 'Saturday', time: '2:00 PM', audienceActivity: 81 },
+          { day: 'Sunday', time: '2:00 PM', audienceActivity: 87 }
+        ]
+      }
+    ]
+  },
+  {
+    id: '3',
+    name: 'Marcus Chen',
+    avatarUrl: 'https://i.pravatar.cc/150?img=11',
+    platformSchedules: [
+      {
+        platform: 'instagram_stories',
+        optimalTimes: [
+          { day: 'Monday', time: '5:00 PM', audienceActivity: 89 },
+          { day: 'Tuesday', time: '5:00 PM', audienceActivity: 87 },
+          { day: 'Wednesday', time: '5:00 PM', audienceActivity: 92 },
+          { day: 'Thursday', time: '5:00 PM', audienceActivity: 88 },
+          { day: 'Friday', time: '12:00 PM', audienceActivity: 83 },
+          { day: 'Saturday', time: '6:00 PM', audienceActivity: 94 },
+          { day: 'Sunday', time: '6:00 PM', audienceActivity: 93 }
+        ]
+      },
+      {
+        platform: 'tiktok',
+        optimalTimes: [
+          { day: 'Monday', time: '1:00 PM', audienceActivity: 81 },
+          { day: 'Tuesday', time: '7:00 PM', audienceActivity: 88 },
+          { day: 'Wednesday', time: '1:00 PM', audienceActivity: 83 },
+          { day: 'Thursday', time: '7:00 PM', audienceActivity: 91 },
+          { day: 'Friday', time: '8:00 PM', audienceActivity: 95 },
+          { day: 'Saturday', time: '8:00 PM', audienceActivity: 97 },
+          { day: 'Sunday', time: '3:00 PM', audienceActivity: 90 }
+        ]
+      }
+    ]
+  },
+  {
+    id: '4',
+    name: 'Cristina Pedroche',
+    avatarUrl: 'https://i.pravatar.cc/150?img=25',
+    platformSchedules: [
+      {
+        platform: 'instagram_stories',
+        optimalTimes: [
+          { day: 'Monday', time: '1:00 PM', audienceActivity: 86 },
+          { day: 'Tuesday', time: '2:00 PM', audienceActivity: 82 },
+          { day: 'Wednesday', time: '1:00 PM', audienceActivity: 88 },
+          { day: 'Thursday', time: '2:00 PM', audienceActivity: 84 },
+          { day: 'Friday', time: '7:00 PM', audienceActivity: 91 },
+          { day: 'Saturday', time: '3:00 PM', audienceActivity: 90 },
+          { day: 'Sunday', time: '4:00 PM', audienceActivity: 92 }
+        ]
+      },
+      {
+        platform: 'instagram_reels',
+        optimalTimes: [
+          { day: 'Monday', time: '7:00 PM', audienceActivity: 90 },
+          { day: 'Tuesday', time: '8:00 PM', audienceActivity: 88 },
+          { day: 'Wednesday', time: '7:00 PM', audienceActivity: 92 },
+          { day: 'Thursday', time: '8:00 PM', audienceActivity: 89 },
+          { day: 'Friday', time: '9:00 PM', audienceActivity: 93 },
+          { day: 'Saturday', time: '9:00 PM', audienceActivity: 95 },
+          { day: 'Sunday', time: '8:00 PM', audienceActivity: 91 }
+        ]
+      },
+      {
+        platform: 'tiktok',
+        optimalTimes: [
+          { day: 'Monday', time: '8:00 PM', audienceActivity: 89 },
+          { day: 'Tuesday', time: '7:00 PM', audienceActivity: 87 },
+          { day: 'Wednesday', time: '8:00 PM', audienceActivity: 91 },
+          { day: 'Thursday', time: '7:00 PM', audienceActivity: 90 },
+          { day: 'Friday', time: '9:00 PM', audienceActivity: 94 },
+          { day: 'Saturday', time: '8:00 PM', audienceActivity: 96 },
+          { day: 'Sunday', time: '7:00 PM', audienceActivity: 93 }
+        ]
+      }
+    ]
+  }
+];
+
 // Extract to a separate file in a real app, e.g., src/lib/utils/dateUtils.ts
 const dateUtils = {
   getCurrentDay: (): DayOfWeek => {
@@ -268,6 +423,7 @@ const useContentCalendar = (initialPlatform: Platform = 'instagram_reels') => {
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(dateUtils.getCurrentDay());
   const [platformData, setPlatformData] = useState<PlatformData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showClientView, setShowClientView] = useState(true); // Already set to true by default
   
   // Fetch platform data when selected platform changes
   useEffect(() => {
@@ -308,22 +464,47 @@ const useContentCalendar = (initialPlatform: Platform = 'instagram_reels') => {
     ).time;
   }, [timeSlotsForSelectedDay]);
   
-  // Memoize highest audience activity percentage
+  // Get client-specific recommendations for selected day
+  const clientRecommendationsForDay = useMemo(() => {
+    return clientsData.flatMap(client => {
+      return client.platformSchedules
+        .filter(ps => ps.platform === selectedPlatform)
+        .flatMap(ps => {
+          const optimalTime = ps.optimalTimes.find(ot => ot.day === selectedDay);
+          if (!optimalTime) return [];
+          
+          return [{
+            clientId: client.id,
+            clientName: client.name,
+            avatarUrl: client.avatarUrl,
+            platform: ps.platform,
+            time: optimalTime.time,
+            audienceActivity: optimalTime.audienceActivity
+          }];
+        });
+    }).sort((a, b) => b.audienceActivity - a.audienceActivity);
+  }, [selectedPlatform, selectedDay]);
+  
+  // Toggle between general and client-specific views
+  const toggleViewMode = () => {
+    setShowClientView(prev => !prev);
+  };
+  
+  // Calculate highest activity percentage for UI
   const highestActivityPercentage = useMemo(() => {
     const timeSlots = timeSlotsForSelectedDay;
     if (!timeSlots.length) return 0;
     
-    return timeSlots.reduce((prev, current) => 
-      (current.audienceActivity > prev.audienceActivity) ? current : prev, 
-      { audienceActivity: 0, time: '', recommended: false }
-    ).audienceActivity;
+    const highestActivity = Math.max(...timeSlots.map(slot => slot.audienceActivity));
+    return highestActivity;
   }, [timeSlotsForSelectedDay]);
   
-  // Memoize handler functions to prevent unnecessary recreations
+  // Handle platform selection
   const handlePlatformSelect = useCallback((platform: Platform) => {
     setSelectedPlatform(platform);
   }, []);
   
+  // Handle day selection
   const handleDaySelect = useCallback((day: DayOfWeek) => {
     setSelectedDay(day);
   }, []);
@@ -336,6 +517,9 @@ const useContentCalendar = (initialPlatform: Platform = 'instagram_reels') => {
     timeSlotsForSelectedDay,
     bestTimeForSelectedDay,
     highestActivityPercentage,
+    clientRecommendationsForDay,
+    showClientView,
+    toggleViewMode,
     handlePlatformSelect,
     handleDaySelect
   };
@@ -350,6 +534,9 @@ const ContentCalendar = () => {
     timeSlotsForSelectedDay,
     bestTimeForSelectedDay,
     highestActivityPercentage,
+    clientRecommendationsForDay,
+    showClientView,
+    toggleViewMode,
     handlePlatformSelect,
     handleDaySelect
   } = useContentCalendar();
@@ -373,12 +560,21 @@ const ContentCalendar = () => {
           <Calendar className="h-5 w-5 text-indigo-500 mr-2" />
           <h2 className="text-xl font-semibold">Content Calendar</h2>
         </div>
-        <Tooltip content="AI-optimized posting schedule based on audience activity patterns">
-          <div className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium flex items-center">
-            <TrendingUp className="h-3 w-3 mr-1" />
-            AI Optimized
-          </div>
-        </Tooltip>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={toggleViewMode} 
+            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-medium flex items-center transition-all"
+          >
+            <UserIcon className="h-3 w-3 mr-1" />
+            {showClientView ? "View General Times" : "View Client Times"}
+          </button>
+          <Tooltip content="AI-optimized posting schedule based on audience activity patterns">
+            <div className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium flex items-center">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              AI Optimized
+            </div>
+          </Tooltip>
+        </div>
       </div>
       
       {/* Platform selection */}
@@ -456,64 +652,103 @@ const ContentCalendar = () => {
         </div>
       </div>
       
-      {/* Best Time Highlight */}
-      <div className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 border-b flex items-center justify-between">
-        <div className="flex items-center">
-          <div className="p-2 rounded-full bg-indigo-100 mr-3">
-            <Clock className="h-4 w-4 text-indigo-600" />
-          </div>
-          <div>
-            <span className="text-xs text-gray-500">Best time to post on {selectedDay}</span>
-            <p className="font-medium">{bestTimeForSelectedDay}</p>
+      {showClientView ? (
+        /* Client-specific recommendations */
+        <div className="px-4 py-3 border-b">
+          <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+            <Users className="h-4 w-4 mr-1 text-indigo-600" />
+            Client Recommendations for {selectedDay}
+          </h3>
+          
+          <div className="space-y-3">
+            {clientRecommendationsForDay.length > 0 ? (
+              clientRecommendationsForDay.map((rec, index) => (
+                <div key={`${rec.clientId}-${index}`} className="bg-gradient-to-r from-gray-50 to-white p-3 rounded-lg border flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                      {rec.avatarUrl ? (
+                        <img src={rec.avatarUrl} alt={rec.clientName} className="w-8 h-8 rounded-full" />
+                      ) : (
+                        <UserIcon className="h-4 w-4 text-indigo-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{rec.clientName}</p>
+                      <span className="text-xs text-gray-500">
+                        {selectedPlatform === 'instagram_reels' && 'Instagram Reels'}
+                        {selectedPlatform === 'instagram_stories' && 'Instagram Stories'}
+                        {selectedPlatform === 'tiktok' && 'TikTok'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-sm">{rec.time}</p>
+                    <span className="text-xs text-gray-500">{rec.audienceActivity}% audience</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-3 text-sm text-gray-500">
+                No client-specific recommendations for this day and platform
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex items-center">
-          <div className="p-2 rounded-full bg-blue-100 mr-3">
-            <Users className="h-4 w-4 text-blue-600" />
+      ) : (
+        /* General Best Time Highlight */
+        <div className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 border-b flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="p-2 rounded-full bg-indigo-100 mr-3">
+              <Clock className="h-4 w-4 text-indigo-600" />
+            </div>
+            <div>
+              <span className="text-xs text-gray-500">Best time to post on {selectedDay}</span>
+              <p className="font-medium">{bestTimeForSelectedDay}</p>
+            </div>
           </div>
-          <div>
-            <span className="text-xs text-gray-500">Expected audience activity</span>
-            <p className="font-medium">{highestActivityPercentage}%</p>
+          <div className="flex items-center">
+            <div className="p-2 rounded-full bg-blue-100 mr-3">
+              <Users className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <span className="text-xs text-gray-500">Expected audience activity</span>
+              <p className="font-medium">{highestActivityPercentage}%</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
       
       {/* Time Slots */}
-      <div className="p-4 max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-        <h3 className="text-sm font-medium text-gray-500 mb-3">
-          Hourly audience activity for {platformData.name} on {selectedDay}
-        </h3>
-        <div className="space-y-3">
-          {timeSlotsForSelectedDay.map((timeSlot, index) => (
-            <div
-              key={index}
-              className={`p-3 rounded-lg border flex items-center justify-between transition-all 
-              ${timeSlot.recommended 
-                ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
-                : 'bg-white'}`}
-            >
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 text-gray-500 mr-2" />
-                <span className="font-medium">{timeSlot.time}</span>
-                {timeSlot.recommended && (
-                  <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800 font-medium">
-                    Recommended
-                  </span>
+      {!showClientView && (
+        <div className="p-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Activity Heatmap</h3>
+          <div className="space-y-2">
+            {timeSlotsForSelectedDay.map((slot, i) => (
+              <div key={i} className="flex items-center">
+                <span className="text-xs font-medium w-16">{slot.time}</span>
+                <div className="flex-1 h-6 bg-gray-100 rounded-lg overflow-hidden ml-2">
+                  <div 
+                    className={`h-full ${
+                      slot.audienceActivity > 80 ? 'bg-green-500' : 
+                      slot.audienceActivity > 60 ? 'bg-green-400' : 
+                      slot.audienceActivity > 40 ? 'bg-yellow-400' : 'bg-gray-300'
+                    } transition-all duration-500 rounded-lg`}
+                    style={{ width: `${slot.audienceActivity}%` }}
+                  />
+                </div>
+                <span className="text-xs font-medium w-12 text-right">{slot.audienceActivity}%</span>
+                {slot.recommended && (
+                  <Tooltip content="Recommended posting time">
+                    <div className="p-1 rounded-full bg-green-100 ml-2">
+                      <TrendingUp className="h-3 w-3 text-green-600" />
+                    </div>
+                  </Tooltip>
                 )}
               </div>
-              <div className="flex items-center">
-                <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden mr-2">
-                  <div 
-                    className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full"
-                    style={{ width: `${timeSlot.audienceActivity}%` }}
-                  ></div>
-                </div>
-                <span className="text-xs font-medium">{timeSlot.audienceActivity}%</span>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -19,6 +19,9 @@ export const API_CONFIG = {
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   googleApiKey: process.env.GOOGLE_API_KEY || "",
   
+  // BRIA AI
+  briaAiApiKey: process.env.BRIA_AI_API_KEY || "",
+  
   // Video APIs
   runwayApiKey: process.env.RUNWAY_API_KEY || "",
   dIdApiKey: process.env.D_ID_API_KEY || "",

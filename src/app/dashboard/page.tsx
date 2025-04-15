@@ -106,34 +106,17 @@ const suggestedActions = [
 
 export default function Dashboard() {
   const [currentSuggestion, setCurrentSuggestion] = useState(0);
-  const [statsLoaded, setStatsLoaded] = useState(false);
-  const [fadeIn, setFadeIn] = useState(false);
   const [expandedSuggestion, setExpandedSuggestion] = useState(false);
   const router = useRouter();
 
-  // Switch suggestions every 10 seconds
+  // Switch suggestions every 10 seconds with smoother transitions
   useEffect(() => {
     const interval = setInterval(() => {
-      setFadeIn(false);
-      setTimeout(() => {
-        setCurrentSuggestion(prev => (prev + 1) % suggestedActions.length);
-        setFadeIn(true);
-        setExpandedSuggestion(false);
-      }, 500);
+      // Use a smoother approach to switch suggestions
+      setCurrentSuggestion(prev => (prev + 1) % suggestedActions.length);
     }, 10000);
     
-    setFadeIn(true);
-    
     return () => clearInterval(interval);
-  }, []);
-
-  // Simulate stats loading for animation
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setStatsLoaded(true);
-    }, 500);
-    
-    return () => clearTimeout(timer);
   }, []);
 
   // Activity icon component
@@ -184,7 +167,7 @@ export default function Dashboard() {
     }
   };
 
-  // Stat card with animation
+  // Stat card without animation
   const StatCard = ({ title, value, icon, trendValue, color }: {
     title: string;
     value: string | number;
@@ -193,21 +176,13 @@ export default function Dashboard() {
     color: string;
   }) => (
     <div 
-      className={`relative overflow-hidden rounded-xl shadow-sm border border-${color}-100 bg-white p-6 transition-all duration-500 hover:shadow-md transform hover:-translate-y-1 opacity-0 animate-fade-in`}
-      style={{
-        animationDelay: '0.2s',
-        animationFillMode: 'forwards'
-      }}
+      className={`relative overflow-hidden rounded-xl shadow-sm border border-${color}-100 bg-white p-6 hover:shadow-md transform hover:-translate-y-1`}
     >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-gray-500">{title}</p>
           <h3 
-            className={`mt-2 text-3xl font-bold text-${color}-600 transition-all duration-500`}
-            style={{
-              opacity: statsLoaded ? 1 : 0,
-              transform: statsLoaded ? 'scale(1)' : 'scale(0.8)'
-            }}
+            className={`mt-2 text-3xl font-bold text-${color}-600`}
           >
             {value}
           </h3>
@@ -240,24 +215,12 @@ export default function Dashboard() {
       <div className="space-y-8">
         {/* Dashboard header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div
-            className="opacity-0 animate-slide-in"
-            style={{
-              animationDelay: '0.1s',
-              animationFillMode: 'forwards'
-            }}
-          >
+          <div>
             <h1 className="text-3xl font-bold">Dashboard</h1>
             <p className="text-gray-600 mt-1">Welcome back! Here's your content overview</p>
           </div>
           
-          <div 
-            className="px-4 py-2 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center opacity-0 animate-slide-in"
-            style={{
-              animationDelay: '0.3s',
-              animationFillMode: 'forwards'
-            }}
-          >
+          <div className="px-4 py-2 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center">
             <Bell className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">3 new notifications</span>
           </div>
@@ -265,7 +228,7 @@ export default function Dashboard() {
         
         {/* AI Assistant Suggestion */}
         <div
-          className={`rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white overflow-hidden transition-opacity duration-500 ease-in-out ${fadeIn ? 'opacity-100' : 'opacity-0'}`}
+          className="rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white overflow-hidden"
         >
           <div className="p-4 flex items-center justify-between">
             <div className="flex items-center">
@@ -275,13 +238,13 @@ export default function Dashboard() {
             <div className="flex space-x-2">
               <button 
                 onClick={() => setExpandedSuggestion(!expandedSuggestion)}
-                className="px-3 py-1 rounded-full bg-white/20 text-sm hover:bg-white/30 transition-colors"
+                className="px-3 py-1 rounded-full bg-white/20 text-sm hover:bg-white/30"
               >
                 {expandedSuggestion ? 'Hide Options' : 'Show Options'}
               </button>
               <Link
                 href={suggestedActions[currentSuggestion].route}
-                className="px-3 py-1 rounded-full bg-white/20 text-sm hover:bg-white/30 transition-colors"
+                className="px-3 py-1 rounded-full bg-white/20 text-sm hover:bg-white/30"
               >
                 Get Started
               </Link>
@@ -295,7 +258,7 @@ export default function Dashboard() {
                 {suggestedActions[currentSuggestion].options.map((option, idx) => (
                   <div 
                     key={idx} 
-                    className="bg-white/10 p-3 rounded-lg hover:bg-white/20 transition-colors cursor-pointer"
+                    className="bg-white/10 p-3 rounded-lg hover:bg-white/20 cursor-pointer"
                   >
                     <div className="flex items-start">
                       <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-medium mr-2 mt-0.5">
@@ -342,59 +305,32 @@ export default function Dashboard() {
           />
         </div>
         
-        {/* Content Calendar */}
-        <div 
-          className="opacity-0 animate-fade-in"
-          style={{
-            animationDelay: '0.4s',
-            animationFillMode: 'forwards'
-          }}
-        >
+        {/* Other content */}
+        <div>
           <ContentCalendar />
         </div>
         
-        {/* Action Items */}
-        <div 
-          className="opacity-0 animate-fade-in"
-          style={{
-            animationDelay: '0.45s',
-            animationFillMode: 'forwards'
-          }}
-        >
+        <div>
           <ActionItems />
         </div>
         
-        {/* AB Testing Content Suggestions */}
-        <div 
-          className="opacity-0 animate-fade-in"
-          style={{
-            animationDelay: '0.5s',
-            animationFillMode: 'forwards'
-          }}
-        >
+        <div>
           <ABTestingContentSuggestions />
         </div>
         
-        {/* Social Media Trends */}
-        <div 
-          className="opacity-0 animate-fade-in"
-          style={{
-            animationDelay: '0.5s',
-            animationFillMode: 'forwards'
-          }}
-        >
+        <div>
           <SocialMediaTrends />
         </div>
         
         {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden transition-all duration-500 hover:shadow-md">
+        <div className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md">
           <div className="p-6 border-b flex justify-between items-center">
             <div className="flex items-center">
               <Activity className="h-5 w-5 text-gray-500 mr-2" />
               <h2 className="text-xl font-semibold">Recent Activity</h2>
             </div>
             <Tooltip content="View all activity history">
-              <button className="text-sm text-indigo-600 font-medium hover:text-indigo-800 transition-colors flex items-center">
+              <button className="text-sm text-indigo-600 font-medium hover:text-indigo-800 flex items-center">
                 View All
                 <ChevronRight className="h-4 w-4 ml-1" />
               </button>
@@ -404,11 +340,7 @@ export default function Dashboard() {
             {recentActivities.map((activity, index) => (
               <div
                 key={activity.id}
-                className="flex items-center justify-between p-4 border-b last:border-b-0 hover:bg-gray-50 transition-all duration-300 cursor-pointer opacity-0 animate-fade-in"
-                style={{
-                  animationDelay: `${index * 0.1}s`,
-                  animationFillMode: 'forwards'
-                }}
+                className="flex items-center justify-between p-4 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer"
               >
                 <div className="flex items-center">
                   <div className="mr-4 p-2 rounded-full bg-gray-100">
@@ -431,11 +363,7 @@ export default function Dashboard() {
         {/* Achievements & Goals section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div 
-            className="col-span-2 bg-white rounded-xl shadow-sm border overflow-hidden transition-all duration-500 hover:shadow-md opacity-0 animate-fade-in"
-            style={{
-              animationDelay: '0.2s',
-              animationFillMode: 'forwards'
-            }}
+            className="col-span-2 bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md"
           >
             <div className="p-6 border-b">
               <h2 className="text-xl font-semibold flex items-center">
@@ -451,8 +379,8 @@ export default function Dashboard() {
                 </div>
                 <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all duration-1000 ease-in-out" 
-                    style={{ width: statsLoaded ? '71%' : '0%' }}
+                    className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full" 
+                    style={{ width: '71%' }}
                   ></div>
                 </div>
               </div>
@@ -464,8 +392,8 @@ export default function Dashboard() {
                 </div>
                 <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all duration-1000 ease-in-out"
-                    style={{ width: statsLoaded ? '42%' : '0%', transitionDelay: '0.2s' }}
+                    className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full"
+                    style={{ width: '42%' }}
                   ></div>
                 </div>
               </div>
@@ -477,8 +405,8 @@ export default function Dashboard() {
                 </div>
                 <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full transition-all duration-1000 ease-in-out"
-                    style={{ width: statsLoaded ? '85%' : '0%', transitionDelay: '0.4s' }}
+                    className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full"
+                    style={{ width: '85%' }}
                   ></div>
                 </div>
               </div>
@@ -486,11 +414,7 @@ export default function Dashboard() {
           </div>
           
           <div 
-            className="bg-white rounded-xl shadow-sm border overflow-hidden transition-all duration-500 hover:shadow-md opacity-0 animate-fade-in"
-            style={{
-              animationDelay: '0.3s',
-              animationFillMode: 'forwards'
-            }}
+            className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md"
           >
             <div className="p-6 border-b">
               <h2 className="text-xl font-semibold flex items-center">
@@ -499,7 +423,7 @@ export default function Dashboard() {
               </h2>
             </div>
             <div className="p-4 space-y-3">
-              <button className="w-full p-3 rounded-xl flex items-center justify-between bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 transition-all duration-300 hover:shadow-md hover:translate-x-1">
+              <button className="w-full p-3 rounded-xl flex items-center justify-between bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 hover:shadow-md hover:translate-x-1">
                 <div className="flex items-center">
                   <div className="p-2 rounded-full bg-indigo-100 mr-3">
                     <Image className="h-4 w-4 text-indigo-600" />
@@ -509,7 +433,7 @@ export default function Dashboard() {
                 <ChevronRight className="h-4 w-4 text-indigo-400" />
               </button>
               
-              <button className="w-full p-3 rounded-xl flex items-center justify-between bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-100 transition-all duration-300 hover:shadow-md hover:translate-x-1">
+              <button className="w-full p-3 rounded-xl flex items-center justify-between bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-100 hover:shadow-md hover:translate-x-1">
                 <div className="flex items-center">
                   <div className="p-2 rounded-full bg-purple-100 mr-3">
                     <BarChart2 className="h-4 w-4 text-purple-600" />
@@ -519,7 +443,7 @@ export default function Dashboard() {
                 <ChevronRight className="h-4 w-4 text-purple-400" />
               </button>
               
-              <button className="w-full p-3 rounded-xl flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 transition-all duration-300 hover:shadow-md hover:translate-x-1">
+              <button className="w-full p-3 rounded-xl flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 hover:shadow-md hover:translate-x-1">
                 <div className="flex items-center">
                   <div className="p-2 rounded-full bg-green-100 mr-3">
                     <Settings className="h-4 w-4 text-green-600" />
@@ -533,25 +457,7 @@ export default function Dashboard() {
         </div>
       </div>
       
-      <style jsx global>{`
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        @keyframes slide-in {
-          from { opacity: 0; transform: translateX(-20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 0.5s ease-in-out;
-        }
-        
-        .animate-slide-in {
-          animation: slide-in 0.5s ease-in-out;
-        }
-      `}</style>
+      {/* Remove all animation styles completely */}
     </MainLayout>
   );
 } 

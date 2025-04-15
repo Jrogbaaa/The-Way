@@ -84,6 +84,16 @@ export default function VideoGenerator({ onVideoGenerated }: VideoGeneratorProps
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
+      // If the error is about a file not found, provide a more helpful message
+      if (err instanceof Error && 
+          (err.message.includes('requested file not found') || 
+           err.message.includes('404') || 
+           err.message.includes('not found'))) {
+        setError(
+          "The video link has expired. This happens with Replicate URLs after a short time. " +
+          "Please try again to generate a new video."
+        );
+      }
     } finally {
       setLoading(false);
     }

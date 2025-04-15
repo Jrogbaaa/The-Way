@@ -285,8 +285,13 @@ export async function getContentTypeTrends(contentType: string, limit: number = 
 /**
  * Search for trends based on a keyword
  */
-export async function searchTrends(keyword: string, limit: number = 20) {
+export async function searchTrends(keyword?: string | null, limit: number = 20) {
   try {
+    if (!keyword) {
+      // Return empty array or default trends if no keyword provided
+      return [];
+    }
+    
     const { data, error } = await supabase
       .from('social_media_trends')
       .select('*')

@@ -107,6 +107,7 @@ export interface ModelCreationFormData {
   training_data?: File[];
   parameters?: Record<string, any>;
   is_public: boolean;
+  keyword?: string;
 }
 
 // Application state types

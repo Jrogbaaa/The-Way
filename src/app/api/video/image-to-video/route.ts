@@ -173,17 +173,46 @@ export async function POST(request: Request) {
         }, { status: 500 });
       }
       
-      return NextResponse.json({
-        output: videoUrl,
-        message: "Video generated successfully with Wan 2.1",
-        predictionId: prediction.id,
-        status: 'succeeded',
-        debug: {
-          promptUsed: prompt,
-          modelId: fullModelId,
-          predictionId: prediction.id,
+      // Download the video and convert to base64 data URL to prevent URL expiration issues
+      try {
+        const videoResponse = await fetch(videoUrl);
+        if (!videoResponse.ok) {
+          throw new Error(`Failed to fetch video from Replicate: ${videoResponse.status} ${videoResponse.statusText}`);
         }
-      });
+        
+        const videoBuffer = await videoResponse.arrayBuffer();
+        const videoBase64 = Buffer.from(videoBuffer).toString('base64');
+        const videoDataUrl = `data:video/mp4;base64,${videoBase64}`;
+        
+        return NextResponse.json({
+          output: videoDataUrl,
+          message: "Video generated successfully with Wan 2.1",
+          predictionId: prediction.id,
+          status: 'succeeded',
+          debug: {
+            promptUsed: prompt,
+            modelId: fullModelId,
+            predictionId: prediction.id,
+          }
+        });
+      } catch (fetchError) {
+        console.error('Error downloading video from Replicate:', fetchError);
+        
+        // Return the original URL as fallback, but note it will expire
+        return NextResponse.json({
+          output: videoUrl,
+          message: "Video generated successfully with Wan 2.1, but couldn't be downloaded. URL will expire soon.",
+          predictionId: prediction.id,
+          status: 'succeeded',
+          isTemporaryUrl: true,
+          debug: {
+            promptUsed: prompt,
+            modelId: fullModelId,
+            predictionId: prediction.id,
+            error: fetchError instanceof Error ? fetchError.message : String(fetchError)
+          }
+        });
+      }
     } catch (error) {
       console.error('Replicate API error:', error);
       // Check for rate limits/auth errors

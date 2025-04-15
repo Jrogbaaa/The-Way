@@ -65,12 +65,20 @@ export default function ImageToVideoConverter({ onVideoGenerated }: ImageToVideo
           
           if (status.status === 'succeeded') {
             clearInterval(intervalId);
-            setVideoUrl(status.output);
-            completeGeneration(status.output);
+            
+            // Use cached URL if available, otherwise fall back to output
+            const videoUrl = status.cachedVideoUrl || status.output;
+            setVideoUrl(videoUrl);
+            completeGeneration(videoUrl);
             setSuccessMessage('Video generated successfully!');
             
             if (onVideoGenerated) {
-              onVideoGenerated(status.output);
+              onVideoGenerated(videoUrl);
+            }
+            
+            // Scroll to result
+            if (resultRef.current) {
+              resultRef.current.scrollIntoView({ behavior: 'smooth' });
             }
           } else if (status.status === 'failed') {
             clearInterval(intervalId);
@@ -296,6 +304,8 @@ export default function ImageToVideoConverter({ onVideoGenerated }: ImageToVideo
             accept="image/*"
             className="hidden"
             onChange={handleFileUpload}
+            id="image-upload"
+            name="image-upload"
           />
         </div>
         
@@ -352,6 +362,7 @@ export default function ImageToVideoConverter({ onVideoGenerated }: ImageToVideo
                   <input
                     type="range"
                     id="motion-strength"
+                    name="motion-strength"
                     min="1"
                     max="255"
                     value={motionStrength}
@@ -370,6 +381,7 @@ export default function ImageToVideoConverter({ onVideoGenerated }: ImageToVideo
                   <input
                     type="range"
                     id="fps"
+                    name="fps"
                     min="1"
                     max="30"
                     value={fps}
@@ -388,6 +400,7 @@ export default function ImageToVideoConverter({ onVideoGenerated }: ImageToVideo
                   <input
                     type="range"
                     id="num-frames"
+                    name="num-frames"
                     min="81"
                     max="150"
                     value={numFrames}
@@ -406,6 +419,7 @@ export default function ImageToVideoConverter({ onVideoGenerated }: ImageToVideo
                   <input
                     type="range"
                     id="guidance-scale"
+                    name="guidance-scale"
                     min="1"
                     max="15"
                     step="0.1"

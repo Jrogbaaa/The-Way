@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 import { API_CONFIG } from '@/lib/config';
 import Replicate from 'replicate';
+import { createClient } from '@supabase/supabase-js';
 
 // Initialize Replicate client
 const replicate = new Replicate({
   auth: API_CONFIG.replicateApiToken,
 });
+
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // TODO: In a production environment, you would store trained models in a database
 // This is a simplified implementation using mock data
@@ -37,22 +43,57 @@ const TRAINED_MODELS = [
  */
 export async function GET(request: Request) {
   try {
-    // Get search params
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
     
-    // In a real implementation, you would fetch models from your database
-    // For example: const models = await db.models.list({ status });
+    // Query to get models from Supabase
+    let query = supabase.from('trained_models').select('*');
     
-    // Filter mock data by status if provided
-    let models = [...TRAINED_MODELS];
+    // Filter by status if provided
     if (status) {
-      models = models.filter(model => model.status === status);
+      query = query.eq('status', status);
     }
     
-    return NextResponse.json({ models });
+    // Execute the query
+    const { data, error } = await query.order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Database error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    
+    // If no models found, return empty array with 200 status
+    if (!data || data.length === 0) {
+      // Provide some mock models for dev purposes
+      const mockModels = [
+        {
+          id: 'mock-model-1',
+          name: 'Sample Fashion Model',
+          description: 'A model trained on fashion images',
+          status: 'ready',
+          category: 'Fashion',
+          model_url: 'owner/fashion-model:latest',
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          keyword: 'fashion-model'
+        },
+        {
+          id: 'mock-model-2',
+          name: 'Sample Landscape Model',
+          description: 'A model trained on landscape images',
+          status: 'ready',
+          category: 'Landscape',
+          model_url: 'owner/landscape-model:latest',
+          created_at: new Date(Date.now() - 172800000).toISOString(),
+          keyword: 'landscape-model'
+        }
+      ];
+      
+      return NextResponse.json(mockModels);
+    }
+    
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error listing models:', error);
+    console.error('Error fetching models:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : String(error) },
       { status: 500 }

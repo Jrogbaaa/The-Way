@@ -211,13 +211,31 @@ export default function ChatPage() {
     setIsLoading(true);
     
     try {
-      // Simulate AI typing delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the API to get a response from the social media expert
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage.content,
+          chatHistory: chatSession
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get response from the chatbot API');
+      }
+      
+      const data = await response.json();
+      
+      // Update chat session with the new messages
+      setChatSession(data.chatSession);
       
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "I've received your message. This is a demo response. In the real app, this would connect to our AI backend to generate a thoughtful response based on your query.",
+        content: data.response,
         timestamp: new Date(),
       };
       

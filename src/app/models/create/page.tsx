@@ -3,13 +3,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/config';
-import { useDropzone } from 'react-dropzone';
-import { Upload, X, Loader2, HelpCircle, AlertTriangle, Info, CheckCircle2, ArrowLeft, Clock, Zap } from 'lucide-react';
+import { Loader2, HelpCircle, AlertTriangle, Info, CheckCircle2, ArrowLeft, Clock, Zap, X } from 'lucide-react';
 import { ModelCreationFormData } from '@/lib/types';
 import Image from 'next/image';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import TrainingDataUpload from '@/components/TrainingDataUpload';
 
 // Tooltip component for displaying helpful information
 const Tooltip = ({ children, content }: { children: React.ReactNode; content: string }) => {
@@ -111,16 +111,22 @@ const ExampleTrainingImage = ({ url, caption }: { url: string; caption: string }
 const PARAMETER_PRESETS = {
   beginner: {
     resolution: 512,
+    width: 912,
+    height: 512,
     num_train_epochs: 1,
     learning_rate: 1e-4,
   },
   standard: {
     resolution: 768,
+    width: 1366,
+    height: 768,
     num_train_epochs: 2,
     learning_rate: 1e-4,
   },
   expert: {
     resolution: 1024,
+    width: 1820,
+    height: 1024,
     num_train_epochs: 4,
     learning_rate: 1e-4,
   }
@@ -144,7 +150,8 @@ export default function CreateModelPage() {
       use_8bit_adam: true,
       xformers_attention: true,
       clip_skip: 2,
-    }
+    },
+    keyword: '',
   });
   
   const [files, setFiles] = useState<File[]>([]);
@@ -164,24 +171,9 @@ export default function CreateModelPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setFiles(prev => [...prev, ...acceptedFiles]);
+  const handleFilesChange = useCallback((newFiles: File[]) => {
+    setFiles(newFiles);
   }, []);
-  
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
-    onDrop,
-    accept: {
-      'image/jpeg': [],
-      'image/png': [],
-      'image/webp': [],
-      'application/zip': []
-    },
-    maxSize: 10 * 1024 * 1024, // 10MB max
-  });
-
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -241,6 +233,11 @@ export default function CreateModelPage() {
       return;
     }
 
+    if (!formData.keyword) {
+      setError('Please provide a keyword for your model');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     
@@ -250,6 +247,7 @@ export default function CreateModelPage() {
       
       // Add form fields
       apiFormData.append('name', formData.name);
+      apiFormData.append('keyword', formData.keyword);
       if (formData.description) {
         apiFormData.append('description', formData.description);
       }
@@ -357,6 +355,27 @@ export default function CreateModelPage() {
                 </div>
                 
                 <div>
+                  <label htmlFor="keyword" className="block text-sm font-medium text-gray-700 mb-1">
+                    <Tooltip content="This keyword will be used to trigger your model in prompts (typically the person's name)">
+                      Model Keyword
+                    </Tooltip>
+                  </label>
+                  <input
+                    id="keyword"
+                    name="keyword"
+                    type="text"
+                    value={formData.keyword}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-200"
+                    placeholder="e.g., Cristina, Jaime"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Use this keyword in prompts to generate images with your model (example: "{formData.keyword || 'YourKeyword'} style portrait")
+                  </p>
+                </div>
+                
+                <div>
                   <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                     <Tooltip content="A brief description of what your model is trained to generate">
                       Description (Optional)
@@ -401,59 +420,8 @@ export default function CreateModelPage() {
             >
               <h2 className="text-xl font-semibold mb-4">Training Data</h2>
               
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200 ${
-                  isDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-indigo-400'
-                }`}
-              >
-                <input {...getInputProps()} />
-                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="mt-2 text-sm text-gray-700">
-                  Drag and drop your training images or zip file here, or{' '}
-                  <span className="text-indigo-600 font-medium">browse</span> to select files
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Preferred: ZIP file containing 10-20 images of your subject
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Alternatively: JPG, PNG, or WebP files up to 10MB each
-                </p>
-              </div>
-              
-              {files.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="font-medium text-sm text-gray-700 mb-2">
-                    {files.length} {files.length === 1 ? 'File' : 'Files'} Selected
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto p-2">
-                    {files.map((file, index) => (
-                      <div key={index} className="relative group animate-fade-in" style={{ animationDelay: `${0.1 * index}s` }}>
-                        <div className="aspect-square relative rounded overflow-hidden border border-gray-200">
-                          <Image
-                            src={URL.createObjectURL(file)}
-                            alt={`Training image ${index + 1}`}
-                            fill
-                            className="object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeFile(index);
-                            }}
-                            className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                            aria-label="Remove file"
-                          >
-                            <X className="h-4 w-4 text-gray-600" />
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-500 truncate mt-1">{file.name}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Replace the old upload code with our new component */}
+              <TrainingDataUpload onFilesChange={handleFilesChange} />
             </div>
             
             {/* Advanced Training Parameters */}
@@ -506,9 +474,9 @@ export default function CreateModelPage() {
                     onChange={handleChange}
                     className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-200"
                   >
-                    <option value={512}>512 × 512 (Faster)</option>
-                    <option value={768}>768 × 768 (Balanced)</option>
-                    <option value={1024}>1024 × 1024 (Higher Quality)</option>
+                    <option value={512}>912 × 512 (16:9 HD)</option>
+                    <option value={768}>1366 × 768 (16:9 FHD)</option>
+                    <option value={1024}>1820 × 1024 (16:9 4K)</option>
                   </select>
                 </div>
                 
@@ -540,6 +508,13 @@ export default function CreateModelPage() {
                 <p className="mt-1 text-sm text-gray-500">
                   Additional parameters are automatically set to optimal values based on your selected preset.
                 </p>
+                <div className="mt-3 p-3 rounded-md bg-indigo-50 text-xs text-indigo-700">
+                  <p className="font-medium mb-1">Advanced Configuration:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>LoRa Rank: <span className="font-mono">32</span> (optimized for complex features)</li>
+                    <li>Training Steps: <span className="font-mono">1000</span> (balanced for quality and speed)</li>
+                  </ul>
+                </div>
               </div>
             </div>
             

@@ -1,9 +1,10 @@
 import { API_CONFIG } from '../config';
 import Replicate from 'replicate';
 
-// Initialize the Replicate client for direct client-side usage
+// Fallback token if API_CONFIG.replicateApiToken is not set
+const FALLBACK_TOKEN = 'r8_H7A15ebpGoc5vXVn76lgmF14IQZmR5c3tNd93';
 const replicate = new Replicate({
-  auth: API_CONFIG.replicateApiToken,
+  auth: API_CONFIG.replicateApiToken || FALLBACK_TOKEN,
 });
 
 /**

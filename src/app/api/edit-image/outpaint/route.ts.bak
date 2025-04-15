@@ -1,0 +1,156 @@
+import { NextRequest, NextResponse } from 'next/server';
+import axios from 'axios';
+import { Buffer } from 'buffer';
+
+// Environment variables
+const processEnv = {
+  STABILITY_API_KEY: process.env.STABILITY_AI_API_KEY || ''
+};
+
+export async function POST(req: NextRequest) {
+  try {
+    console.log('POST /api/edit-image/outpaint: Starting request processing');
+    
+    // Parse FormData
+    const formData = await req.formData();
+    const imageFile = formData.get('image') as File;
+    const prompt = formData.get('prompt') as string;
+    const direction = formData.get('direction') as string;
+    
+    if (!processEnv.STABILITY_API_KEY) {
+      console.error('Stability API key not configured');
+      return NextResponse.json({ error: 'Stability API key not configured' }, { status: 500 });
+    }
+
+    if (!imageFile) {
+      console.error('Image missing from request');
+      return NextResponse.json({ error: 'Image is required' }, { status: 400 });
+    }
+
+    if (!direction) {
+      console.error('Direction missing from request');
+      return NextResponse.json({ error: 'Direction is required' }, { status: 400 });
+    }
+
+    // Validate direction value
+    const validDirections = ['left', 'right', 'top', 'bottom'];
+    if (!validDirections.includes(direction)) {
+      console.error(`Invalid direction: ${direction}`);
+      return NextResponse.json({ 
+        error: 'Invalid direction', 
+        message: `Direction must be one of: ${validDirections.join(', ')}` 
+      }, { status: 400 });
+    }
+
+    console.log(`Image file received: ${imageFile.name} ${imageFile.type} ${imageFile.size} bytes`);
+    console.log(`Direction: ${direction}`);
+    console.log(`Prompt: ${prompt || 'No prompt provided'}`);
+
+    // Create multipart form data for the API request
+    const formDataForApi = new FormData();
+    formDataForApi.append('init_image', imageFile);
+    
+    // Map the direction to outpainting parameters
+    // In v1 API, we need to specify which edges to outpaint
+    const outpaintMaskEdges = [];
+    if (direction === 'top') outpaintMaskEdges.push('top');
+    if (direction === 'bottom') outpaintMaskEdges.push('bottom');
+    if (direction === 'left') outpaintMaskEdges.push('left');
+    if (direction === 'right') outpaintMaskEdges.push('right');
+    
+    formDataForApi.append('outpainting_edges', JSON.stringify(outpaintMaskEdges));
+    formDataForApi.append('outpainting_fill', 'match');
+    
+    // Add prompt if provided
+    if (prompt) {
+      formDataForApi.append('text_prompts[0][text]', prompt);
+      formDataForApi.append('text_prompts[0][weight]', '1.0');
+    } else {
+      // If no prompt provided, add a default prompt
+      formDataForApi.append('text_prompts[0][text]', 'Continue the image seamlessly');
+      formDataForApi.append('text_prompts[0][weight]', '1.0');
+    }
+    
+    // Add additional required parameters
+    formDataForApi.append('cfg_scale', '7.0');
+    formDataForApi.append('samples', '1');
+    formDataForApi.append('steps', '30');
+    formDataForApi.append('style_preset', 'photographic');
+    
+    // API endpoint for outpainting - Using v1 instead of v2beta
+    const apiUrl = 'https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/image-to-image/outpainting';
+    console.log(`Sending request to ${apiUrl}`);
+    
+    const response = await axios.post(
+      apiUrl,
+      formDataForApi,
+      {
+        headers: {
+          'Authorization': `Bearer ${processEnv.STABILITY_API_KEY}`,
+          'Accept': 'application/json',
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+
+    console.log('API Response status:', response.status);
+    
+    // The v1 API returns a JSON response with artifacts containing images
+    const responseData = response.data;
+    
+    if (!responseData.artifacts || responseData.artifacts.length === 0) {
+      throw new Error('No image received from API');
+    }
+    
+    // Get the first image from the response
+    const artifact = responseData.artifacts[0];
+    const base64Image = artifact.base64;
+    const imageBuffer = Buffer.from(base64Image, 'base64');
+    
+    // Return the image directly
+    return new NextResponse(imageBuffer, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Content-Length': imageBuffer.length.toString(),
+        'Cache-Control': 'max-age=0, no-cache, no-store, must-revalidate'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error in outpaint API route:', error);
+    
+    // Get more detailed error information
+    const axiosError = error as any;
+    if (axiosError.response) {
+      console.error('API Error Status:', axiosError.response.status);
+      console.error('API Error Headers:', axiosError.response.headers);
+      
+      // For arraybuffer responses, we need to convert to string to see error details
+      let errorData = axiosError.response.data;
+      if (errorData instanceof ArrayBuffer) {
+        try {
+          errorData = JSON.parse(Buffer.from(errorData).toString('utf8'));
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+        }
+      }
+      console.error('API Error Data:', errorData);
+      
+      return NextResponse.json(
+        { error: 'Failed to outpaint image', details: errorData },
+        { status: axiosError.response.status || 500 }
+      );
+    } else if (axiosError.request) {
+      console.error('No response received:', axiosError.request);
+      return NextResponse.json(
+        { error: 'No response received from API', details: 'The request was made but no response was received' },
+        { status: 503 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: 'Failed to outpaint image', message: axiosError.message || 'Unknown error' },
+      { status: 500 }
+    );
+  }
+} 

@@ -1,4 +1,5 @@
 import { API_CONFIG, AI_MODELS } from '../config';
+import { replicateClient } from '../replicate-client';
 
 // Interface for prediction input parameters
 export interface PredictionInput {
@@ -210,7 +211,7 @@ export const runCustomModel = async (
     // Format must match expected type: `${string}/${string}` | `${string}/${string}:${string}`
     const modelString = `${owner}/${name}:${version}`;
     // Use a type assertion to override the TypeScript constraint
-    const output = await replicate.run(modelString as any, { input });
+    const output = await replicateClient.run(modelString as any, { input });
     
     return output;
   } catch (error) {
@@ -229,13 +230,13 @@ export const createAndWaitPrediction = async (
 ) => {
   try {
     // Create a prediction
-    let prediction = await replicate.predictions.create({
+    let prediction = await replicateClient.predictions.create({
       version,
       input,
     });
     
     // Wait for the prediction to complete
-    prediction = await replicate.wait(prediction);
+    prediction = await replicateClient.wait(prediction);
     
     return prediction.output;
   } catch (error) {
@@ -249,7 +250,7 @@ export const createAndWaitPrediction = async (
  */
 export const getModelInfo = async (owner: string, name: string) => {
   try {
-    const model = await replicate.models.get(owner, name);
+    const model = await replicateClient.models.get(owner, name);
     return model;
   } catch (error) {
     console.error(`Error getting model info (${owner}/${name}):`, error);
@@ -262,7 +263,7 @@ export const getModelInfo = async (owner: string, name: string) => {
  */
 export const getModelVersions = async (owner: string, name: string) => {
   try {
-    const versions = await replicate.models.versions.list(owner, name);
+    const versions = await replicateClient.models.versions.list(owner, name);
     return versions;
   } catch (error) {
     console.error(`Error getting model versions (${owner}/${name}):`, error);
@@ -277,7 +278,7 @@ export const getModelVersions = async (owner: string, name: string) => {
 export const uploadFile = async (fileData: Buffer | Blob) => {
   try {
     // According to the docs, files.create expects the file as its first parameter
-    const uploadedFile = await replicate.files.create(fileData);
+    const uploadedFile = await replicateClient.files.create(fileData);
     return uploadedFile;
   } catch (error) {
     console.error("Error uploading file:", error);
@@ -359,11 +360,28 @@ export const runImageToVideoModel = async (input: ImageToVideoInput) => {
  */
 export const checkVideoGenerationStatus = async (predictionId: string) => {
   try {
-    const response = await fetch(`/api/video/image-to-video?id=${predictionId}`);
+    const response = await fetch(`/api/video/image-to-video/status?id=${predictionId}`);
     const data = await response.json();
     
     if (!response.ok) {
       throw new Error(data.error || `Failed to check status: ${response.status} ${response.statusText}`);
+    }
+    
+    // If there's a cached URL, use it instead of the original output
+    if (data.cachedVideoUrl && typeof data.cachedVideoUrl === 'string') {
+      console.log(`Using cached video URL: ${data.cachedVideoUrl}`);
+      
+      // If the output is a string, replace it
+      if (typeof data.output === 'string') {
+        data.output = data.cachedVideoUrl;
+      } 
+      // If the output is an array, replace the first element
+      else if (Array.isArray(data.output) && data.output.length > 0) {
+        data.output[0] = data.cachedVideoUrl;
+      }
+      
+      // Also include the cached URL in the response
+      data.cachedVideoUrl = data.cachedVideoUrl;
     }
     
     return data;
