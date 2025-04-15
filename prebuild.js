@@ -16,7 +16,7 @@ const createDummyEnvFile = () => {
 NEXT_PUBLIC_SUPABASE_URL=https://dummy-value-for-build.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-value-for-build
 SUPABASE_SERVICE_ROLE_KEY=dummy-value-for-build
-REPLICATE_API_TOKEN=r8_W6YHRCBleZjPLLmfyrQiWseStHtumUo4TBMzb
+REPLICATE_API_TOKEN=dummy-replicate-token-for-build
 GOOGLE_API_KEY=dummy-value-for-build
 GEMINI_API_KEY=dummy-value-for-build
 GOOGLE_CLOUD_VISION_CREDENTIALS=dummy-value-for-build
