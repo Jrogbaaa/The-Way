@@ -11,7 +11,6 @@ export const API_CONFIG = {
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
   
   // Replicate
-  replicateApiToken: process.env.REPLICATE_API_TOKEN || "",
   cristinaModelId: "jrogbaaa/cristina:44dbcde3f6b2fdd42c5c25e6a81cb05a8b1b4b8a611b61d94dbd6e0d8dd1e24f",
   jaimeModelId: "jrogbaaa/jaimecreator:59d13a73db570b23b5b1128c9d2ae3d880e55e840b2ddd601da1cf5987b76be9",
   

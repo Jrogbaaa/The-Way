@@ -3,7 +3,7 @@ import Replicate from 'replicate';
 
 // Initialize Replicate client
 const replicate = new Replicate({
-  auth: API_CONFIG.replicateApiToken || '',
+  auth: process.env.REPLICATE_API_TOKEN || '',
 });
 
 /**
