@@ -26,15 +26,14 @@ async function imageToDataUrl(file: File | Blob): Promise<string> {
 
 /**
  * API Route: POST /api/replicate/inpaint
- * Handles image inpainting and generative fill requests using the Replicate API.
+ * Handles image inpainting using the zsxkib/flux-dev-inpainting model.
  * 
  * Workflow:
- * 1. Receives image, mask (optional), prompt (optional), width, and height from FormData.
- * 2. Converts image and mask files to data URLs.
- * 3. Specifies the Replicate model (`black-forest-labs/flux-fill-dev`).
- * 4. Sets input parameters, including `image`, `mask`, `prompt`, `guidance_scale`, and `strength`.
- * 5. Calls `replicate.predictions.create()` to start the asynchronous generation process.
- * 6. Returns the initial prediction object (including its ID) to the client for polling.
+ * 1. Receives image, mask, and prompt from FormData
+ * 2. Converts image and mask files to data URLs
+ * 3. Configures inpainting parameters for optimal results
+ * 4. Calls Replicate API to perform inpainting
+ * 5. Returns prediction object for polling
  */
 export async function POST(req: NextRequest) {
   console.log('Received request for /api/replicate/inpaint POST');
@@ -50,90 +49,100 @@ export async function POST(req: NextRequest) {
     const imageFile = formData.get('image') as File | null;
     const maskFile = formData.get('mask') as File | null;
     const prompt = formData.get('prompt') as string | null;
-    const widthStr = formData.get('width') as string | null;
-    const heightStr = formData.get('height') as string | null;
 
-    // Refined Validation
-    if (!imageFile || !maskFile || !widthStr || !heightStr || isNaN(parseInt(widthStr)) || isNaN(parseInt(heightStr))) {
-        console.error('Missing or invalid input:', { 
-            imageFile: !!imageFile, 
-            maskFile: !!maskFile, 
-            widthStr, 
-            heightStr, 
-            prompt: prompt || '[Empty]' 
-        });
-        // Combine error messages for clarity
-        let errorMessages = [];
-        if (!imageFile) errorMessages.push('Original image file is required.');
-        if (!maskFile) errorMessages.push('Mask image file is required.');
-        if (!widthStr || isNaN(parseInt(widthStr))) errorMessages.push('Valid width is required.');
-        if (!heightStr || isNaN(parseInt(heightStr))) errorMessages.push('Valid height is required.');
-        
-        return NextResponse.json({ error: errorMessages.join(' ') }, { status: 400 });
+    // Validation
+    if (!imageFile || !maskFile) {
+      console.error('Missing input:', { 
+        imageFile: !!imageFile, 
+        maskFile: !!maskFile,
+        prompt: prompt || '[Empty]' 
+      });
+      
+      let errorMessages = [];
+      if (!imageFile) errorMessages.push('Original image file is required.');
+      if (!maskFile) errorMessages.push('Mask image file is required.');
+      
+      return NextResponse.json({ error: errorMessages.join(' ') }, { status: 400 });
     }
-    const width = parseInt(widthStr);
-    const height = parseInt(heightStr);
-    
-    console.log(`Processing inpaint: Prompt - "${prompt || '[Empty Prompt]'}", Size: ${width}x${height}`);
+
+    console.log(`Processing inpaint with prompt: "${prompt || '[Empty Prompt]'}"`);
 
     const imageDataUrl = await imageToDataUrl(imageFile);
     const maskDataUrl = await imageToDataUrl(maskFile);
 
-    // --- Use the new model --- 
-    const modelIdentifier = "black-forest-labs/flux-fill-dev"; 
+    // --- Switched to SDXL Inpainting Model ---
+    const modelIdentifier = "stability-ai/sdxl-inpainting:1a4128c86c222449267578b3e285664185b00f46396ad131617ec556b8f1e8b3"; 
+    
+    // Extract version and model name correctly for the predictions.create call
+    const [modelOwnerSlashName, modelVersion] = modelIdentifier.split(':');
     
     const input = {
-        image: imageDataUrl, 
-        mask: maskDataUrl, 
-        prompt: prompt || "",
-        // --- Add common inpainting parameters --- 
-        guidance_scale: 7.5, // How strongly to follow the prompt (default often around 7.5)
-        strength: 0.85,      // How much to respect the original image vs prompt (0=prompt only, 1=image only). Higher values are typical for inpainting.
+      image: imageDataUrl,
+      mask: maskDataUrl,
+      prompt: prompt || "", // Provide empty prompt if null
+      negative_prompt: "mountains, clouds, sky, rocks, blurry, duplicate", // Keep negative prompt
+      // Common parameters for SDXL
+      num_inference_steps: 30, 
+      guidance_scale: 7.5,     
+      // scheduler: "K_EULER", // Let SDXL use its default scheduler
+      // inpainting_full_res_padding: 16, // Removed, less common for SDXL
+      // strength might not be applicable or named differently
+      // num_outputs: 1, // Default is usually 1
     };
 
-    console.log(`Attempting replicate.predictions.create with MODEL: ${modelIdentifier}`);
-    console.log(`Input keys being sent: ${Object.keys(input).join(', ')}`);
-    console.log(`Input values (excluding image data):`, { 
-        prompt: input.prompt, 
-        guidance_scale: input.guidance_scale, 
-        strength: input.strength 
+    console.log(`Attempting replicate.predictions.create with MODEL: ${modelOwnerSlashName} VERSION: ${modelVersion}`);
+    console.log(`Input configuration:`, { 
+      prompt: input.prompt,
+      negative_prompt: input.negative_prompt, 
+      num_inference_steps: input.num_inference_steps,
+      guidance_scale: input.guidance_scale,
+      // scheduler: input.scheduler, 
+      // inpainting_full_res_padding: input.inpainting_full_res_padding,
     });
 
     try {
-        // --- Revert to predictions.create for non-blocking behavior --- 
-        const prediction = await replicate.predictions.create({
-            model: modelIdentifier, // Use owner/name, let Replicate handle version
-            // version: undefined, // Explicitly omit version hash
-            input: input,
-            webhook: undefined, 
-            webhook_events_filter: undefined,
-        });
+      const prediction = await replicate.predictions.create({
+        // Pass model and version separately
+        model: modelOwnerSlashName,
+        version: modelVersion,
+        input: input,
+      });
 
-        console.log(`Replicate prediction successfully initiated for ${modelIdentifier}:`, prediction.id, prediction.status);
-        // Return the initial prediction object for the frontend to poll
-        return NextResponse.json(prediction, { status: 201 }); 
+      console.log(`Replicate prediction successfully initiated:`, prediction.id, prediction.status);
+      return NextResponse.json(prediction, { status: 201 });
 
     } catch (creationError: any) {
-       // Refined Error Logging
-       console.error(`Error during replicate.predictions.create for ${modelIdentifier}:`, creationError);
-       const responseData = creationError?.response?.data; 
-       const errorTitle = responseData?.title || 'Prediction Creation Failed';
-       const errorDetail = responseData?.detail || creationError.message || 'Unknown error detail';
-       const statusCode = creationError?.response?.status || 500;
-       
-       console.error(`Prediction creation failed! Status: ${statusCode}, Title: "${errorTitle}", Detail: "${errorDetail}"`);
-       
-       // Keep the specific check for 422 errors, but update the message context
-       if (statusCode === 422 && (errorTitle.includes("Invalid version") || errorDetail.includes("not permitted") || errorDetail.includes("does not exist"))) {
-            console.error(`PERSISTENT 422 ERROR: Please VERIFY on replicate.com that your token has permissions for ${modelIdentifier} OR try specifying a known working version hash if available.`);
-       }
+      console.error(`Error during replicate.predictions.create:`, creationError);
+      
+      const responseData = creationError?.response?.data;
+      const errorTitle = responseData?.title || 'Prediction Creation Failed';
+      const errorDetail = responseData?.detail || creationError.message || 'Unknown error detail';
+      const statusCode = creationError?.response?.status || 500;
+      
+      console.error(`Prediction creation failed! Status: ${statusCode}, Title: "${errorTitle}", Detail: "${errorDetail}"`);
+      
+      // Special handling for common 422 errors
+      if (statusCode === 422) {
+        if (errorDetail.includes("not permitted") || errorDetail.includes("does not exist")) {
+          console.error(`Permission Error: Please verify your Replicate API token has access to ${modelIdentifier}`);
+          return NextResponse.json(
+            { 
+              error: 'Permission denied',
+              detail: 'Your API token does not have permission to use this model. Please check your Replicate account settings.',
+              status: 422
+            },
+            { status: 422 }
+          );
+        }
+      }
+
       return NextResponse.json(
-          { 
-              error: `Replicate prediction creation failed: ${errorTitle}`, 
-              detail: errorDetail, 
-              status: statusCode 
-          },
-          { status: statusCode }
+        { 
+          error: `Replicate prediction creation failed: ${errorTitle}`,
+          detail: errorDetail,
+          status: statusCode
+        },
+        { status: statusCode }
       );
     }
 

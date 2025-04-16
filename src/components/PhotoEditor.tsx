@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, ChangeEvent, useCallback } from 'react';
+import React, { useState, useRef, ChangeEvent, useCallback, useEffect } from 'react';
 import { 
   Loader2, Upload, ArrowLeft, Download, Sparkles, Undo, 
   Camera, Pencil, RotateCw, Trash, Image as ImageIcon,
@@ -17,9 +17,6 @@ const EDITING_MODES = {
   PROMPT: 'prompt',
   INPAINT: 'inpaint',
   ERASE: 'erase',
-  EXPAND_IMAGE: 'expand-image',
-  REMOVE_BG: 'remove-bg',
-  BLUR_BG: 'blur-bg',
   INCREASE_RES: 'increase-res',
   GENFILL: 'genfill'
 };
@@ -34,66 +31,27 @@ const EDITING_PRESETS = [
 
 // Define edit features
 const EDIT_FEATURES = [
-  // {
-  //   id: EDITING_MODES.PROMPT, 
-  //   name: 'Prompt Edit', 
-  //   description: 'Edit with text prompts', 
-  //   icon: <Sparkles className="h-5 w-5" />,
-  //   apiEndpoint: '/api/edit-image' // Needs Gemini endpoint?
-  // },
   {
-    // NOTE: The UI shows two tabs ("Generative Fill" and "GenFill"), 
-    // but they both use the INPAINT mode internally and now point to the same Replicate API.
-    // Consider consolidating the UI if their functionality is identical.
     id: EDITING_MODES.INPAINT, 
-    name: 'Generative Fill', // UI Label for this tab
+    name: 'Generative Fill', 
     description: 'Fill selected areas with AI', 
     icon: <Paintbrush className="h-5 w-5" />,
-    apiEndpoint: '/api/replicate/inpaint' // Use Replicate
+    apiEndpoint: '/api/replicate/inpaint'
   },
-  // {
-  //   id: EDITING_MODES.ERASE, 
-  //   name: 'Eraser', 
-  //   description: 'Remove unwanted objects', 
-  //   icon: <Eraser className="h-5 w-5" />,
-  //   apiEndpoint: '/api/edit-image/erase' // No backend?
-  // },
-  // {
-  //   id: EDITING_MODES.EXPAND_IMAGE, 
-  //   name: 'Expand Image', 
-  //   description: 'Extend the image canvas', 
-  //   icon: <Plus className="h-5 w-5" />,
-  //   apiEndpoint: '/api/bria/expand' // No backend?
-  // },
   {
-    // NOTE: See INPAINT mode comment above.
     id: EDITING_MODES.GENFILL, 
-    name: 'GenFill', // UI Label for this tab
+    name: 'GenFill', 
     description: 'Generate content in masked areas', 
     icon: <Wand2 className="h-5 w-5" />,
-    apiEndpoint: '/api/replicate/inpaint' // Use Replicate
+    apiEndpoint: '/api/replicate/inpaint'
   },
-  // {
-  //   id: EDITING_MODES.REMOVE_BG, 
-  //   name: 'Remove BG', 
-  //   description: 'Isolate the subject', 
-  //   icon: <Layers className="h-5 w-5" />,
-  //   apiEndpoint: '/api/edit-image/remove-background' // No backend?
-  // },
-  // {
-  //   id: EDITING_MODES.BLUR_BG, 
-  //   name: 'Blur BG', 
-  //   description: 'Blur the background', 
-  //   icon: <CircleDashed className="h-5 w-5" />,
-  //   apiEndpoint: '/api/edit-image/blur-background' // No backend?
-  // },
-  // {
-  //   id: EDITING_MODES.INCREASE_RES, 
-  //   name: 'Upscale', 
-  //   description: 'Increase resolution', 
-  //   icon: <Zap className="h-5 w-5" />,
-  //   apiEndpoint: '/api/edit-image/increase-resolution' // No backend?
-  // }
+  {
+    id: EDITING_MODES.INCREASE_RES, 
+    name: 'Upscale', 
+    description: 'Increase resolution', 
+    icon: <Zap className="h-5 w-5" />,
+    apiEndpoint: '/api/replicate/upscale'
+  }
 ];
 
 const PhotoEditor = () => {
@@ -109,15 +67,18 @@ const PhotoEditor = () => {
   const [isPainting, setIsPainting] = useState(false);
   const [brushSize, setBrushSize] = useState(20);
   const [isEraser, setIsEraser] = useState(false);
-  const [expandDirection, setExpandDirection] = useState<string>('');
   const [maskGrowAmount, setMaskGrowAmount] = useState(5);
   const [isPolling, setIsPolling] = useState<boolean>(false);
   const [pollingStatus, setPollingStatus] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
 
   /**
    * Handles image selection from the file input
@@ -162,86 +123,160 @@ const PhotoEditor = () => {
   };
 
   /**
-   * Initialize the mask canvas when the image loads
+   * Updated handleImageLoad: Only record image dimensions
    */
   const handleImageLoad = useCallback(() => {
-    if (!imageRef.current || !canvasRef.current || !containerRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const img = imageRef.current;
-    const container = containerRef.current;
-    
-    // Set canvas dimensions to match the displayed image size
-    const imgRect = img.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    
-    canvas.width = imgRect.width;
-    canvas.height = imgRect.height;
-    
-    // Clear the canvas
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    console.log("handleImageLoad triggered.");
+    if (imageRef.current) {
+        setImageDimensions({
+            width: imageRef.current.naturalWidth,
+            height: imageRef.current.naturalHeight,
+        });
+        console.log(`handleImageLoad: Image dimensions recorded: ${imageRef.current.naturalWidth}x${imageRef.current.naturalHeight}`);
+    } else {
+        console.error("handleImageLoad: imageRef is null.");
+    }
+  }, []);
+
+  // Effect to setup canvas context when canvas is rendered and image is loaded
+  useEffect(() => {
+    const needsCanvas = editingMode === EDITING_MODES.INPAINT || 
+                        editingMode === EDITING_MODES.GENFILL || 
+                        editingMode === EDITING_MODES.ERASE;
+
+    // Only proceed if we need the canvas, the ref is set, and we have image dimensions
+    if (needsCanvas && canvasRef.current && imageRef.current && imageDimensions) {
+        console.log("Canvas setup effect: Conditions met, setting up context.");
+        const canvas = canvasRef.current;
+        const img = imageRef.current;
+
+        // Calculate display dimensions based on container/image ref if needed, or use fixed logic
+        // For simplicity, let's use the bounding rect again, assuming containerRef is stable
+        if (!containerRef.current) {
+            console.error("Canvas setup effect: containerRef is null.");
+            return;
+        }
+        const imgRect = img.getBoundingClientRect(); // Get current display size
+        canvas.width = imgRect.width;
+        canvas.height = imgRect.height;
+
+        contextRef.current = canvas.getContext('2d');
+        if (contextRef.current) {
+            console.log("Canvas setup effect: Context obtained.");
+            contextRef.current.clearRect(0, 0, canvas.width, canvas.height);
+            contextRef.current.lineCap = 'round';
+            contextRef.current.lineJoin = 'round';
+            // Apply current brush settings immediately
+            contextRef.current.lineWidth = brushSize;
+            contextRef.current.strokeStyle = isEraser ? 'rgba(0, 0, 0, 1)' : 'rgba(255, 0, 0, 1)'; // Still red for debug
+            contextRef.current.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+        } else {
+            console.error("Canvas setup effect: Failed to get 2D context!");
+        }
+    } else {
+        // Clear context ref if canvas is not needed or not ready
+        // console.log("Canvas setup effect: Conditions not met or canvas not needed.");
+        // contextRef.current = null; // Be careful with clearing this, might cause issues if mode changes quickly
+    }
+  }, [editingMode, imageDimensions, brushSize, isEraser]);
+
+  // Effect to update drawing context settings (simplified, as initial setup is in above effect)
+  useEffect(() => {
+    if (contextRef.current) {
+      contextRef.current.lineWidth = brushSize;
+      contextRef.current.strokeStyle = isEraser ? 'rgba(0, 0, 0, 1)' : 'rgba(255, 0, 0, 1)'; // Bright Red for drawing
+      contextRef.current.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+      // console.log(`Brush/Eraser Effect: Context updated - Eraser=${isEraser}, Size=${brushSize}`);
+    }
+  }, [brushSize, isEraser]); 
+
+  // Get scaled mouse/touch coordinates relative to the canvas
+  const getCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>): { x: number; y: number } | null => {
+      if (!canvasRef.current) return null;
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      let clientX, clientY;
+
+      if ('touches' in e) {
+          if (e.touches.length === 0) return null; // No touch points
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+      } else {
+          clientX = e.clientX;
+          clientY = e.clientY;
+      }
+      
+      // Calculate position relative to the element
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
+      // Adjust for the canvas's internal resolution vs. display size
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
+      return {
+          x: x * scaleX,
+          y: y * scaleY,
+      };
+  };
+
+  // Updated startPainting to use moveTo
+  const startPainting = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    // Log context state at the start of drawing attempt
+    if (contextRef.current) {
+        console.log('startPainting: Context exists', {
+            lineWidth: contextRef.current.lineWidth,
+            strokeStyle: contextRef.current.strokeStyle,
+            globalCompositeOperation: contextRef.current.globalCompositeOperation
+        });
+    } else {
+        console.error('startPainting: Context is NULL!');
+        return; // Cannot draw without context
     }
     
-    setMaskCanvas(canvas);
-  }, []);
+    const coords = getCoords(e);
+    if (!coords) return;
 
-  /**
-   * Handle drawing on the canvas for masking
-   */
-  const startPainting = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
     setIsPainting(true);
-    
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    ctx.beginPath();
-    ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
-    ctx.fillStyle = isEraser ? 'rgba(0, 0, 0, 0)' : 'rgba(255, 255, 255, 0.8)';
-    ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
-    ctx.fill();
-  }, [brushSize, isEraser]);
-  
-  const paint = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isPainting || !canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    ctx.beginPath();
-    ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
-    ctx.fillStyle = isEraser ? 'rgba(0, 0, 0, 0)' : 'rgba(255, 255, 255, 0.8)';
-    ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
-    ctx.fill();
-  }, [isPainting, brushSize, isEraser]);
-  
-  const stopPainting = useCallback(() => {
-    setIsPainting(false);
+    contextRef.current.beginPath();
+    contextRef.current.moveTo(coords.x, coords.y);
+    contextRef.current.lineTo(coords.x, coords.y); 
+    contextRef.current.stroke();
+    console.log("Start painting at:", coords);
+
   }, []);
+  
+  // Updated paint function for continuous line
+  const paint = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isPainting || !contextRef.current) return;
+    const coords = getCoords(e);
+    if (!coords) return;
+
+    contextRef.current.lineTo(coords.x, coords.y); // Draw line to new point
+    contextRef.current.stroke(); // Stroke the path
+    contextRef.current.beginPath(); // Begin new path segment for smoother joining (optional but good practice)
+    contextRef.current.moveTo(coords.x, coords.y); // Move to the current point
+
+  }, [isPainting]); // Depends only on isPainting state
+  
+  // Updated stopPainting
+  const stopPainting = useCallback(() => {
+    if (isPainting) {
+        setIsPainting(false);
+        if (contextRef.current) {
+            contextRef.current.beginPath(); // Reset path after stopping
+        }
+        console.log("Stop painting");
+    }
+  }, [isPainting]);
 
   /**
-   * Clear the mask canvas
+   * Clear the mask canvas (canvasRef)
    */
   const handleClearMask = useCallback(() => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (contextRef.current && canvasRef.current) {
+      contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      console.log("Mask cleared");
     }
   }, []);
 
@@ -255,239 +290,189 @@ const PhotoEditor = () => {
   };
 
   /**
-   * Get mask data from canvas
+   * Get mask data from the drawing canvas (canvasRef)
    */
-  const getMaskBlob = useCallback(async (): Promise<Blob | null> => {
-    if (!canvasRef.current) return null;
+  const getMaskBlob = async (): Promise<Blob | null> => {
+    // Use canvasRef for mask generation
+    if (!canvasRef.current) { 
+      console.error('Drawing canvas ref not available for mask generation');
+      return null;
+    }
+    const canvas = canvasRef.current; // Get the drawing canvas
     
-    return new Promise(resolve => {
-      canvasRef.current?.toBlob(blob => {
-        resolve(blob);
-      }, 'image/png');
-    });
-  }, []);
+    // Create a temporary canvas at original image dimensions if needed for scaling
+    // Or simply export the current canvas content if scaling is handled elsewhere
+    // For simplicity now, let's export the current drawing canvas directly
+    
+    try {
+      return await new Promise<Blob | null>((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              console.log("Mask blob generated from drawing canvas", blob.size, blob.type);
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to create blob from drawing canvas'));
+            }
+          },
+          'image/png', // Ensure PNG for potential transparency
+          1.0 // Max quality
+        );
+      });
+    } catch (error) {
+      console.error('Error converting drawing canvas to blob:', error);
+      return null;
+    }
+  };
+
+  /**
+   * Helper function to poll prediction status
+   */
+  const pollPrediction = async (predictionId: string) => {
+    let prediction;
+    
+    while (true) {
+      const response = await fetch(`/api/replicate/predictions/${predictionId}`);
+      if (!response.ok) {
+        throw new Error('Failed to check prediction status');
+      }
+      
+      prediction = await response.json();
+      
+      if (prediction.status === 'succeeded') {
+        console.log('Prediction succeeded:', prediction);
+        const proxiedUrl = `/api/proxy?url=${encodeURIComponent(prediction.output[0])}`;
+        setEditedImage(proxiedUrl);
+        setIsLoading(false);
+        break;
+      } else if (prediction.status === 'failed' || prediction.status === 'canceled') {
+        throw new Error(`Prediction ${prediction.status}: ${prediction.error || 'Unknown error'}`);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+  };
 
   /**
    * Handles the primary edit action based on the selected mode.
-   * This function orchestrates the entire process from preparing data,
-   * calling the appropriate backend API, handling potential asynchronous 
-   * operations like Replicate polling, and updating the UI with the result or error.
    */
-  const handleEditAction = useCallback(async () => {
-    if (!selectedImage || !imagePreview) return;
-    
-    setIsEditing(true);
+  const handleEditAction = async () => {
+    setIsLoading(true);
     setError(null);
     setEditedImage(null);
-    setIsPolling(false);
-    setPollingStatus(null);
 
     try {
-      const isReplicateInpaint = editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.GENFILL;
-
+      if (!selectedImage) {
+        throw new Error('Please select an image first.');
+      }
+      
+      // Prepare the form data (common for most actions)
       const formData = new FormData();
       formData.append('image', selectedImage);
-      
-      // Get the active feature object
-      const activeFeature = EDIT_FEATURES.find(feature => feature.id === editingMode);
-      
-      if (!activeFeature) {
-        throw new Error('Invalid editing mode');
-      }
-      
-      console.log(`Starting ${activeFeature.name} operation using ${activeFeature.apiEndpoint}`);
-      
-      // Process based on mode
-      switch (editingMode) {
-        case EDITING_MODES.PROMPT:
-          let prompt = customPrompt;
-          if (selectedPreset !== null && selectedPreset >= 0 && selectedPreset < EDITING_PRESETS.length) {
-            prompt = EDITING_PRESETS[selectedPreset].prompt;
-          }
-          
-          if (!prompt) {
-            throw new Error('Please enter an editing prompt or select a preset');
-          }
-          
-          formData.append('prompt', prompt);
-          console.log(`Using prompt: "${prompt}"`);
-          break;
-          
-        case EDITING_MODES.INPAINT:
-        case EDITING_MODES.ERASE:
-          const maskBlob = await getMaskBlob();
-          if (!maskBlob) {
-            const modeName = editingMode === EDITING_MODES.GENFILL ? 'GenFill' : 'Inpaint/Erase';
-            throw new Error(`Please draw a mask for ${modeName}`);
-          }
-          
-          formData.append('mask', maskBlob);
-          
-          if (editingMode === EDITING_MODES.INPAINT && customPrompt) {
-            formData.append('prompt', customPrompt);
-            console.log(`Using inpaint prompt: "${customPrompt}"`);
-          }
-          
-          if (maskGrowAmount > 0) {
-            formData.append('grow_mask', maskGrowAmount.toString());
-            console.log(`Growing mask by ${maskGrowAmount} pixels`);
-          }
-          break;
-          
-        case EDITING_MODES.GENFILL:
-          const genfillMaskBlob = await getMaskBlob();
-          if (!genfillMaskBlob) {
-            throw new Error('Please draw a mask on the areas you want to fill with AI');
-          }
-          
-          formData.append('mask', genfillMaskBlob);
-          
-          if (customPrompt) {
-            formData.append('prompt', customPrompt);
-            console.log(`Using genfill prompt: "${customPrompt}"`);
-          } else {
-            throw new Error('Please enter a prompt for GenFill');
-          }
-          
-          if (maskGrowAmount > 0) {
-            formData.append('grow_mask', maskGrowAmount.toString());
-            console.log(`Growing mask by ${maskGrowAmount} pixels`);
-          }
-          break;
-          
-        case EDITING_MODES.EXPAND_IMAGE:
-          if (!expandDirection) {
-            throw new Error('Please select a direction to extend the image');
-          }
-          
-          formData.append('direction', expandDirection);
-          console.log(`Expanding image in direction: ${expandDirection}`);
-          
-          if (customPrompt) {
-            const sanitizedPrompt = customPrompt.trim()
-              .replace(/\r?\n|\r/g, ' ')
-              .replace(/["\\]/g, ' ')
-              .replace(/\s+/g, ' ')
-              .trim();
-              
-            formData.append('prompt', sanitizedPrompt);
-            console.log(`Using sanitized expansion prompt: "${sanitizedPrompt}"`);
-          }
-          break;
-          
-        case EDITING_MODES.REMOVE_BG:
-        case EDITING_MODES.BLUR_BG:
-        case EDITING_MODES.INCREASE_RES:
-          console.log(`Executing simple operation: ${activeFeature.name}`);
-          break;
-          
-        default:
-          throw new Error('Unsupported editing mode');
-      }
-      
-      if (isReplicateInpaint) {
-        console.log(`Sending Replicate request to: ${activeFeature.apiEndpoint}`);
-        const createResponse = await fetch(activeFeature.apiEndpoint, {
-          method: 'POST',
-          body: formData,
+
+      // Handle different editing modes
+      if (editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.GENFILL) {
+        // Use canvasRef for the check
+        if (!canvasRef.current) { 
+           throw new Error('Canvas not ready for inpainting/genfill');
+        }
+        // Use getMaskBlob which now reads from canvasRef
+        console.log('Calling getMaskBlob. canvasRef.current is:', canvasRef.current);
+        const maskBlob = await getMaskBlob(); 
+        if (!maskBlob) {
+           // Explicitly check if the reason was canvasRef being null INSIDE getMaskBlob
+           if (!canvasRef.current) {
+               throw new Error('handleEditAction Error: canvasRef became null before mask generation!');
+           } else {
+               // Otherwise, blob creation itself failed
+               throw new Error('handleEditAction Error: Failed to generate mask blob from canvas.');
+           }
+        }
+
+        formData.append('mask', maskBlob);
+        
+        if (!customPrompt) {
+          throw new Error('Please enter a prompt describing what you want to add/change');
+        }
+        formData.append('prompt', customPrompt);
+
+        console.log(`Starting ${editingMode} with:`, {
+          imageSize: `${selectedImage.size} bytes`,
+          maskSize: `${maskBlob.size} bytes`,
+          prompt: customPrompt
         });
 
-        if (!createResponse.ok || createResponse.status !== 201) {
-            let errorData;
-            const contentType = createResponse.headers.get('content-type');
-            try {
-                if (contentType && contentType.includes('application/json')) {
-                    errorData = await createResponse.json();
-                } else {
-                    errorData = { raw: await createResponse.text() };
-                }
-                console.error('Replicate prediction creation failed:', createResponse.status, errorData);
-                const detail = errorData.detail || errorData.error || errorData.raw || 'Unknown error';
-                throw new Error(`Replicate prediction creation failed: ${detail}`);
-            } catch (parseError) {
-                 console.error('Error parsing Replicate error response:', parseError);
-                 throw new Error(`Replicate prediction creation failed: ${createResponse.status} ${createResponse.statusText}`);
-            }
-        }
-
-        let prediction = await createResponse.json();
-        console.log(`Started Replicate prediction: ${prediction.id} ${prediction.status}`);
-        setIsPolling(true);
-        setPollingStatus(prediction.status);
-
-        while (prediction.status !== "succeeded" && prediction.status !== "failed" && prediction.status !== "canceled") {
-          await sleep(1500);
-          try {
-              const pollResponse = await fetch(`/api/replicate/predictions/${prediction.id}`);
-              if (!pollResponse.ok) {
-                  console.error(`Polling error for ${prediction.id}: ${pollResponse.status} ${pollResponse.statusText}`);
-                  await sleep(3000);
-                  continue;
-              }
-              
-              const polledPrediction = await pollResponse.json();
-              prediction = polledPrediction;
-              setPollingStatus(prediction.status);
-              console.log(`Polling prediction ${prediction.id}... Status: ${prediction.status}`);
-
-          } catch(pollError) {
-             console.error(`Error during fetch for polling ${prediction.id}:`, pollError);
-             setError(`Network error while polling prediction status.`);
-             setIsPolling(false);
-             return;
-          }
-        }
-        setIsPolling(false);
-
-        if (prediction.status === "succeeded") {
-          console.log("Prediction succeeded! Output URL:", prediction.output[0]);
-          const proxiedUrl = `/api/proxy?url=${encodeURIComponent(prediction.output[0])}`;
-          setEditedImage(proxiedUrl); 
-          console.log('Replicate Edit operation completed successfully via polling.');
-        } else {
-          throw new Error(`Replicate prediction failed or was canceled. Status: ${prediction.status}. Error: ${prediction.error || 'No error details'}`);
-        }
-
-      } else {
-        console.log(`Sending request to non-Replicate endpoint: ${activeFeature.apiEndpoint}`);
-        const response = await fetch(activeFeature.apiEndpoint, {
+        // Call the Replicate inpainting endpoint
+        const response = await fetch('/api/replicate/inpaint', {
           method: 'POST',
-          body: formData,
+          body: formData
         });
 
         if (!response.ok) {
-            let errorData;
-            const contentType = response.headers.get('content-type');
-            try {
-              if (contentType && contentType.includes('application/json')) { errorData = await response.json(); }
-              else { errorData = { raw: await response.text() }; }
-              console.log('Error response:', response.status, errorData);
-              let errorMessage = `Error ${response.status}: `;
-              if (errorData.error) { errorMessage += errorData.error; if (errorData.details) errorMessage += ` - ${errorData.details}`; if (errorData.message) errorMessage += ` - ${errorData.message}`; }
-              else if (errorData.raw) { errorMessage += errorData.raw.substring(0, 100); }
-              else { errorMessage += response.statusText; }
-              throw new Error(errorMessage);
-            } catch (parseError) {
-              console.error('Error parsing error response:', parseError);
-              throw new Error(`Error ${response.status}: ${response.statusText}`);
-            }
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to process ${editingMode} request`);
+        }
+
+        const prediction = await response.json();
+        console.log(`${editingMode} initiated:`, prediction);
+
+        // Start polling for results
+        setIsPolling(true);
+        setPollingStatus(prediction.status);
+        await pollPrediction(prediction.id);
+
+      } else if (editingMode === EDITING_MODES.PROMPT) {
+        let promptToUse = customPrompt;
+        if (selectedPreset !== null && selectedPreset >= 0 && selectedPreset < EDITING_PRESETS.length) {
+          promptToUse = EDITING_PRESETS[selectedPreset].prompt;
         }
         
-        const imageBlob = await response.blob();
-        const objectUrl = URL.createObjectURL(imageBlob);
-        setEditedImage(objectUrl);
-        console.log('Non-Replicate Edit operation completed successfully');
+        if (!promptToUse) {
+          throw new Error('Please enter an editing prompt or select a preset');
+        }
+        
+        formData.append('prompt', promptToUse);
+        console.log(`Editing with prompt: "${promptToUse}"`);
+        setError("Prompt-based editing endpoint not yet implemented.");
+        setIsLoading(false);
+
+      } else if (editingMode === EDITING_MODES.INCREASE_RES) {
+        console.log('Starting Upscale process...');
+        
+        const response = await fetch('/api/replicate/upscale', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Upscale request failed');
+        }
+
+        const prediction = await response.json();
+        console.log('Upscale prediction initiated:', prediction);
+
+        setIsPolling(true);
+        setPollingStatus(prediction.status);
+        await pollPrediction(prediction.id);
+
+      } else if (editingMode === EDITING_MODES.ERASE) {
+        console.log('Erase mode selected - implementation pending.');
+        setError('Erase functionality not yet implemented.');
+        setIsLoading(false);
       }
 
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to edit image';
-      setError(errorMessage);
-      console.error('Error in handleEditAction:', err);
-    } finally {
-      setIsEditing(false);
+    } catch (error: any) {
+      console.error('Edit action failed:', error);
+      setError(error.message || 'Failed to process edit action');
+      setIsLoading(false);
       setIsPolling(false);
+      setPollingStatus(null);
+    } finally {
+       setIsPolling(false);
+       setPollingStatus(null);
     }
-  }, [selectedImage, editingMode, customPrompt, selectedPreset, getMaskBlob, maskGrowAmount, expandDirection]);
+  };
 
   /**
    * Reset the editor
@@ -506,9 +491,8 @@ const PhotoEditor = () => {
     setIsEditing(false);
     setCustomPrompt('');
     setSelectedPreset(null);
-    setEditingMode(EDITING_MODES.PROMPT);
+    setEditingMode(EDITING_MODES.GENFILL);
     handleClearMask();
-    setExpandDirection('');
     
     // Reset file input
     if (fileInputRef.current) {
@@ -544,26 +528,16 @@ const PhotoEditor = () => {
     handleClearMask();
   };
 
-  /**
-   * Set the direction for image expansion
-   */
-  const setDirection = (direction: string) => {
-    setExpandDirection(direction);
-  };
-
-  const isDirectionSelected = (direction: string) => {
-    return expandDirection === direction;
-  };
-
   // Helper: sleep function
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   // Display polling status if polling is active
   const renderPollingStatus = () => {
-      if (!isPolling || !pollingStatus) return null;
+      if (!isLoading && !isPolling) return null;
+      const statusText = pollingStatus || 'Initializing...';
       return (
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center text-sm text-blue-700">
-              <p>Processing with Replicate... Status: <span className="font-semibold">{pollingStatus}</span></p>
+              <p>Processing with Replicate... Status: <span className="font-semibold">{statusText}</span></p>
               <div className="w-full bg-blue-200 rounded-full h-1.5 mt-2">
                   <div className="bg-blue-600 h-1.5 rounded-full animate-pulse"></div>
               </div>
@@ -571,15 +545,54 @@ const PhotoEditor = () => {
       );
   };
 
+  // Add touch support
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (!canvasRef.current || !contextRef.current) return;
+    
+    const touch = e.touches[0];
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    setIsPainting(true);
+    contextRef.current.beginPath();
+    contextRef.current.moveTo(x, y);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (!isPainting || !canvasRef.current || !contextRef.current) return;
+    
+    const touch = e.touches[0];
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    contextRef.current.lineTo(x, y);
+    contextRef.current.stroke();
+  }, [isPainting]);
+
+  // Add cleanup effect
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
   return (
     <div className="w-full max-w-full">
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 flex items-center mb-2">
           <ImageIcon className="w-8 h-8 mr-3 text-indigo-600" />
-          BRIA AI Photo Editor
+          Replicate AI Photo Editor
         </h1>
         <p className="text-gray-600 text-lg">
-          Enhance and transform your photos with BRIA AI's powerful image editing capabilities
+          Enhance and transform your photos with Replicate AI's powerful image editing capabilities
         </p>
       </header>
       
@@ -597,35 +610,14 @@ const PhotoEditor = () => {
       <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
         <h3 className="font-semibold text-gray-800 text-sm mb-3 flex items-center">
           <SlidersHorizontal className="h-4 w-4 mr-2 text-gray-600" />
-          BRIA AI Editing Features
+          AI Editing Features (Powered by Replicate)
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
           <div className="p-3 bg-white rounded border border-gray-200 flex items-start">
-            <Sparkles className="h-5 w-5 text-indigo-500 mr-2 mt-0.5" />
+            <Wand2 className="h-5 w-5 text-indigo-500 mr-2 mt-0.5" />
             <div>
               <h4 className="font-medium text-gray-800">Generative Fill</h4>
               <p className="text-gray-600 text-xs mt-1">Fill in areas with AI-generated content based on your prompts.</p>
-            </div>
-          </div>
-          <div className="p-3 bg-white rounded border border-gray-200 flex items-start">
-            <Eraser className="h-5 w-5 text-indigo-500 mr-2 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-gray-800">Eraser</h4>
-              <p className="text-gray-600 text-xs mt-1">Remove unwanted objects or elements from your image.</p>
-            </div>
-          </div>
-          <div className="p-3 bg-white rounded border border-gray-200 flex items-start">
-            <Layers className="h-5 w-5 text-indigo-500 mr-2 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-gray-800">Background Tools</h4>
-              <p className="text-gray-600 text-xs mt-1">Remove, blur, or replace image backgrounds automatically.</p>
-            </div>
-          </div>
-          <div className="p-3 bg-white rounded border border-gray-200 flex items-start">
-            <Plus className="h-5 w-5 text-indigo-500 mr-2 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-gray-800">Expand Image</h4>
-              <p className="text-gray-600 text-xs mt-1">Extend your image canvas in any direction.</p>
             </div>
           </div>
           <div className="p-3 bg-white rounded border border-gray-200 flex items-start">
@@ -639,7 +631,6 @@ const PhotoEditor = () => {
       </div>
 
       <div className="space-y-6">
-        {/* Image upload area */}
         {!selectedImage && (
           <div 
             onClick={handleUploadClick}
@@ -657,7 +648,7 @@ const PhotoEditor = () => {
             <p className="text-sm text-gray-500 mt-2">PNG, JPG or WEBP (max. 10MB)</p>
             <Button 
               onClick={(e) => {
-                e.stopPropagation(); // Prevent the event from bubbling up
+                e.stopPropagation();
                 handleUploadClick();
               }} 
               className="mt-6 bg-indigo-600 hover:bg-indigo-700"
@@ -667,7 +658,6 @@ const PhotoEditor = () => {
           </div>
         )}
         
-        {/* Error message */}
         {error && (
           <div className="rounded-md bg-red-50 p-4 mt-6">
             <div className="flex">
@@ -698,13 +688,10 @@ const PhotoEditor = () => {
           </div>
         )}
         
-        {/* Polling Status Display */} 
         {renderPollingStatus()}
 
-        {/* Image editing area */}
         {selectedImage && (
           <div className="space-y-8">
-            {/* Controls */}
             <div className="flex justify-between items-center">
               <Button
                 variant="outline"
@@ -727,7 +714,6 @@ const PhotoEditor = () => {
               )}
             </div>
             
-            {/* Image preview */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -735,37 +721,39 @@ const PhotoEditor = () => {
                 </div>
                 <div 
                   ref={containerRef}
-                  className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm"
+                  className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm cursor-crosshair"
                 >
                   {imagePreview && (
                     <div className="absolute inset-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         ref={imageRef}
                         src={imagePreview}
                         alt="Original image"
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-contain pointer-events-none"
                         onLoad={handleImageLoad}
                       />
                       
-                      {/* Canvas for masking - only visible in certain modes */}
                       {(editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.ERASE || editingMode === EDITING_MODES.GENFILL) && (
                         <canvas
-                          ref={canvasRef}
-                          className="absolute inset-0 z-10 cursor-crosshair"
+                          ref={canvasRef} 
                           onMouseDown={startPainting}
                           onMouseMove={paint}
                           onMouseUp={stopPainting}
                           onMouseLeave={stopPainting}
+                          onTouchStart={startPainting} 
+                          onTouchMove={paint}
+                          onTouchEnd={stopPainting}
+                          role="img"
+                          aria-label="Drawing canvas for masking area"
+                          tabIndex={0}
+                          className="absolute top-0 left-0 z-10 w-full h-full"
                         />
                       )}
                       
-                      {/* Mask instruction overlay */}
-                      {(editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.ERASE || editingMode === EDITING_MODES.GENFILL) && !isEditing && !editedImage && (
+                      {(editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.ERASE || editingMode === EDITING_MODES.GENFILL) && !isPainting && !isLoading && !isPolling && !editedImage && (
                         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                           <div className="bg-black/70 text-white py-3 px-4 rounded-lg max-w-xs text-center">
-                            <p className="text-sm font-medium mb-2">Draw on the image to select an area</p>
-                            <p className="text-xs">Use the brush tools below to create a mask</p>
+                            <p className="text-sm font-medium mb-2">Draw on the image to select area</p>
                           </div>
                         </div>
                       )}
@@ -789,8 +777,6 @@ const PhotoEditor = () => {
                     </div>
                   )}
                   {editedImage && !isEditing && !isPolling && (
-                    // Use Next Image for optimized loading if preferred, otherwise standard img
-                    // eslint-disable-next-line @next/next/no-img-element
                     <img 
                       src={editedImage} 
                       alt="Edited Result"
@@ -816,289 +802,50 @@ const PhotoEditor = () => {
               </div>
             </div>
             
-            {/* Editing features */}
             <div className="space-y-5 bg-gray-50 p-6 rounded-xl border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Editing Options</h3>
               
-              {/* Task-based selector */}
               <div className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">What do you want to do?</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <button 
-                    onClick={() => setEditingMode(EDITING_MODES.GENFILL)}
-                    className="flex flex-col items-center p-3 bg-gradient-to-b from-purple-50 to-white rounded-lg border border-purple-100 hover:border-purple-300 transition-all"
-                  >
-                    <div className="bg-purple-100 p-2 rounded-full mb-2">
-                      <Wand2 className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-800">Add an object</span>
-                    <span className="text-xs text-gray-500 mt-1">Add objects to your image</span>
-                  </button>
-                  
-                  <button 
-                    onClick={() => setEditingMode(EDITING_MODES.ERASE)}
-                    className="flex flex-col items-center p-3 bg-gradient-to-b from-red-50 to-white rounded-lg border border-red-100 hover:border-red-300 transition-all"
-                  >
-                    <div className="bg-red-100 p-2 rounded-full mb-2">
-                      <Eraser className="h-4 w-4 text-red-600" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-800">Remove an object</span>
-                    <span className="text-xs text-gray-500 mt-1">Erase unwanted items</span>
-                  </button>
-                  
-                  <button 
-                    onClick={() => setEditingMode(EDITING_MODES.EXPAND_IMAGE)}
-                    className="flex flex-col items-center p-3 bg-gradient-to-b from-blue-50 to-white rounded-lg border border-blue-100 hover:border-blue-300 transition-all"
-                  >
-                    <div className="bg-blue-100 p-2 rounded-full mb-2">
-                      <Plus className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-800">Expand the canvas</span>
-                    <span className="text-xs text-gray-500 mt-1">Make image wider or taller</span>
-                  </button>
-                  
-                  <button 
-                    onClick={() => setEditingMode(EDITING_MODES.PROMPT)}
-                    className="flex flex-col items-center p-3 bg-gradient-to-b from-green-50 to-white rounded-lg border border-green-100 hover:border-green-300 transition-all"
-                  >
-                    <div className="bg-green-100 p-2 rounded-full mb-2">
-                      <Sparkles className="h-4 w-4 text-green-600" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-800">Enhance overall</span>
-                    <span className="text-xs text-gray-500 mt-1">Improve the entire image</span>
-                  </button>
-                </div>
+                 <h3 className="text-sm font-medium text-gray-700 mb-3">Select an Editing Task:</h3>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3"> 
+                   <button 
+                     onClick={() => setEditingMode(EDITING_MODES.GENFILL)}
+                     className={`flex flex-col items-center p-3 rounded-lg border transition-all ${ editingMode === EDITING_MODES.GENFILL ? 'bg-gradient-to-b from-purple-100 to-white border-purple-300' : 'bg-gradient-to-b from-purple-50 to-white border-purple-100 hover:border-purple-300'}`}
+                   >
+                     <div className="bg-purple-100 p-2 rounded-full mb-2">
+                       <Wand2 className="h-4 w-4 text-purple-600" />
+                     </div>
+                     <span className="text-sm font-medium text-gray-800">Generative Fill</span>
+                     <span className="text-xs text-gray-500 mt-1 text-center">Add or replace content</span>
+                   </button>
+                   
+                   <button 
+                     onClick={() => setEditingMode(EDITING_MODES.INCREASE_RES)}
+                     className={`flex flex-col items-center p-3 rounded-lg border transition-all ${ editingMode === EDITING_MODES.INCREASE_RES ? 'bg-gradient-to-b from-green-100 to-white border-green-300' : 'bg-gradient-to-b from-green-50 to-white border-green-100 hover:border-green-300'}`}
+                   >
+                     <div className="bg-green-100 p-2 rounded-full mb-2">
+                       <Zap className="h-4 w-4 text-green-600" />
+                     </div>
+                     <span className="text-sm font-medium text-gray-800">Upscale Image</span>
+                     <span className="text-xs text-gray-500 mt-1 text-center">Increase resolution</span>
+                   </button>
+
+                   <button 
+                     onClick={() => setEditingMode(EDITING_MODES.ERASE)} 
+                     disabled // Disable if not implemented
+                     className={`flex flex-col items-center p-3 rounded-lg border transition-all ${ editingMode === EDITING_MODES.ERASE ? 'bg-gradient-to-b from-red-100 to-white border-red-300' : 'bg-gradient-to-b from-red-50 to-white border-red-100 hover:border-red-300'} ${'opacity-50 cursor-not-allowed'}`} // Disable style
+                   >
+                     <div className="bg-red-100 p-2 rounded-full mb-2">
+                       <Eraser className="h-4 w-4 text-red-600" />
+                     </div>
+                     <span className="text-sm font-medium text-gray-800">Erase Object</span>
+                     <span className="text-xs text-gray-500 mt-1 text-center">Remove items (soon)</span>
+                   </button>
+                 </div>
               </div>
-              
-              {/* Editing modes tabs */}
-              <Tabs defaultValue={EDITING_MODES.PROMPT} onValueChange={(val) => setEditingMode(val)}>
-                <TabsList className="grid grid-cols-9 mb-6">
-                  {EDIT_FEATURES.map((feature) => (
-                    <TabsTrigger 
-                      key={feature.id} 
-                      value={feature.id}
-                      className="flex flex-col items-center py-3"
-                    >
-                      <div className="mb-1">{feature.icon}</div>
-                      <span className="text-xs">{feature.name}</span>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                
-                {/* Text Prompt Mode */}
-                <TabsContent value={EDITING_MODES.PROMPT} className="space-y-6">
-                  <div className="space-y-4">
-                    <h4 className="text-base font-medium text-gray-700">Choose an editing preset:</h4>
-                    
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      {EDITING_PRESETS.map((preset, index) => (
-                        <button
-                          key={preset.name}
-                          onClick={() => setSelectedPreset(index)}
-                          disabled={isEditing}
-                          className={`p-4 rounded-xl transition-all ${
-                            editingMode === EDITING_MODES.PROMPT && selectedPreset === index
-                              ? 'bg-indigo-100 border-2 border-indigo-400 shadow-sm'
-                              : 'bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50'
-                          } flex flex-col items-center justify-center text-center`}
-                        >
-                          <div className={`p-3 rounded-full ${editingMode === EDITING_MODES.PROMPT && selectedPreset === index ? 'bg-indigo-200 text-indigo-700' : 'bg-gray-100 text-gray-700'}`}>
-                            {preset.icon}
-                          </div>
-                          <p className={`text-sm font-medium mt-2 ${editingMode === EDITING_MODES.PROMPT && selectedPreset === index ? 'text-indigo-700' : 'text-gray-700'}`}>
-                            {preset.name}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">{preset.description}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="pt-6 border-t border-gray-200">
-                    <h4 className="text-base font-medium text-gray-700 mb-3">Or enter a custom editing prompt:</h4>
-                    <div className="flex space-x-3">
-                      <input
-                        type="text"
-                        value={customPrompt}
-                        onChange={(e) => setCustomPrompt(e.target.value)}
-                        placeholder="e.g., Make the sky more blue, increase contrast"
-                        className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        disabled={isEditing}
-                      />
-                      <Button
-                        onClick={handleEditAction}
-                        disabled={isEditing || !customPrompt}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
-                      >
-                        {isEditing ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-4 w-4" />
-                        )}
-                        <span>Apply</span>
-                      </Button>
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                {/* Inpaint Mode */}
-                <TabsContent value={EDITING_MODES.INPAINT} className="space-y-6">
-                  <div className="space-y-4">
-                    <h4 className="text-base font-medium text-gray-700">Fill selected areas with new content</h4>
-                    <p className="text-sm text-gray-500">Draw on the original image to create a mask area, then describe what you want to add in that area.</p>
-                    
-                    <div className="flex items-center space-x-6 mt-4">
-                      <div className="flex items-center space-x-2">
-                        <Label htmlFor="brush-size" className="text-sm text-gray-700">Brush Size</Label>
-                        <div className="w-32">
-                          <input
-                            type="range"
-                            id="brush-size"
-                            min={1}
-                            max={50}
-                            value={brushSize}
-                            onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                            className="w-full"
-                          />
-                        </div>
-                        <span className="text-xs text-gray-500">{brushSize}px</span>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="eraser-mode"
-                          checked={isEraser}
-                          onChange={(e) => setIsEraser(e.target.checked)}
-                          className="rounded"
-                        />
-                        <Label htmlFor="eraser-mode" className="text-sm text-gray-700">Eraser Mode</Label>
-                      </div>
-                      
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleClearMask}
-                        className="ml-auto"
-                      >
-                        <Trash className="h-4 w-4 mr-1" />
-                        Clear Mask
-                      </Button>
-                    </div>
-                    
-                    <div className="pt-4">
-                      <Label htmlFor="grow-mask" className="text-sm text-gray-700">Grow Mask Edges</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <input
-                          type="range"
-                          id="grow-mask"
-                          min={0}
-                          max={20}
-                          value={maskGrowAmount}
-                          onChange={(e) => setMaskGrowAmount(parseInt(e.target.value))}
-                          className="w-full"
-                        />
-                        <span className="text-xs text-gray-500 min-w-[30px]">{maskGrowAmount}px</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="pt-6 border-t border-gray-200">
-                    <h4 className="text-base font-medium text-gray-700 mb-3">Enter what to add in the masked area:</h4>
-                    <div className="flex space-x-3">
-                      <input
-                        type="text"
-                        value={customPrompt}
-                        onChange={(e) => setCustomPrompt(e.target.value)}
-                        placeholder="e.g., A beautiful sunset sky"
-                        className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        disabled={isEditing}
-                      />
-                      <Button
-                        onClick={handleEditAction}
-                        disabled={isEditing}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
-                      >
-                        {isEditing ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Paintbrush className="h-4 w-4" />
-                        )}
-                        <span>Apply Inpaint</span>
-                      </Button>
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                {/* Erase Mode */}
-                <TabsContent value={EDITING_MODES.ERASE} className="space-y-6">
-                  <div className="space-y-4">
-                    <h4 className="text-base font-medium text-gray-700">Remove unwanted objects</h4>
-                    <p className="text-sm text-gray-500">Draw on the objects you want to remove from the image.</p>
-                    
-                    <div className="flex items-center space-x-6 mt-4">
-                      <div className="flex items-center space-x-2">
-                        <Label htmlFor="erase-brush-size" className="text-sm text-gray-700">Brush Size</Label>
-                        <div className="w-32">
-                          <input
-                            type="range"
-                            id="erase-brush-size"
-                            min={1}
-                            max={50}
-                            value={brushSize}
-                            onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                            className="w-full"
-                          />
-                        </div>
-                        <span className="text-xs text-gray-500">{brushSize}px</span>
-                      </div>
-                      
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleClearMask}
-                        className="ml-auto"
-                      >
-                        <Trash className="h-4 w-4 mr-1" />
-                        Clear Mask
-                      </Button>
-                    </div>
-                    
-                    <div className="pt-4">
-                      <Label htmlFor="erase-grow-mask" className="text-sm text-gray-700">Grow Mask Edges</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <input
-                          type="range"
-                          id="erase-grow-mask"
-                          min={0}
-                          max={20}
-                          value={maskGrowAmount}
-                          onChange={(e) => setMaskGrowAmount(parseInt(e.target.value))}
-                          className="w-full"
-                        />
-                        <span className="text-xs text-gray-500 min-w-[30px]">{maskGrowAmount}px</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="pt-6 border-t border-gray-200">
-                    <Button
-                      onClick={handleEditAction}
-                      disabled={isEditing}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
-                    >
-                      {isEditing ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Eraser className="h-4 w-4" />
-                      )}
-                      <span>Erase Selected Areas</span>
-                    </Button>
-                  </div>
-                </TabsContent>
-                
-                {/* GenFill Mode */}
-                <TabsContent value={EDITING_MODES.GENFILL} className="space-y-6">
+
+              {(editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.GENFILL) && (
+                <div className="space-y-6">
                   <div className="space-y-4">
                     <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 mb-4">
                       <h4 className="text-base font-medium text-purple-800 flex items-center">
@@ -1195,14 +942,14 @@ const PhotoEditor = () => {
                           onChange={(e) => setCustomPrompt(e.target.value)}
                           placeholder="e.g., A beautiful mountain landscape with trees and clouds"
                           className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          disabled={isEditing}
+                          disabled={isLoading || isPolling}
                         />
                         <Button
                           onClick={handleEditAction}
-                          disabled={isEditing || !customPrompt}
+                          disabled={isLoading || isPolling || !customPrompt || !canvasRef.current}
                           className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
                         >
-                          {isEditing ? (
+                          {(isLoading || isPolling) ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <Wand2 className="h-4 w-4" />
@@ -1220,191 +967,38 @@ const PhotoEditor = () => {
                       </div>
                     </div>
                   </div>
-                </TabsContent>
-                
-                {/* Expand Image Mode */}
-                <TabsContent value={EDITING_MODES.EXPAND_IMAGE} className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="bg-teal-50 p-4 rounded-lg border border-teal-100 mb-4">
-                      <h4 className="text-base font-medium text-teal-800 flex items-center">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Expand Image Canvas
-                      </h4>
-                      <p className="text-sm text-teal-700 mt-1">
-                        BRIA's Image Expansion allows you to extend your image in one direction at a time.
-                      </p>
-                      <ul className="text-xs text-teal-700 mt-2 space-y-1 list-disc list-inside">
-                        <li>Select one direction to extend the image</li>
-                        <li>Provide a descriptive prompt for what should be added in that area</li>
-                        <li>Example: "Continue the beach scene with palm trees" or "Extend the mountain landscape with a flowing river"</li>
-                      </ul>
-                    </div>
+                </div>
+              )}
 
-                    <h4 className="text-base font-medium text-gray-700">Select direction to extend image</h4>
-                    <p className="text-sm text-gray-500">
-                      Choose one direction to expand your image.
-                    </p>
-                    
-                    <div className="grid grid-cols-3 gap-4 my-6">
-                      <div className="col-start-2">
-                        <Button
-                          variant={isDirectionSelected('top') ? 'default' : 'outline'}
-                          className={`w-full ${isDirectionSelected('top') ? 'bg-indigo-600' : ''}`}
-                          onClick={() => setDirection('top')}
-                        >
-                          <span className="flex items-center justify-center">
-                            Top {isDirectionSelected('top') && <Check className="h-3 w-3 ml-1" />}
-                          </span>
-                        </Button>
-                      </div>
-                      <div className="col-start-1 col-span-1 row-start-2">
-                        <Button
-                          variant={isDirectionSelected('left') ? 'default' : 'outline'}
-                          className={`w-full ${isDirectionSelected('left') ? 'bg-indigo-600' : ''}`}
-                          onClick={() => setDirection('left')}
-                        >
-                          <span className="flex items-center justify-center">
-                            Left {isDirectionSelected('left') && <Check className="h-3 w-3 ml-1" />}
-                          </span>
-                        </Button>
-                      </div>
-                      <div className="col-start-3 col-span-1 row-start-2">
-                        <Button
-                          variant={isDirectionSelected('right') ? 'default' : 'outline'}
-                          className={`w-full ${isDirectionSelected('right') ? 'bg-indigo-600' : ''}`}
-                          onClick={() => setDirection('right')}
-                        >
-                          <span className="flex items-center justify-center">
-                            Right {isDirectionSelected('right') && <Check className="h-3 w-3 ml-1" />}
-                          </span>
-                        </Button>
-                      </div>
-                      <div className="col-start-2 row-start-3">
-                        <Button
-                          variant={isDirectionSelected('bottom') ? 'default' : 'outline'}
-                          className={`w-full ${isDirectionSelected('bottom') ? 'bg-indigo-600' : ''}`}
-                          onClick={() => setDirection('bottom')}
-                        >
-                          <span className="flex items-center justify-center">
-                            Bottom {isDirectionSelected('bottom') && <Check className="h-3 w-3 ml-1" />}
-                          </span>
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="pt-6 border-t border-gray-200">
-                      <h4 className="text-base font-medium text-gray-700 mb-3">Describe what to add in the extended area:</h4>
-                      <div className="flex space-x-3">
-                        <input
-                          type="text"
-                          value={customPrompt}
-                          onChange={(e) => setCustomPrompt(e.target.value)}
-                          placeholder="e.g., Continue the beach scene with palm trees"
-                          className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          disabled={isEditing}
-                        />
-                        <Button
-                          onClick={handleEditAction}
-                          disabled={isEditing || !customPrompt || !expandDirection}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
-                        >
-                          {isEditing ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Plus className="h-4 w-4" />
-                          )}
-                          <span>Expand Image</span>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                {/* Remove Background Mode */}
-                <TabsContent value={EDITING_MODES.REMOVE_BG} className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="bg-violet-50 p-4 rounded-lg border border-violet-100 mb-4">
-                      <h4 className="text-base font-medium text-violet-800 flex items-center">
-                        <Layers className="h-4 w-4 mr-2" />
-                        Background Removal
-                      </h4>
-                      <p className="text-sm text-violet-700 mt-1">
-                        This will automatically remove the background from your image, leaving only the subject.
-                      </p>
-                      <ul className="text-xs text-violet-700 mt-2 space-y-1 list-disc list-inside">
-                        <li>Perfect for product photography, portraits, and creating cutouts</li>
-                        <li>Works best with images where the subject is clearly distinct from the background</li>
-                        <li>The result will have a transparent background (PNG format)</li>
-                      </ul>
-                    </div>
-                  </div>
-                  
-                  <div className="pt-6 border-t border-gray-200">
-                    <Button
-                      onClick={handleEditAction}
-                      disabled={isEditing}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
-                    >
-                      {isEditing ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Layers className="h-4 w-4" />
-                      )}
-                      <span>Remove Background</span>
-                    </Button>
-                  </div>
-                </TabsContent>
+              {editingMode === EDITING_MODES.ERASE && (
+                 <div className="space-y-6">
+                    <div className="bg-red-50 p-4 rounded-lg border border-red-100">
+                       <h4 className="text-base font-medium text-red-800 flex items-center">
+                         <Eraser className="h-4 w-4 mr-2" />
+                         Erase Objects (Coming Soon)
+                       </h4>
+                       <p className="text-sm text-red-700 mt-1">
+                         This feature is not yet implemented. Check back later to remove unwanted objects by masking them.
+                       </p>
+                   </div>
+                 </div>
+              )}
 
-                {/* Blur Background Mode */}
-                <TabsContent value={EDITING_MODES.BLUR_BG} className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
-                      <h4 className="text-base font-medium text-blue-800 flex items-center">
-                        <CircleDashed className="h-4 w-4 mr-2" />
-                        Background Blur
-                      </h4>
-                      <p className="text-sm text-blue-700 mt-1">
-                        This will automatically detect and blur the background while keeping the subject in focus.
-                      </p>
-                      <ul className="text-xs text-blue-700 mt-2 space-y-1 list-disc list-inside">
-                        <li>Perfect for portrait shots, product photography, and creating depth-of-field effects</li>
-                        <li>Works best with images where the subject is clearly distinct from the background</li>
-                        <li>Creates a professional bokeh effect with a single click</li>
-                      </ul>
-                    </div>
-                  </div>
-                  
-                  <div className="pt-6 border-t border-gray-200">
-                    <Button
-                      onClick={handleEditAction}
-                      disabled={isEditing}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
-                    >
-                      {isEditing ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <CircleDashed className="h-4 w-4" />
-                      )}
-                      <span>Blur Background</span>
-                    </Button>
-                  </div>
-                </TabsContent>
-
-                {/* Increase Resolution Mode */}
-                <TabsContent value={EDITING_MODES.INCREASE_RES} className="space-y-6">
+              {editingMode === EDITING_MODES.INCREASE_RES && (
+                <div className="space-y-6">
                   <div className="space-y-4">
                     <div className="bg-green-50 p-4 rounded-lg border border-green-100 mb-4">
                       <h4 className="text-base font-medium text-green-800 flex items-center">
                         <Zap className="h-4 w-4 mr-2" />
-                        Increase Resolution
+                        Increase Resolution (Upscale)
                       </h4>
                       <p className="text-sm text-green-700 mt-1">
-                        This will enhance your image's resolution and quality using AI upscaling.
+                        Enhance your image's resolution and quality using a Replicate AI upscaling model.
                       </p>
                       <ul className="text-xs text-green-700 mt-2 space-y-1 list-disc list-inside">
-                        <li>Improve details and clarity in your images</li>
-                        <li>Enhance low-resolution photos for better printing or display</li>
-                        <li>Reduce noise and enhance overall image quality</li>
+                        <li>Improves details and clarity.</li>
+                        <li>Enhances low-resolution photos.</li>
+                        <li>Reduces noise and improves overall quality.</li>
                       </ul>
                     </div>
                   </div>
@@ -1412,22 +1006,21 @@ const PhotoEditor = () => {
                   <div className="pt-6 border-t border-gray-200">
                     <Button
                       onClick={handleEditAction}
-                      disabled={isEditing}
+                      disabled={isEditing || isPolling}
                       className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
                     >
-                      {isEditing ? (
+                      {(isEditing || isPolling) ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Zap className="h-4 w-4" />
                       )}
-                      <span>Increase Resolution</span>
+                      <span>Apply Upscale</span> 
                     </Button>
                   </div>
-                </TabsContent>
-              </Tabs>
+                </div>
+              )}
             </div>
             
-            {/* Edit result controls */}
             {editedImage && (
               <div className="flex justify-end space-x-3 mt-6">
                 <Button
