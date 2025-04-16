@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Replicate from 'replicate';
 import { formatErrorMessage } from '@/lib/errorHandling';
-import { API_CONFIG } from '@/lib/config';
 
 // Initialize Replicate client
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN || API_CONFIG.replicateApiToken,
+  auth: process.env.REPLICATE_API_TOKEN,
 });
 
+const isConfigured = !!process.env.REPLICATE_API_TOKEN;
+
 export async function POST(request: NextRequest) {
+  if (!isConfigured) {
+    return NextResponse.json(
+      { error: 'Server configuration error: Replicate API token missing' }, 
+      { status: 500 }
+    );
+  }
+
   try {
     // Get request body
     const body = await request.json();

@@ -7,15 +7,14 @@
 
 import { NextResponse } from 'next/server';
 import Replicate from 'replicate';
-import { API_CONFIG } from '@/lib/config';
 import { ChatSession } from '@/lib/api/replicateChat';
 
-// Initialize Replicate client
+// Initialize Replicate client using only the environment variable
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN || API_CONFIG.replicateApiToken,
+  auth: process.env.REPLICATE_API_TOKEN, // Use env var directly
 });
 
-// Validate the API configuration
+// Validate the API configuration directly from the environment variable
 const isConfigured = !!process.env.REPLICATE_API_TOKEN;
 
 // Llama 2 model ID and version
@@ -156,7 +155,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if Replicate API token is configured
+    // Check if Replicate API token is configured (using the direct env var check)
     if (!isConfigured) {
       console.warn('Replicate API not configured, returning error');
       return NextResponse.json(

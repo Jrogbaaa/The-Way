@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useUIStore } from '@/lib/store';
 import { ROUTES } from '@/lib/config';
 import Logo from '@/components/ui/Logo';
+import { LayoutGrid, Sparkles, Clapperboard, Image, BarChart, MessageSquare, GalleryVerticalEnd } from 'lucide-react';
 
 type NavItem = {
   name: string;
@@ -42,30 +43,6 @@ const Sidebar = () => {
       ),
       label: 'View your dashboard',
       color: 'blue',
-    },
-    // IMPORTANT: Photo Editor should always be included in navigation for all environments
-    {
-      name: 'Photo Editor',
-      href: ROUTES.photoEditor,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <path d="M15 8h.01" />
-          <rect width="16" height="16" x="4" y="4" rx="3" />
-          <path d="m4 15 4-4a3 5 0 0 1 3 0l5 5" />
-          <path d="m14 14 1-1a3 5 0 0 1 3 0l2 2" />
-        </svg>
-      ),
-      label: 'Edit photos with AI',
-      color: 'pink',
     },
     {
       name: 'Image Creator',
@@ -112,7 +89,29 @@ const Sidebar = () => {
       color: 'red',
     },
     {
-      name: 'Analyze Post',
+      name: 'Photo Editor',
+      href: ROUTES.photoEditor,
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-5 w-5"
+        >
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
+        </svg>
+      ),
+      label: 'Edit your photos',
+      color: 'green',
+    },
+    {
+      name: 'Social Analyzer',
       href: ROUTES.uploadPost,
       icon: (
         <svg

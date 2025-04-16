@@ -1,56 +1,66 @@
 import { NextResponse } from 'next/server';
 import Replicate from 'replicate';
-import { API_CONFIG } from '@/lib/config';
 
-// Initialize Replicate client
+// Read token directly from environment
+const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
+
+// Ensure API token is available 
+if (!REPLICATE_API_TOKEN) {
+  console.error('REPLICATE_API_TOKEN environment variable is not set.');
+}
+
+// Initialize Replicate client once at the module level
 const replicate = new Replicate({
-  auth: API_CONFIG.replicateApiToken,
+  auth: REPLICATE_API_TOKEN,
 });
 
-// Well-known public models to test with
-const PUBLIC_MODELS = {
-  sdxl: "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-  flux: "stability-ai/stable-diffusion:27b93a2413e7f36cd83da926f3656280b2931564ff050bf9575f1fdf9bcd7478"
-};
-
+// --- UNCOMMENTED POST Handler --- 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { modelId, input } = body;
-
-    if (!modelId) {
+    const { modelId, input } = await request.json();
+    
+    // Validate input
+    if (!modelId || !input) {
       return NextResponse.json(
-        { error: 'Model ID is required' },
+        { error: 'Missing modelId or input in request body' },
         { status: 400 }
       );
     }
-
-    console.log('Calling Replicate API with:', { modelId, input });
     
-    // Use a public model for testing if directed to do so
-    const actualModelId = modelId === "test" ? PUBLIC_MODELS.sdxl : modelId;
+    // Token check 
+    if (!REPLICATE_API_TOKEN) {
+      console.warn('Replicate API not configured, returning error');
+      return NextResponse.json(
+        { 
+          error: 'Replicate API token is required',
+          message: 'Please set the REPLICATE_API_TOKEN environment variable'
+        },
+        { status: 500 }
+      );
+    }
     
     try {
-      // For SDXL and other well-known models, we can use the simple run API
-      if (actualModelId === PUBLIC_MODELS.sdxl || actualModelId === PUBLIC_MODELS.flux) {
-        console.log('Using public model:', actualModelId);
-        const output = await replicate.run(actualModelId, { input });
-        return NextResponse.json({ output });
+      // Use predictions API for model/version
+      const actualModelId = modelId as string; // Treat modelId as string
+      console.log('Using predictions API for model/version:', actualModelId);
+      
+      // Extract version (handles both owner/name:version and just version_hash)
+      let version: string | undefined;
+      if (actualModelId.includes(':')) {
+           const parts = actualModelId.split(':');
+           version = parts[1]; // Assumes format owner/name:version
+           console.log(`Extracted version ${version} from ${actualModelId}`);
+      } else if (actualModelId.length > 50) { // Heuristic: likely a version hash
+           version = actualModelId;
+           console.log(`Using provided string as version hash: ${version}`);
+      } else {
+           console.error('Could not determine version from modelId:', actualModelId);
+           return NextResponse.json(
+                { error: 'Invalid model format. Expected owner/model:version or a version hash.' },
+                { status: 400 }
+           );
       }
-      
-      // For custom models, try the predictions API directly
-      console.log('Using custom model, falling back to predictions API');
-      
-      // Convert model IDs to versions (for well-formed IDs like 'owner/name:version')
-      const [ownerModel, version] = actualModelId.split(':');
-      
-      if (!version) {
-        return NextResponse.json(
-          { error: 'Invalid model format. Expected owner/model:version' },
-          { status: 400 }
-        );
-      }
-      
+            
       console.log('Creating prediction with version:', version);
       
       // Create a prediction using the version directly
@@ -59,57 +69,34 @@ export async function POST(request: Request) {
         input: input,
       });
       
-      console.log('Prediction created:', prediction.id);
-      
-      // Wait for the prediction to complete
-      const result = await replicate.wait(prediction);
-      
-      console.log('Prediction completed:', result.status);
-      
-      if (result.error) {
-        console.error('Prediction error:', result.error);
-        return NextResponse.json(
-          { error: result.error },
-          { status: 500 }
-        );
-      }
-      
-      console.log('Output type:', typeof result.output);
-      console.log('Output value:', result.output);
-      
-      return NextResponse.json({ 
-        output: result.output,
-        debug: {
-          predictionId: prediction.id,
-          outputType: typeof result.output,
-          outputIsArray: Array.isArray(result.output),
-          outputLength: Array.isArray(result.output) ? result.output.length : 0
-        }
-      });
-    } catch (runError: unknown) {
-      console.error('Model API error:', runError);
-      
-      // If specific error for invalid version, provide a more helpful message
-      if (typeof runError === 'object' && runError !== null && runError.toString().includes('Invalid version')) {
-        return NextResponse.json(
-          { 
-            error: 'The model version either does not exist or your API key does not have permission to use it. Try using a public model like "stability-ai/sdxl" for testing.',
-            originalError: runError.toString() 
-          },
-          { status: 422 }
-        );
-      }
+      console.log('Generic handler: Prediction created:', prediction.id, prediction.status);
+      return NextResponse.json(prediction, { status: 201 });
+
+    } catch (error: any) {
+      console.error('Error calling Replicate:', error);
+      let errorMessage = 'Failed to generate image using Replicate';
+      if (error?.response?.status === 401) {
+        errorMessage = 'Replicate API authentication failed. Check your API token.';
+      } else if (error?.response?.status === 402) {
+        errorMessage = 'Replicate API call failed: Payment required or credit limit reached.';
+      } else if (error?.response?.status === 429) {
+        errorMessage = 'Replicate API call failed: Rate limit exceeded.';
+      } else if (error?.response?.status === 422) {
+        errorMessage = 'Replicate API call failed: Invalid input or version. Check model parameters and version compatibility.';
+      } else if (error.message) {
+        errorMessage = `Replicate API Error: ${error.message}`;
+      } 
       
       return NextResponse.json(
-        { error: runError instanceof Error ? runError.message : String(runError) },
-        { status: 500 }
+        { error: errorMessage, details: error.toString() }, 
+        { status: error?.response?.status || 500 } // Use error status if available
       );
     }
-  } catch (error: unknown) {
-    console.error('Replicate API error:', error);
+  } catch (error: any) {
+    console.error('Error parsing request body:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
+      { error: 'Invalid request body' }, 
+      { status: 400 }
     );
   }
 } 

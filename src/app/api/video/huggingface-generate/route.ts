@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { API_CONFIG } from "@/lib/config";
+import Replicate from 'replicate';
+
+// Initialize Replicate client
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN, // Use environment variable directly
+});
+
+const isConfigured = !!process.env.REPLICATE_API_TOKEN;
 
 interface VideoGenerationRequest {
-  image_url?: string;
-  image_base64?: string;
+  imageDataURL: string;
   num_frames?: number;
   fps?: number;
   motion_bucket_id?: number;
-  model_id?: string;
   prompt?: string;
 }
 
@@ -16,182 +21,60 @@ interface VideoGenerationRequest {
  * This provides a free alternative to Runway or D-ID
  */
 export async function POST(req: NextRequest) {
+  if (!isConfigured) {
+    return NextResponse.json(
+      { error: 'Server configuration error: Replicate API token missing' },
+      { status: 500 }
+    );
+  }
+
   try {
-    // Check if API key is configured - but allow operation without key
-    const apiKey = API_CONFIG.huggingFaceApiKey || "";
-    
     const body = await req.json() as VideoGenerationRequest;
     const { 
-      image_url, 
-      image_base64,
+      imageDataURL,
       num_frames = 25, 
       fps = 7, 
       motion_bucket_id = 127,
-      model_id = API_CONFIG.videoGenerationModels.stableVideoDiffusion,
       prompt = "" // Default to empty string
     } = body;
 
-    // Validate input
-    if (!image_url && !image_base64) {
+    if (!imageDataURL) {
       return NextResponse.json(
-        { success: false, error: "An image URL or base64 data is required" },
+        { success: false, error: "imageDataURL is required" },
         { status: 400 }
       );
     }
 
-    let base64Data: string;
-
-    // Handle image from URL
-    if (image_url) {
-      console.log("Fetching image data from URL:", image_url);
-      const imageResponse = await fetch(image_url);
-      if (!imageResponse.ok) {
-        return NextResponse.json(
-          { success: false, error: "Failed to fetch image from provided URL" },
-          { status: 400 }
-        );
-      }
-      
-      const imageBuffer = await imageResponse.arrayBuffer();
-      base64Data = Buffer.from(imageBuffer).toString('base64');
-    } 
-    // Handle image from base64
-    else {
-      console.log("Processing base64 image data");
-      // Remove the data:image/jpeg;base64, part
-      base64Data = image_base64!.split(',')[1]; 
-    }
-
-    // Instead of using the main Hugging Face API, we'll use Replicate API which works better
-    // for this specific model
-    const replicateApiKey = API_CONFIG.replicateApiToken;
-    
-    if (!replicateApiKey) {
+    // Extract base64 data
+    const base64Data = imageDataURL.split(',')[1];
+    if (!base64Data) {
       return NextResponse.json(
-        { success: false, error: "Replicate API key is required but missing" },
+        { success: false, error: "Invalid imageDataURL format" },
         { status: 400 }
       );
     }
-    
-    console.log("Using Replicate API for Stable Video Diffusion");
-    
-    // Call the Replicate API with the model
-    const replicateResponse = await fetch("https://api.replicate.com/v1/predictions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Token ${replicateApiKey}`
-      },
-      body: JSON.stringify({
-        version: "6244f70a6b0dfd1bb6984a53f9dfedb15142234597b12481be5b0d8ce979c138",
+
+    // Call the Replicate API to generate video
+    const output = await replicate.run(
+      'anotherjesse/zeroscope-v2-xl:9f747673945c62801b13b84701c783929c0ee784e4748ec062204894dda1a351',
+      {
         input: {
           image: `data:image/jpeg;base64,${base64Data}`,
-          motion_bucket_id: motion_bucket_id,
-          fps: fps,
+          num_frames,
+          fps,
+          motion_bucket_id,
           ...(prompt && { prompt: prompt })
         }
-      })
-    });
-    
-    if (!replicateResponse.ok) {
-      let errorMessage = `Replicate API error: ${replicateResponse.status} ${replicateResponse.statusText}`;
-      try {
-        const errorData = await replicateResponse.json();
-        console.error("Error response from Replicate:", errorData);
-        errorMessage = errorData.detail || errorMessage;
-      } catch (e) {
-        console.error("Failed to parse error response:", e);
       }
-      
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: errorMessage,
-          status: replicateResponse.status
-        },
-        { status: replicateResponse.status }
-      );
-    }
-    
-    const prediction = await replicateResponse.json();
-    
-    // Replicate returns a prediction ID and we need to poll for the result
-    let videoUrl: string | null = null;
-    const predictionId = prediction.id;
-    
-    // Poll for the result (up to 60 seconds)
-    for (let i = 0; i < 30; i++) {
-      console.log(`Polling for prediction result, attempt ${i+1}...`);
-      
-      const statusResponse = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
-        headers: {
-          "Authorization": `Token ${replicateApiKey}`
-        }
-      });
-      
-      if (!statusResponse.ok) {
-        console.error("Failed to check prediction status:", statusResponse.statusText);
-        continue;
-      }
-      
-      const statusData = await statusResponse.json();
-      
-      if (statusData.status === "succeeded") {
-        videoUrl = statusData.output;
-        break;
-      } else if (statusData.status === "failed") {
-        return NextResponse.json(
-          { success: false, error: statusData.error || "Video generation failed" },
-          { status: 500 }
-        );
-      }
-      
-      // Wait 2 seconds before polling again
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    }
-    
-    if (!videoUrl) {
-      return NextResponse.json(
-        { success: false, error: "Timed out waiting for video generation" },
-        { status: 504 }
-      );
-    }
-    
-    // We now have a video URL from Replicate, but we need to return a data URL
-    // to the client, so we need to fetch the video data and convert it
-    const videoResponse = await fetch(videoUrl);
-    if (!videoResponse.ok) {
-      return NextResponse.json(
-        { success: false, error: "Failed to fetch generated video" },
-        { status: 500 }
-      );
-    }
-    
-    const videoBuffer = await videoResponse.arrayBuffer();
-    const videoBase64 = Buffer.from(videoBuffer).toString('base64');
-    const videoDataUrl = `data:video/mp4;base64,${videoBase64}`;
-    
-    return NextResponse.json({
-      success: true,
-      videoUrl: videoDataUrl,
-      metadata: {
-        model_id: "replicate/stable-video-diffusion",
-        num_frames,
-        fps,
-        motion_bucket_id,
-        has_prompt: !!prompt,
-        provider: "replicate"
-      }
-    });
-  } catch (error) {
-    console.error("Error in video generation:", error);
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : "Failed to generate video" 
-      },
-      { status: 500 }
     );
+
+    // Return the generated video URL or data
+    return NextResponse.json(output, { status: 200 });
+  } catch (error: any) {
+    console.error('Error calling Hugging Face video generation API:', error);
+    // Handle potential errors from the Replicate API
+    const errorMessage = error.response?.data?.detail || 'Failed to generate video';
+    const statusCode = error.response?.status || 500;
+    return NextResponse.json({ error: errorMessage }, { status: statusCode });
   }
 }

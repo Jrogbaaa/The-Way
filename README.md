@@ -12,13 +12,31 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
   - Google Vertex AI Imagen (fully implemented)
   
 - 📷 **Photo Editor**:
-  - AI-powered photo editing with Google's Gemini 2.0 Pro model
-  - Preset editing options and custom prompt support
-  - Easy-to-use interface for quick enhancements
-  - **NEW:** Outpainting functionality using Stability AI to extend images beyond their original boundaries
-  - **NEW:** Multi-directional outpainting support - extend in multiple directions at once
-  - **NEW:** Search & Replace feature to swap objects in images
-  - **NEW:** Recolor feature to change colors of specific objects while preserving everything else
+  - Rebuilding with direct Bria AI integration ([https://docs.bria.ai/](https://docs.bria.ai/))
+  - Features being added:
+    - Image Upload & Preview
+    - Increase Resolution (Upscale) (`/increase_resolution`)
+    - Image Expansion (Outpaint) (`/image_expansion`)
+  - More features (Background Removal, Eraser, etc.) to come.
+  - Combines Bria AI for direct image edits and Replicate for AI generation tasks.
+  - **Bria AI Features (Direct API - `/api/bria/...` or `/api/edit-image/...`)**:
+    - Image Upload & Preview
+    - Prompt Edit
+    - Eraser
+    - Expand Image (Outpaint)
+    - Remove Background
+    - Blur Background
+    - Increase Resolution (Upscale)
+  - **Replicate Features (Inpaint/GenFill - `/api/replicate/inpaint`)**:
+    - Uses `black-forest-labs/flux-fill-dev` model ([Source](https://replicate.com/black-forest-labs/flux-fill-dev)).
+    - **Workflow**: 
+      1. Frontend (`PhotoEditor.tsx`) sends image, mask, prompt to `/api/replicate/inpaint`.
+      2. Backend starts Replicate prediction & returns prediction ID.
+      3. Frontend polls `/api/replicate/predictions/[id]` for status.
+      4. On success, frontend gets `replicate.delivery` URL.
+      5. Frontend uses `/api/proxy` to fetch the image (bypassing CORS).
+      6. Result is displayed.
+    - **Key Parameters**: `guidance_scale` (prompt adherence), `strength` (image influence).
   
 - 🎬 **Video Creator**:
   - Convert still images to high-quality videos
@@ -367,33 +385,57 @@ For more detailed documentation on the storyboard system, see the [Storyboard Do
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/the-way.git
-   cd the-way
-   ```
+1. **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-username/the-way.git
+    cd the-way
+    ```
+2. **Install dependencies:**
+    ```bash
+    npm install
+    # or
+    yarn install
+    # or
+    pnpm install
+    ```
+3. **Set up environment variables:**
+    - Create a `.env.local` file in the root directory.
+    - Add the required environment variables (see `.env.example`). Key variables include:
+      - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL.
+      - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase project anon key.
+      - `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key (for backend operations).
+      - `REPLICATE_API_TOKEN`: Your Replicate API token.
+      - `GEMINI_API_KEY`: Your Google AI (Gemini) API key.
+      - `GOOGLE_PROJECT_ID`: Your Google Cloud project ID.
+      - `GOOGLE_APPLICATION_CREDENTIALS`: Path to your Google Cloud service account key file.
+      - `NEXT_PUBLIC_APP_URL`: The base URL of your deployed application (e.g., `http://localhost:3000` for local dev).
+      - `DATABASE_URL`: Your full database connection string (used by Prisma).
+      - `REPLICATE_WEBHOOK_URL`: URL for Replicate webhooks (if used).
+      - `REPLICATE_WEBHOOK_SECRET`: Secret for verifying Replicate webhooks (if used).
 
-2. Install dependencies:
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
+4. **Database Setup (Prisma & Supabase):**
+    - Ensure your `DATABASE_URL` in `.env.local` points to your Supabase PostgreSQL database.
+    - Define your database models in `prisma/schema.prisma`.
+    - Sync your Prisma schema with your Supabase database:
+      ```bash
+      npx prisma db push 
+      # Or, for generating and applying SQL migrations (recommended for production):
+      # npx prisma migrate dev --name your_migration_name
+      ```
+    - Generate the Prisma Client based on your schema:
+      ```bash
+      npx prisma generate
+      ```
 
-3. Set up environment variables:
-   ```
-   cp .env.example .env.local
-   ```
-   Then edit `.env.local` with your configuration values.
-
-4. Run the development server:
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
-
-5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+5. **Run the development server:**
+    ```bash
+    npm run dev
+    # or
+    yarn dev
+    # or
+    pnpm dev
+    ```
+6.  Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Architecture
 

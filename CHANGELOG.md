@@ -14,10 +14,27 @@ All notable changes to this project will be documented in this file.
 - Added Recolor feature to change colors of specific objects while preserving the rest of the image
 - Enhanced error handling and logging for Stability AI API interactions
 - Optimized image preparation pipeline with automatic resizing for API requirements
+- Integrated BRIA AI GenFill feature to add objects to masked areas of images
+- Added task-based interface to the Photo Editor for more intuitive feature selection
+- Improved masking functionality with visual overlay instructions
+- Enhanced GenFill mode with step-by-step instructions and visual guidance
+- Added Bria AI integration for image upscaling (`/increase_resolution`)
+- Added Bria AI integration for image expansion (`/image_expansion`)
+- Added basic image upload and preview to the new Photo Editor page
+
+### Changed
+- Updated navigation menu to replace standalone GenFill page with consolidated Photo Editor functionality
+- Improved Photo Editor UI with clearer instructions and visual cues for masking operations
+- Enhanced drawing tools with toggle buttons for Draw/Erase modes
+- Added floating instruction overlays for better user guidance in masking modes
+- Restarted Bria AI integration for Photo Editor, removing previous implementation and SDK
 
 ### Removed
+- Removed standalone GenFill page and route to consolidate functionality into the Photo Editor
 - Removed "Create Images of You" feature due to persistent technical issues and API reliability problems
 - Removed related API endpoints, store files, and components for the custom model training feature
+- Removed previous Photo Editor page component and associated API routes/SDK
+- Removed Photo Editor documentation file (`docs/photo-editor.md`) prior to rebuild
 
 ### Fixed
 - Fixed Link component error in Dashboard page causing prop type errors

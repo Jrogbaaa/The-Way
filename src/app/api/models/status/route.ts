@@ -1,33 +1,53 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Replicate from 'replicate';
-import { API_CONFIG } from '@/lib/config';
+// Remove unused import if API_CONFIG is no longer needed for the token
+// import { API_CONFIG } from '@/lib/config';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Replicate client
 const replicate = new Replicate({
-  auth: API_CONFIG.replicateApiToken,
+  auth: process.env.REPLICATE_API_TOKEN, // Use environment variable directly
 });
+
+// Check configuration directly from the environment variable
+const isConfigured = !!process.env.REPLICATE_API_TOKEN;
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-export async function GET(request: Request) {
+/**
+ * API Route: GET /api/models/status
+ * Fetches the status of a Replicate prediction.
+ * 
+ * Expects a `predictionId` query parameter.
+ */
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const predictionId = searchParams.get('predictionId');
+
+  console.log(`GET /api/models/status called for prediction ID: ${predictionId}`);
+
+  if (!isConfigured) {
+    console.error('Replicate API key not configured in GET /api/models/status');
+    return NextResponse.json(
+      { error: 'Server configuration error: Replicate API token missing' }, 
+      { status: 500 }
+    );
+  }
+
+  if (!predictionId) {
+    return NextResponse.json({ error: 'Missing predictionId parameter' }, { status: 400 });
+  }
+
   try {
-    // Get the prediction ID from the query string
-    const url = new URL(request.url);
-    const id = url.searchParams.get('id');
+    console.log(`Fetching status for prediction: ${predictionId}`);
+    // Fetch the prediction status from Replicate
+    const prediction = await replicate.predictions.get(predictionId);
     
-    if (!id) {
-      return NextResponse.json({ error: 'Missing prediction ID' }, { status: 400 });
-    }
-    
-    console.log(`Checking status for prediction ${id}`);
-    
-    // Get prediction status from Replicate
-    const prediction = await replicate.predictions.get(id);
-    
+    console.log(`Prediction status for ${predictionId}: ${prediction.status}`);
+
     // If training completed successfully but we didn't get a webhook (likely in local dev),
     // save the model data
     if (prediction.status === 'succeeded' && 
@@ -46,7 +66,7 @@ export async function GET(request: Request) {
         const { data: existingModel } = await supabase
           .from('trained_models')
           .select('id')
-          .eq('id', id)
+          .eq('id', predictionId)
           .single();
           
         if (!existingModel) {
@@ -83,21 +103,19 @@ export async function GET(request: Request) {
       }
     }
     
-    // Return the prediction status
+    // Return the relevant prediction details (status, output, error)
     return NextResponse.json({
       id: prediction.id,
       status: prediction.status,
-      created_at: prediction.created_at,
-      completed_at: prediction.completed_at,
       output: prediction.output,
       error: prediction.error,
+      logs: prediction.logs // Include logs for debugging if needed
     });
-    
-  } catch (error) {
-    console.error('Error checking prediction status:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    );
+
+  } catch (error: any) {
+    console.error(`Error fetching status for prediction ${predictionId}:`, error);
+    const detail = error.response?.data?.detail || error.message || 'An unknown error occurred';
+    const status = error.response?.status || 500;
+    return NextResponse.json({ detail, error: `Failed to get prediction status` }, { status });
   }
 } 
