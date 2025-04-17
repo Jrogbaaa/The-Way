@@ -185,11 +185,13 @@ const PhotoEditor = () => {
   useEffect(() => {
     if (contextRef.current) {
       contextRef.current.lineWidth = brushSize;
-      contextRef.current.strokeStyle = isEraser ? 'rgba(0, 0, 0, 1)' : 'rgba(255, 0, 0, 1)'; // Bright Red for drawing
+      // Use a semi-transparent red that makes it clearer this is a selection mask
+      contextRef.current.strokeStyle = isEraser ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 0, 0, 0.5)'; 
+      contextRef.current.fillStyle = isEraser ? 'rgba(0, 0, 0, 0)' : 'rgba(255, 0, 0, 0.2)';
       contextRef.current.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
-      // console.log(`Brush/Eraser Effect: Context updated - Eraser=${isEraser}, Size=${brushSize}`);
+      console.log(`Brush settings updated: Eraser=${isEraser}, Size=${brushSize}px`);
     }
-  }, [brushSize, isEraser]); 
+  }, [brushSize, isEraser]);
 
   // Get scaled mouse/touch coordinates relative to the canvas
   const getCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>): { x: number; y: number } | null => {
@@ -239,13 +241,27 @@ const PhotoEditor = () => {
     if (!coords) return;
 
     setIsPainting(true);
+    
+    // Draw initial point
     contextRef.current.beginPath();
     contextRef.current.moveTo(coords.x, coords.y);
     contextRef.current.lineTo(coords.x, coords.y); 
     contextRef.current.stroke();
+    
+    // For non-eraser, fill a circle at the starting point
+    if (!isEraser) {
+      contextRef.current.beginPath();
+      contextRef.current.arc(coords.x, coords.y, brushSize / 2, 0, Math.PI * 2);
+      contextRef.current.fill();
+    }
+    
+    // Begin a new path for the next segment
+    contextRef.current.beginPath();
+    contextRef.current.moveTo(coords.x, coords.y);
+    
     console.log("Start painting at:", coords);
 
-  }, []);
+  }, [isEraser, brushSize]);
   
   // Updated paint function for continuous line
   const paint = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -255,10 +271,18 @@ const PhotoEditor = () => {
 
     contextRef.current.lineTo(coords.x, coords.y); // Draw line to new point
     contextRef.current.stroke(); // Stroke the path
-    contextRef.current.beginPath(); // Begin new path segment for smoother joining (optional but good practice)
+    
+    // For non-eraser mode, fill a small circle at the current position for better visibility
+    if (!isEraser && contextRef.current) {
+      contextRef.current.beginPath();
+      contextRef.current.arc(coords.x, coords.y, brushSize / 2, 0, Math.PI * 2);
+      contextRef.current.fill();
+    }
+    
+    contextRef.current.beginPath(); // Begin new path segment for smoother joining
     contextRef.current.moveTo(coords.x, coords.y); // Move to the current point
 
-  }, [isPainting]); // Depends only on isPainting state
+  }, [isPainting, isEraser, brushSize]);
   
   // Updated stopPainting
   const stopPainting = useCallback(() => {
@@ -812,7 +836,8 @@ const PhotoEditor = () => {
                         {(editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.ERASE || editingMode === EDITING_MODES.GENFILL) && !isPainting && !isLoading && !isPolling && !editedImage && (
                           <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                             <div className="bg-black/70 text-white py-3 px-4 rounded-lg max-w-xs text-center">
-                              <p className="text-sm font-medium mb-2">Draw on the image to select area</p>
+                              <p className="text-sm font-medium mb-2">Draw a mask over the area you want to replace</p>
+                              <p className="text-xs">The red area will be replaced with AI-generated content</p>
                             </div>
                           </div>
                         )}
@@ -909,15 +934,15 @@ const PhotoEditor = () => {
                       <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 mb-4">
                         <h4 className="text-base font-medium text-purple-800 flex items-center">
                           <Wand2 className="h-4 w-4 mr-2" />
-                          GenFill
+                          Generative Fill (Inpainting)
                         </h4>
                         <p className="text-sm text-purple-700 mt-1">
-                          Generate content in masked areas of your image using AI.
+                          Replace or add content in specific areas of your image with AI-generated alternatives.
                         </p>
                         <ol className="text-xs text-purple-700 mt-2 space-y-1 list-decimal list-inside">
-                          <li><span className="font-medium">Step 1:</span> Use the brush to mask areas you want to fill</li>
-                          <li><span className="font-medium">Step 2:</span> Provide a descriptive prompt for what should appear in that area</li>
-                          <li><span className="font-medium">Step 3:</span> Click "Generate Fill" to create the content</li>
+                          <li><span className="font-medium">Step 1:</span> Draw a red mask over the area you want to fill/replace</li>
+                          <li><span className="font-medium">Step 2:</span> Provide a descriptive prompt for what should appear in the masked area</li>
+                          <li><span className="font-medium">Step 3:</span> Click "Generate Fill" to replace only the masked area</li>
                         </ol>
                       </div>
 

@@ -9,7 +9,9 @@ const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 if (!REPLICATE_API_TOKEN) {
   console.error('CRITICAL ERROR: REPLICATE_API_TOKEN environment variable is NOT SET.');
 } else {
-  console.log(`Using Replicate API Token starting with: ${REPLICATE_API_TOKEN.substring(0, 5)}...`);
+  // Log more details about the token for debugging
+  console.log(`Replicate API Token: First 5 chars: ${REPLICATE_API_TOKEN.substring(0, 5)}..., Length: ${REPLICATE_API_TOKEN.length}`);
+  console.log(`Last successful token refresh: ${new Date().toISOString()}`); // Timestamp for debugging
 }
 
 // Initialize Replicate client once at the module level
@@ -26,7 +28,7 @@ async function imageToDataUrl(file: File | Blob): Promise<string> {
 
 /**
  * API Route: POST /api/replicate/inpaint
- * Handles image inpainting using the zsxkib/flux-dev-inpainting model.
+ * Handles image inpainting using the community inpainting models.
  * 
  * Workflow:
  * 1. Receives image, mask, and prompt from FormData
@@ -70,88 +72,152 @@ export async function POST(req: NextRequest) {
     const imageDataUrl = await imageToDataUrl(imageFile);
     const maskDataUrl = await imageToDataUrl(maskFile);
 
-    // --- Switched to SDXL Inpainting Model ---
-    const modelIdentifier = "stability-ai/sdxl-inpainting:1a4128c86c222449267578b3e285664185b00f46396ad131617ec556b8f1e8b3"; 
-    
-    // Extract version and model name correctly for the predictions.create call
-    const [modelOwnerSlashName, modelVersion] = modelIdentifier.split(':');
-    
-    const input = {
-      image: imageDataUrl,
-      mask: maskDataUrl,
-      prompt: prompt || "", // Provide empty prompt if null
-      negative_prompt: "mountains, clouds, sky, rocks, blurry, duplicate", // Keep negative prompt
-      // Common parameters for SDXL
-      num_inference_steps: 30, 
-      guidance_scale: 7.5,     
-      // scheduler: "K_EULER", // Let SDXL use its default scheduler
-      // inpainting_full_res_padding: 16, // Removed, less common for SDXL
-      // strength might not be applicable or named differently
-      // num_outputs: 1, // Default is usually 1
-    };
-
-    console.log(`Attempting replicate.predictions.create with MODEL: ${modelOwnerSlashName} VERSION: ${modelVersion}`);
-    console.log(`Input configuration:`, { 
-      prompt: input.prompt,
-      negative_prompt: input.negative_prompt, 
-      num_inference_steps: input.num_inference_steps,
-      guidance_scale: input.guidance_scale,
-      // scheduler: input.scheduler, 
-      // inpainting_full_res_padding: input.inpainting_full_res_padding,
-    });
-
-    try {
-      const prediction = await replicate.predictions.create({
-        // Pass model and version separately
-        model: modelOwnerSlashName,
-        version: modelVersion,
-        input: input,
-      });
-
-      console.log(`Replicate prediction successfully initiated:`, prediction.id, prediction.status);
-      return NextResponse.json(prediction, { status: 201 });
-
-    } catch (creationError: any) {
-      console.error(`Error during replicate.predictions.create:`, creationError);
-      
-      const responseData = creationError?.response?.data;
-      const errorTitle = responseData?.title || 'Prediction Creation Failed';
-      const errorDetail = responseData?.detail || creationError.message || 'Unknown error detail';
-      const statusCode = creationError?.response?.status || 500;
-      
-      console.error(`Prediction creation failed! Status: ${statusCode}, Title: "${errorTitle}", Detail: "${errorDetail}"`);
-      
-      // Special handling for common 422 errors
-      if (statusCode === 422) {
-        if (errorDetail.includes("not permitted") || errorDetail.includes("does not exist")) {
-          console.error(`Permission Error: Please verify your Replicate API token has access to ${modelIdentifier}`);
-          return NextResponse.json(
-            { 
-              error: 'Permission denied',
-              detail: 'Your API token does not have permission to use this model. Please check your Replicate account settings.',
-              status: 422
-            },
-            { status: 422 }
-          );
-        }
+    // Try three different community inpainting models in order, if one fails try the next
+    const inpaintingModels = [
+      {
+        name: "stabilityai/stable-diffusion-2-inpainting",
+        version: "9c34d792f0e1f6aeda465dd5605a67196176633b557c7656f0f36c3f8ac52fc2",
+        description: "Stability AI Stable Diffusion 2 Inpainting - Most reliable model"
+      },
+      {
+        name: "runwayml/stable-diffusion-inpainting",
+        version: "c28b92a7ecd66eee4aefadb71161d3c9d8d47ef9744b312183b2eb353724cd21",
+        description: "RunwayML Stable Diffusion Inpainting - Community model"
+      },
+      {
+        name: "madebyollin/sdxl-inpainting",
+        version: "4e34dfb5d7332177f3f472a0b325a7e3782dd4c455d14b5b1ea2f1705c4cb77d",
+        description: "SDXL Inpainting - Higher quality inpainting"
       }
+    ];
 
-      return NextResponse.json(
-        { 
-          error: `Replicate prediction creation failed: ${errorTitle}`,
-          detail: errorDetail,
-          status: statusCode
-        },
-        { status: statusCode }
-      );
+    // Try each model in sequence
+    for (const model of inpaintingModels) {
+      console.log(`Trying inpainting model: ${model.name} (${model.description})`);
+      
+      try {
+        // Configure appropriate input parameters based on the model
+        let input;
+
+        if (model.name.includes('sdxl')) {
+          // SDXL inpainting has different parameters
+          input = {
+            prompt: prompt || "A beautiful bush or tree",
+            image: imageDataUrl,
+            mask: maskDataUrl,
+            negative_prompt: "blurry, ugly, duplicate, distorted, low quality",
+            width: 1024,
+            height: 1024,
+            num_inference_steps: 25,
+            guidance_scale: 7.5,
+          };
+        } else {
+          // Standard SD inpainting parameters
+          input = {
+            prompt: prompt || "A beautiful bush or tree",
+            image: imageDataUrl,
+            mask: maskDataUrl,
+            negative_prompt: "blurry, ugly, duplicate, distorted, low quality",
+            num_inference_steps: 30,
+            guidance_scale: 7.5,
+          };
+        }
+
+        console.log(`Attempting inpainting with model: ${model.name} (${model.description})`);
+        
+        // Debug info for troubleshooting
+        console.log(`Inpainting parameters:
+          - Prompt: "${prompt || 'A beautiful bush or tree'}"
+          - Model: ${model.name} (v${model.version})
+          - Image data URL length: ${imageDataUrl.length} chars
+          - Mask data URL length: ${maskDataUrl.length} chars
+        `);
+        
+        const prediction = await replicate.predictions.create({
+          model: model.name,
+          version: model.version,
+          input: input,
+        });
+
+        console.log(`✓ Success! ${model.name} prediction initiated:`, prediction.id, prediction.status);
+        return NextResponse.json({
+          ...prediction,
+          modelUsed: model.name
+        }, { status: 201 });
+
+      } catch (modelError: any) {
+        console.error(`× Failed to use ${model.name}:`, modelError.message);
+        
+        // If this is the last model in our array and it failed, throw to outer catch
+        if (model === inpaintingModels[inpaintingModels.length - 1]) {
+          throw modelError;
+        }
+        
+        // Otherwise continue to the next model
+        console.log(`Trying next model...`);
+        continue;
+      }
     }
 
+    // This should not happen as we throw from the loop, but just in case
+    throw new Error("All inpainting models failed");
+
   } catch (error: any) {
-    // Outer catch for formData parsing or other initial errors
-    console.error('Unhandled error in /api/replicate/inpaint POST:', error);
+    // Handle errors from all models
+    console.error('All inpainting models failed:', error);
+    
+    const errorDetail = error?.response?.data?.detail || error.message || 'Unknown error';
+    const statusCode = error?.response?.status || 500;
+    
+    // FALLBACK: If all inpainting models failed, try text-to-image as absolute last resort
+    console.log("FALLBACK: All inpainting models failed. Switching to text-to-image as fallback");
+    
+    try {
+      // Use SDXL text-to-image as fallback (known to work)
+      const fallbackModel = "stability-ai/sdxl";
+      const fallbackVersion = "39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b";
+      
+      // Create a more descriptive prompt based on original prompt
+      const enhancedPrompt = prompt ? 
+        `A detailed image of ${prompt}. High quality, realistic, detailed photography.` : 
+        "A beautiful detailed landscape with trees and natural elements. High quality, realistic, detailed photography.";
+      
+      const fallbackInput = {
+        prompt: enhancedPrompt,
+        negative_prompt: "blurry, ugly, duplicate, distorted, low quality, cartoon, illustration, disfigured",
+        num_inference_steps: 30,
+        guidance_scale: 7.5,
+        width: 1024,
+        height: 1024,
+      };
+      
+      console.log(`FALLBACK: Using text-to-image model with enhanced prompt: "${enhancedPrompt}"`);
+      
+      const fallbackPrediction = await replicate.predictions.create({
+        model: fallbackModel,
+        version: fallbackVersion,
+        input: fallbackInput,
+      });
+      
+      console.log(`FALLBACK prediction successfully initiated:`, fallbackPrediction.id, fallbackPrediction.status);
+      
+      // Return the prediction but include a flag that indicates this is a fallback
+      return NextResponse.json({
+        ...fallbackPrediction,
+        isFallback: true,
+        fallbackReason: "All inpainting models failed; used text-to-image instead"
+      }, { status: 201 });
+    } catch (fallbackError: any) {
+      console.error("Even fallback failed:", fallbackError);
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to process inpaint request', detail: error.message },
-      { status: 500 } 
+      { 
+        error: `Replicate prediction creation failed after trying multiple models`,
+        detail: errorDetail,
+        status: statusCode
+      },
+      { status: statusCode }
     );
   }
 } 

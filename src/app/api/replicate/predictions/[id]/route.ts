@@ -21,14 +21,14 @@ interface RouteParams {
  *          (including status, input, output, logs, etc.) or an error object.
  */
 export async function GET(req: NextRequest, { params }: RouteParams) {
-  console.log(`Received request for /api/replicate/predictions/${params.id}`);
+  const id = params.id;
+  console.log(`Received request for /api/replicate/predictions/${id}`);
 
   if (!REPLICATE_API_TOKEN) {
     return NextResponse.json({ error: 'Server configuration error: Replicate API token missing' }, { status: 500 });
   }
 
-  const predictionId = params.id;
-  if (!predictionId) {
+  if (!id) {
     return NextResponse.json({ error: 'Prediction ID is required' }, { status: 400 });
   }
 
@@ -37,14 +37,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   });
 
   try {
-    const prediction = await replicate.predictions.get(predictionId);
-    console.log(`Fetched prediction status for ${predictionId}:`, prediction.status);
+    const prediction = await replicate.predictions.get(id);
+    console.log(`Fetched prediction status for ${id}:`, prediction.status);
 
     // Return the full prediction object (includes status, input, output, logs, etc.)
     return NextResponse.json(prediction);
 
   } catch (error: any) {
-    console.error(`Error fetching Replicate prediction ${predictionId}:`, error);
+    console.error(`Error fetching Replicate prediction ${id}:`, error);
     const statusCode = error.response?.status || 500;
     const errorMessage = error.message || 'Failed to fetch prediction status from Replicate';
     const errorDetails = error.response?.data?.detail || error.detail || {};
