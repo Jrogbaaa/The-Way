@@ -370,6 +370,34 @@ To access the storyboard creator, navigate to:
 
 For more detailed documentation on the storyboard system, see the [Storyboard Documentation](./the-way/docs/storyboard.md).
 
+## Recent Updates
+
+### ComfyUI Integration (New)
+
+The application now supports local image editing using ComfyUI, providing faster processing and more privacy compared to cloud-based solutions.
+
+**Features:**
+- Local inpainting using your own hardware
+- Custom workflows for precise control
+- Faster processing times
+- Enhanced privacy (images don't leave your machine)
+
+**Technical Implementation:**
+- API endpoints for interacting with local ComfyUI instance
+- Seamless integration with existing UI
+- Proper state management for loading and error handling
+- Fallback to Replicate API when ComfyUI is unavailable
+
+### Bug Fixes
+
+#### PhotoEditor Component Improvements
+- Fixed issue with processing state management in inpainting operations
+- Updated UI loading indicators to properly reflect processing state
+- Improved error handling and reporting
+- Fixed Next.js API route parameters handling for prediction status endpoint
+
+For detailed setup instructions for ComfyUI, see the [ComfyUI Integration](#local-development-with-comfyui-integration) section.
+
 ## Getting Started
 
 ### Prerequisites
