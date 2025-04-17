@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { toast } from 'react-hot-toast';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Define editing modes
 const EDITING_MODES = {
@@ -19,7 +22,8 @@ const EDITING_MODES = {
   INPAINT: 'INPAINT',
   ERASE: 'ERASE',
   GENFILL: 'GENFILL',
-  INCREASE_RES: 'INCREASE_RES'
+  INCREASE_RES: 'INCREASE_RES',
+  COMFY_INPAINT: 'COMFY_INPAINT',
 };
 
 // Define common editing presets
@@ -31,6 +35,13 @@ const EDITING_PRESETS = [
 
 // Define edit features
 const EDIT_FEATURES = [
+  {
+    id: EDITING_MODES.COMFY_INPAINT, 
+    name: 'ComfyUI Inpaint', 
+    description: 'Local inpainting using ComfyUI', 
+    icon: <Paintbrush className="h-5 w-5" />,
+    apiEndpoint: '/api/comfy/inpaint'
+  },
   {
     id: EDITING_MODES.INPAINT, 
     name: 'Generative Fill', 
@@ -146,13 +157,14 @@ const PhotoEditor = () => {
   useEffect(() => {
     const needsCanvas = editingMode === EDITING_MODES.INPAINT || 
                         editingMode === EDITING_MODES.GENFILL || 
-                        editingMode === EDITING_MODES.ERASE;
+                        editingMode === EDITING_MODES.ERASE ||
+                        editingMode === EDITING_MODES.COMFY_INPAINT;
 
     // Only proceed if we need the canvas, the ref is set, and we have image dimensions
     if (needsCanvas && canvasRef.current && imageRef.current && imageDimensions) {
         console.log("Canvas setup effect: Conditions met, setting up context.");
-        const canvas = canvasRef.current;
-        const img = imageRef.current;
+    const canvas = canvasRef.current;
+    const img = imageRef.current;
 
         // Calculate display dimensions based on container/image ref if needed, or use fixed logic
         // For simplicity, let's use the bounding rect again, assuming containerRef is stable
@@ -161,9 +173,9 @@ const PhotoEditor = () => {
             return;
         }
         const imgRect = img.getBoundingClientRect(); // Get current display size
-        canvas.width = imgRect.width;
-        canvas.height = imgRect.height;
-
+    canvas.width = imgRect.width;
+    canvas.height = imgRect.height;
+    
         contextRef.current = canvas.getContext('2d');
         if (contextRef.current) {
             console.log("Canvas setup effect: Context obtained.");
@@ -199,7 +211,7 @@ const PhotoEditor = () => {
   // Get scaled mouse/touch coordinates relative to the canvas
   const getCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>): { x: number; y: number } | null => {
       if (!canvasRef.current) return null;
-      const canvas = canvasRef.current;
+    const canvas = canvasRef.current;
       const rect = canvas.getBoundingClientRect();
       let clientX, clientY;
 
@@ -242,7 +254,7 @@ const PhotoEditor = () => {
     
     const coords = getCoords(e);
     if (!coords) return;
-
+    
     setIsPainting(true);
     
     // Draw initial point
@@ -290,7 +302,7 @@ const PhotoEditor = () => {
   // Updated stopPainting
   const stopPainting = useCallback(() => {
     if (isPainting) {
-        setIsPainting(false);
+    setIsPainting(false);
         if (contextRef.current) {
             contextRef.current.beginPath(); // Reset path after stopping
         }
@@ -338,7 +350,7 @@ const PhotoEditor = () => {
           (blob) => {
             if (blob) {
               console.log("Mask blob generated from drawing canvas", blob.size, blob.type);
-              resolve(blob);
+        resolve(blob);
             } else {
               reject(new Error('Failed to create blob from drawing canvas'));
             }
@@ -432,13 +444,17 @@ const PhotoEditor = () => {
       setProcessingMessage("Processing your request...");
 
       // Check if we're in inpainting/genfill mode requiring a mask
-      if ((editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.GENFILL) && !canvasRef.current) {
+      if ((editingMode === EDITING_MODES.INPAINT || 
+           editingMode === EDITING_MODES.GENFILL || 
+           editingMode === EDITING_MODES.COMFY_INPAINT) && !canvasRef.current) {
         console.log("Canvas not ready for inpainting/genfill");
         throw new Error("Canvas not ready for drawing. Please try refreshing the page.");
       }
 
-      // For inpainting and genfill modes, we need to get mask data
-      if (editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.GENFILL) {
+      // For inpainting, genfill, and comfy inpaint modes, we need to get mask data
+      if (editingMode === EDITING_MODES.INPAINT || 
+          editingMode === EDITING_MODES.GENFILL || 
+          editingMode === EDITING_MODES.COMFY_INPAINT) {
         console.log('Calling getMaskBlob. canvasRef.current is:', canvasRef.current);
         const maskBlob = await getMaskBlob();
         
@@ -469,62 +485,59 @@ const PhotoEditor = () => {
         
         setProcessingMessage(`Generating content with prompt: "${apiPrompt}"...`);
         
-        const route = editingMode === EDITING_MODES.INPAINT ? 'inpaint' : 'genfill';
-        const response = await fetch(`/api/replicate/${route}`, {
+        // Determine the API endpoint based on the editing mode
+        let apiEndpoint = '';
+        if (editingMode === EDITING_MODES.COMFY_INPAINT) {
+          apiEndpoint = '/api/comfy/inpaint';
+        } else {
+          const route = editingMode === EDITING_MODES.INPAINT ? 'inpaint' : 'genfill';
+          apiEndpoint = `/api/replicate/${route}`;
+        }
+        
+        const response = await fetch(apiEndpoint, {
           method: 'POST',
           body: formData,
         });
-        
+
         if (!response.ok) {
-          const data = await response.json();
-          console.error('API error:', data);
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("API Response:", data);
+
+        // Handle ComfyUI response differently than Replicate
+        if (editingMode === EDITING_MODES.COMFY_INPAINT) {
+          setProcessingMessage("Processing with ComfyUI...");
           
-          // More descriptive error messages based on status code
-          if (response.status === 422) {
-            throw new Error("The AI model rejected the request. The model might be temporarily unavailable.");
-          } else if (response.status === 429) {
-            throw new Error("Too many requests. Please wait a moment and try again.");
-          } else if (response.status >= 500) {
-            throw new Error(`Server error: ${data.detail || 'The AI service is currently unavailable'}`);
+          // Poll for ComfyUI results
+          const resultData = await pollComfyResult(data.id);
+          
+          if (resultData.output) {
+            setEditedImage(resultData.output);
+            setIsProcessing(false);
+            setProcessingMessage(null);
           } else {
-            // Include more details from the API in the error message
-            throw new Error(`Processing failed: ${data.error || data.detail || 'Unknown error'}`);
+            throw new Error(resultData.error || "Failed to get result from ComfyUI");
+          }
+        } else {
+          // This is a Replicate job - use the existing polling
+          setProcessingMessage("Processing with Replicate...");
+          setIsPolling(true);
+          setPollingStatus("Starting AI model...");
+          
+          // Poll for Replicate results
+          const predictionResult = await pollPrediction(data.id);
+          
+          if (predictionResult) {
+            // Set the edited image URL
+            setEditedImage(predictionResult);
+            setProcessingMessage(null);
+          } else {
+            throw new Error("Failed to get result from Replicate");
           }
         }
-        
-        const prediction = await response.json();
-        setCurrentPredictionId(prediction.id);
-        
-        // If this is a fallback response (we used text-to-image instead of inpainting)
-        if (prediction.isFallback) {
-          setProcessingMessage("Inpainting models unavailable. Using text-to-image as fallback...");
-        } else {
-          setProcessingMessage("AI is working on your image...");
-        }
-        
-        // Poll the prediction until it's ready
-        await pollPrediction(prediction.id);
-      }
-      // If we're just using prompt-based editing
-      else if (editingMode === EDITING_MODES.PROMPT) {
-        let promptToUse = customPrompt;
-        if (selectedPreset !== null && selectedPreset >= 0 && selectedPreset < EDITING_PRESETS.length) {
-          promptToUse = EDITING_PRESETS[selectedPreset].prompt;
-        }
-        
-        if (!promptToUse) {
-          throw new Error('Please enter an editing prompt or select a preset');
-        }
-        
-        // Create form data for the API
-        const formData = new FormData();
-        formData.append('image', selectedImage);
-        formData.append('prompt', promptToUse);
-        
-        console.log(`Editing with prompt: "${promptToUse}"`);
-        setError("Prompt-based editing endpoint not yet implemented.");
-        setIsLoading(false);
-
       } else if (editingMode === EDITING_MODES.INCREASE_RES) {
         console.log('Starting Upscale process...');
         
@@ -560,7 +573,6 @@ const PhotoEditor = () => {
           setEditedImage(imageUrl);
           setProcessingMessage("Upscaling complete!");
         }
-
       } else if (editingMode === EDITING_MODES.ERASE) {
         console.log('Erase mode selected - implementation pending.');
         setError('Erase functionality not yet implemented.');
@@ -685,6 +697,57 @@ const PhotoEditor = () => {
     };
   }, [imagePreview]);
 
+  /**
+   * Poll for ComfyUI results
+   */
+  const pollComfyResult = async (promptId: string): Promise<any> => {
+    setIsPolling(true);
+    setPollingStatus("Starting ComfyUI processing...");
+    
+    const maxPolls = 60; // Maximum number of polling attempts
+    const pollInterval = 2000; // 2 seconds between polls
+    
+    try {
+      for (let i = 0; i < maxPolls; i++) {
+        setPollingStatus(`Processing image... (${i + 1}/${maxPolls})`);
+        
+        // Wait for the poll interval
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        
+        // Check the status
+        const response = await fetch(`/api/comfy/status?id=${promptId}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Status check failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("ComfyUI status:", data);
+        
+        // Update polling status based on job status
+        if (data.status === 'completed' && data.output) {
+          setIsPolling(false);
+          setPollingStatus(null);
+          return data;
+        } else if (data.status === 'executing') {
+          setPollingStatus("ComfyUI is processing your image...");
+        } else if (data.status === 'queued') {
+          setPollingStatus("Waiting in ComfyUI queue...");
+        } else if (data.error) {
+          throw new Error(`ComfyUI error: ${data.error}`);
+        }
+      }
+      
+      throw new Error('ComfyUI processing timed out');
+    } catch (error: any) {
+      console.error('ComfyUI polling error:', error);
+      setIsPolling(false);
+      setPollingStatus(null);
+      throw error;
+    }
+  };
+
   return (
     <div className="relative flex flex-col h-full overflow-hidden">
       {isProcessing && (
@@ -695,80 +758,80 @@ const PhotoEditor = () => {
           </div>
         </div>
       )}
-      <div className="w-full max-w-full">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center mb-2">
-            <ImageIcon className="w-8 h-8 mr-3 text-indigo-600" />
+    <div className="w-full max-w-full">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 flex items-center mb-2">
+          <ImageIcon className="w-8 h-8 mr-3 text-indigo-600" />
             Replicate AI Photo Editor
-          </h1>
-          <p className="text-gray-600 text-lg">
+        </h1>
+        <p className="text-gray-600 text-lg">
             Enhance and transform your photos with Replicate AI's powerful image editing capabilities
-          </p>
-        </header>
-        
-        <div className="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-100">
-          <h3 className="font-semibold text-indigo-800 text-sm mb-2">Quick Start Guide</h3>
-          <ol className="text-sm text-indigo-700 list-decimal list-inside space-y-1">
-            <li>Upload an image you want to edit</li>
-            <li>Select an editing feature from the tabs below</li>
-            <li>Follow the specific instructions for each feature</li>
-            <li>Click the "Apply" button to transform your image</li>
-            <li>Download your edited image when you're satisfied with the results</li>
-          </ol>
-        </div>
+        </p>
+      </header>
+      
+      <div className="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-100">
+        <h3 className="font-semibold text-indigo-800 text-sm mb-2">Quick Start Guide</h3>
+        <ol className="text-sm text-indigo-700 list-decimal list-inside space-y-1">
+          <li>Upload an image you want to edit</li>
+          <li>Select an editing feature from the tabs below</li>
+          <li>Follow the specific instructions for each feature</li>
+          <li>Click the "Apply" button to transform your image</li>
+          <li>Download your edited image when you're satisfied with the results</li>
+        </ol>
+      </div>
 
-        <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
-          <h3 className="font-semibold text-gray-800 text-sm mb-3 flex items-center">
-            <SlidersHorizontal className="h-4 w-4 mr-2 text-gray-600" />
+      <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
+        <h3 className="font-semibold text-gray-800 text-sm mb-3 flex items-center">
+          <SlidersHorizontal className="h-4 w-4 mr-2 text-gray-600" />
             AI Editing Features (Powered by Replicate)
-          </h3>
+        </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            <div className="p-3 bg-white rounded border border-gray-200 flex items-start">
+          <div className="p-3 bg-white rounded border border-gray-200 flex items-start">
               <Wand2 className="h-5 w-5 text-indigo-500 mr-2 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-gray-800">Generative Fill</h4>
-                <p className="text-gray-600 text-xs mt-1">Fill in areas with AI-generated content based on your prompts.</p>
-              </div>
+            <div>
+              <h4 className="font-medium text-gray-800">Generative Fill</h4>
+              <p className="text-gray-600 text-xs mt-1">Fill in areas with AI-generated content based on your prompts.</p>
             </div>
-            <div className="p-3 bg-white rounded border border-gray-200 flex items-start">
-              <Zap className="h-5 w-5 text-indigo-500 mr-2 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-gray-800">Upscale</h4>
-                <p className="text-gray-600 text-xs mt-1">Increase resolution and detail of your images.</p>
-              </div>
+          </div>
+          <div className="p-3 bg-white rounded border border-gray-200 flex items-start">
+            <Zap className="h-5 w-5 text-indigo-500 mr-2 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-gray-800">Upscale</h4>
+              <p className="text-gray-600 text-xs mt-1">Increase resolution and detail of your images.</p>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="space-y-6">
-          {!selectedImage && (
-            <div 
-              onClick={handleUploadClick}
-              className="border-2 border-dashed border-gray-300 rounded-xl p-16 text-center hover:border-indigo-400 transition-colors cursor-pointer bg-gray-50"
-            >
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleImageChange}
-                accept="image/jpeg,image/png,image/jpg,image/webp"
-                className="hidden"
-              />
-              <Upload className="h-16 w-16 mx-auto text-indigo-400" />
-              <p className="mt-4 text-base text-gray-600">Click to upload or drag and drop</p>
-              <p className="text-sm text-gray-500 mt-2">PNG, JPG or WEBP (max. 10MB)</p>
-              <Button 
-                onClick={(e) => {
+      <div className="space-y-6">
+        {!selectedImage && (
+          <div 
+            onClick={handleUploadClick}
+            className="border-2 border-dashed border-gray-300 rounded-xl p-16 text-center hover:border-indigo-400 transition-colors cursor-pointer bg-gray-50"
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageChange}
+              accept="image/jpeg,image/png,image/jpg,image/webp"
+              className="hidden"
+            />
+            <Upload className="h-16 w-16 mx-auto text-indigo-400" />
+            <p className="mt-4 text-base text-gray-600">Click to upload or drag and drop</p>
+            <p className="text-sm text-gray-500 mt-2">PNG, JPG or WEBP (max. 10MB)</p>
+            <Button 
+              onClick={(e) => {
                   e.stopPropagation();
-                  handleUploadClick();
-                }} 
-                className="mt-6 bg-indigo-600 hover:bg-indigo-700"
-              >
-                Select Image
-              </Button>
-            </div>
-          )}
-          
-          {error && (
+                handleUploadClick();
+              }} 
+              className="mt-6 bg-indigo-600 hover:bg-indigo-700"
+            >
+              Select Image
+            </Button>
+          </div>
+        )}
+        
+        {error && (
             <div className="p-3 bg-red-100 border border-red-300 text-red-800 rounded-md flex items-start space-x-2">
               <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
               <div>
@@ -779,62 +842,62 @@ const PhotoEditor = () => {
                     The AI model may be temporarily unavailable. Please try again later or try a different edit mode.
                   </p>
                 )}
-              </div>
             </div>
-          )}
-          
-          {renderPollingStatus()}
+          </div>
+        )}
+        
+        {renderPollingStatus()}
 
-          {selectedImage && (
-            <div className="space-y-8">
-              <div className="flex justify-between items-center">
+        {selectedImage && (
+          <div className="space-y-8">
+            <div className="flex justify-between items-center">
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+              >
+                <Trash className="h-4 w-4" />
+                <span>Reset</span>
+              </Button>
+              
+              {editedImage && (
                 <Button
                   variant="outline"
-                  onClick={handleReset}
+                  onClick={handleBackToOriginal}
                   className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
                 >
-                  <Trash className="h-4 w-4" />
-                  <span>Reset</span>
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Back to original</span>
                 </Button>
-                
-                {editedImage && (
-                  <Button
-                    variant="outline"
-                    onClick={handleBackToOriginal}
-                    className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    <span>Back to original</span>
-                  </Button>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">Original Image</h3>
-                  </div>
-                  <div 
-                    ref={containerRef}
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">Original Image</h3>
+                </div>
+                <div 
+                  ref={containerRef}
                     className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm cursor-crosshair"
-                  >
-                    {imagePreview && (
-                      <div className="absolute inset-0">
-                        <img
-                          ref={imageRef}
-                          src={imagePreview}
-                          alt="Original image"
+                >
+                  {imagePreview && (
+                    <div className="absolute inset-0">
+                      <img
+                        ref={imageRef}
+                        src={imagePreview}
+                        alt="Original image"
                           className="w-full h-full object-contain pointer-events-none"
-                          onLoad={handleImageLoad}
-                        />
-                        
-                        {(editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.ERASE || editingMode === EDITING_MODES.GENFILL) && (
-                          <canvas
-                            ref={canvasRef} 
-                            onMouseDown={startPainting}
-                            onMouseMove={paint}
-                            onMouseUp={stopPainting}
-                            onMouseLeave={stopPainting}
+                        onLoad={handleImageLoad}
+                      />
+                      
+                      {(editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.ERASE || editingMode === EDITING_MODES.GENFILL || editingMode === EDITING_MODES.COMFY_INPAINT) && (
+                        <canvas
+                          ref={canvasRef}
+                          onMouseDown={startPainting}
+                          onMouseMove={paint}
+                          onMouseUp={stopPainting}
+                          onMouseLeave={stopPainting}
                             onTouchStart={startPainting} 
                             onTouchMove={paint}
                             onTouchEnd={stopPainting}
@@ -845,102 +908,102 @@ const PhotoEditor = () => {
                           />
                         )}
                         
-                        {(editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.ERASE || editingMode === EDITING_MODES.GENFILL) && !isPainting && !isLoading && !isPolling && !editedImage && (
-                          <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                            <div className="bg-black/70 text-white py-3 px-4 rounded-lg max-w-xs text-center">
+                        {(editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.ERASE || editingMode === EDITING_MODES.GENFILL || editingMode === EDITING_MODES.COMFY_INPAINT) && !isPainting && !isLoading && !isPolling && !editedImage && (
+                        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                          <div className="bg-black/70 text-white py-3 px-4 rounded-lg max-w-xs text-center">
                               <p className="text-sm font-medium mb-2">Draw a mask over the area you want to replace</p>
                               <p className="text-xs">The red area will be replaced with AI-generated content</p>
-                            </div>
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">Result</h3>
-                  </div>
-                  <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm flex items-center justify-center">
-                    {(isEditing || isPolling) && !error && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-white/80 backdrop-blur-sm">
-                        <Loader2 className="h-10 w-10 animate-spin text-indigo-600 mb-3" />
-                        <p className="text-sm font-medium text-indigo-700">Processing your image...</p>
-                        {isPolling && pollingStatus && (
-                           <p className="text-xs text-indigo-600 mt-1">Status: {pollingStatus}</p>
-                        )}
-                      </div>
-                    )}
-                    {editedImage && !isEditing && !isPolling && (
-                      <img 
-                        src={editedImage} 
-                        alt="Edited Result"
-                        className="w-full h-full object-contain" 
-                      />
-                    )}
-                    {!editedImage && !isEditing && !isPolling && !error && (
-                       <div className="text-center text-gray-500">
-                         <ImageIcon className="h-12 w-12 mx-auto text-gray-400" />
-                         <p className="mt-2 text-sm">Your edited image will appear here.</p>
-                       </div>
-                    )}
-                  </div>
-                  {editedImage && !isEditing && !isPolling && (
-                    <Button 
-                      onClick={handleDownload}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center gap-2"
-                    >
-                      <Download className="h-4 w-4" />
-                      <span>Download Result</span>
-                    </Button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
               
-              <div className="space-y-5 bg-gray-50 p-6 rounded-xl border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Editing Options</h3>
-                
-                <div className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">Result</h3>
+                </div>
+                <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm flex items-center justify-center">
+                  {(isEditing || isPolling) && !error && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-white/80 backdrop-blur-sm">
+                      <Loader2 className="h-10 w-10 animate-spin text-indigo-600 mb-3" />
+                      <p className="text-sm font-medium text-indigo-700">Processing your image...</p>
+                      {isPolling && pollingStatus && (
+                         <p className="text-xs text-indigo-600 mt-1">Status: {pollingStatus}</p>
+                      )}
+                    </div>
+                  )}
+                  {editedImage && !isEditing && !isPolling && (
+                    <img 
+                      src={editedImage} 
+                      alt="Edited Result"
+                      className="w-full h-full object-contain" 
+                    />
+                  )}
+                  {!editedImage && !isEditing && !isPolling && !error && (
+                     <div className="text-center text-gray-500">
+                       <ImageIcon className="h-12 w-12 mx-auto text-gray-400" />
+                       <p className="mt-2 text-sm">Your edited image will appear here.</p>
+                     </div>
+                  )}
+                </div>
+                {editedImage && !isEditing && !isPolling && (
+                  <Button 
+                    onClick={handleDownload}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Download Result</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            <div className="space-y-5 bg-gray-50 p-6 rounded-xl border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Editing Options</h3>
+              
+              <div className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
                    <h3 className="text-sm font-medium text-gray-700 mb-3">Select an Editing Task:</h3>
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3"> 
-                     <button 
-                       onClick={() => setEditingMode(EDITING_MODES.GENFILL)}
+                  <button 
+                    onClick={() => setEditingMode(EDITING_MODES.GENFILL)}
                        className={`flex flex-col items-center p-3 rounded-lg border transition-all ${ editingMode === EDITING_MODES.GENFILL ? 'bg-gradient-to-b from-purple-100 to-white border-purple-300' : 'bg-gradient-to-b from-purple-50 to-white border-purple-100 hover:border-purple-300'}`}
-                     >
-                       <div className="bg-purple-100 p-2 rounded-full mb-2">
-                         <Wand2 className="h-4 w-4 text-purple-600" />
-                       </div>
+                  >
+                    <div className="bg-purple-100 p-2 rounded-full mb-2">
+                      <Wand2 className="h-4 w-4 text-purple-600" />
+                    </div>
                        <span className="text-sm font-medium text-gray-800">Generative Fill</span>
                        <span className="text-xs text-gray-500 mt-1 text-center">Add or replace content</span>
-                     </button>
-                     
-                     <button 
+                  </button>
+                  
+                  <button 
                        onClick={() => setEditingMode(EDITING_MODES.INCREASE_RES)}
                        className={`flex flex-col items-center p-3 rounded-lg border transition-all ${ editingMode === EDITING_MODES.INCREASE_RES ? 'bg-gradient-to-b from-green-100 to-white border-green-300' : 'bg-gradient-to-b from-green-50 to-white border-green-100 hover:border-green-300'}`}
-                     >
-                       <div className="bg-green-100 p-2 rounded-full mb-2">
+                  >
+                    <div className="bg-green-100 p-2 rounded-full mb-2">
                          <Zap className="h-4 w-4 text-green-600" />
-                       </div>
+                    </div>
                        <span className="text-sm font-medium text-gray-800">Upscale Image</span>
                        <span className="text-xs text-gray-500 mt-1 text-center">Increase resolution</span>
-                     </button>
+                  </button>
 
-                     <button 
+                        <button
                        onClick={() => setEditingMode(EDITING_MODES.ERASE)} 
                        disabled // Disable if not implemented
                        className={`flex flex-col items-center p-3 rounded-lg border transition-all ${ editingMode === EDITING_MODES.ERASE ? 'bg-gradient-to-b from-red-100 to-white border-red-300' : 'bg-gradient-to-b from-red-50 to-white border-red-100 hover:border-red-300'} ${'opacity-50 cursor-not-allowed'}`} // Disable style
                      >
                        <div className="bg-red-100 p-2 rounded-full mb-2">
                          <Eraser className="h-4 w-4 text-red-600" />
-                       </div>
+                          </div>
                        <span className="text-sm font-medium text-gray-800">Erase Object</span>
                        <span className="text-xs text-gray-500 mt-1 text-center">Remove items (soon)</span>
-                     </button>
-                   </div>
-                </div>
-
-                {(editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.GENFILL) && (
+                        </button>
+                    </div>
+                  </div>
+                  
+                {(editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.GENFILL || editingMode === EDITING_MODES.COMFY_INPAINT) && (
                   <div className="space-y-6">
                     <div className="space-y-4">
                       <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 mb-4">
@@ -1038,14 +1101,14 @@ const PhotoEditor = () => {
                             onChange={(e) => setCustomPrompt(e.target.value)}
                             placeholder="e.g., A beautiful mountain landscape with trees and clouds"
                             className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            disabled={isLoading || isPolling}
+                              disabled={isLoading || isPolling}
                           />
                           <Button
                             onClick={handleEditAction}
-                            disabled={isLoading || isPolling || !customPrompt || !canvasRef.current}
+                              disabled={isLoading || isPolling || !customPrompt || !canvasRef.current}
                             className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
                           >
-                            {(isLoading || isPolling) ? (
+                              {(isLoading || isPolling) ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
                               <Wand2 className="h-4 w-4" />
@@ -1072,72 +1135,162 @@ const PhotoEditor = () => {
                          <h4 className="text-base font-medium text-red-800 flex items-center">
                            <Eraser className="h-4 w-4 mr-2" />
                            Erase Objects (Coming Soon)
-                         </h4>
+                      </h4>
                          <p className="text-sm text-red-700 mt-1">
                            This feature is not yet implemented. Check back later to remove unwanted objects by masking them.
-                         </p>
-                     </div>
-                   </div>
+                      </p>
+                    </div>
+                  </div>
                 )}
 
                 {editingMode === EDITING_MODES.INCREASE_RES && (
                   <div className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="bg-green-50 p-4 rounded-lg border border-green-100 mb-4">
-                        <h4 className="text-base font-medium text-green-800 flex items-center">
-                          <Zap className="h-4 w-4 mr-2" />
+                  <div className="space-y-4">
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-100 mb-4">
+                      <h4 className="text-base font-medium text-green-800 flex items-center">
+                        <Zap className="h-4 w-4 mr-2" />
                           Increase Resolution (Upscale)
-                        </h4>
-                        <p className="text-sm text-green-700 mt-1">
+                      </h4>
+                      <p className="text-sm text-green-700 mt-1">
                           Enhance your image's resolution and quality using a Replicate AI upscaling model.
-                        </p>
-                        <ul className="text-xs text-green-700 mt-2 space-y-1 list-disc list-inside">
+                      </p>
+                      <ul className="text-xs text-green-700 mt-2 space-y-1 list-disc list-inside">
                           <li>Improves details and clarity.</li>
                           <li>Enhances low-resolution photos.</li>
                           <li>Reduces noise and improves overall quality.</li>
-                        </ul>
-                      </div>
+                      </ul>
                     </div>
-                    
-                    <div className="pt-6 border-t border-gray-200">
-                      <Button
-                        onClick={handleEditAction}
+                  </div>
+                  
+                  <div className="pt-6 border-t border-gray-200">
+                    <Button
+                      onClick={handleEditAction}
                         disabled={isEditing || isPolling}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
-                      >
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
+                    >
                         {(isEditing || isPolling) ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Zap className="h-4 w-4" />
-                        )}
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Zap className="h-4 w-4" />
+                      )}
                         <span>Apply Upscale</span> 
-                      </Button>
+                    </Button>
+                  </div>
+                  </div>
+                )}
+
+                {editingMode === EDITING_MODES.COMFY_INPAINT && (
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
+                        <h4 className="text-base font-medium text-blue-800 flex items-center">
+                          <Paintbrush className="h-4 w-4 mr-2" />
+                          Local ComfyUI Inpainting
+                        </h4>
+                        <p className="text-sm text-blue-700 mt-1">
+                          Replace content using your local ComfyUI instance - faster and more private than cloud-based solutions.
+                        </p>
+                        <ol className="text-xs text-blue-700 mt-2 space-y-1 list-decimal list-inside">
+                          <li><span className="font-medium">Step 1:</span> Draw a red mask over the area you want to fill/replace</li>
+                          <li><span className="font-medium">Step 2:</span> Provide a descriptive prompt for what should appear in the masked area</li>
+                          <li><span className="font-medium">Step 3:</span> Click "Generate with ComfyUI" to process locally</li>
+                        </ol>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-sm font-medium">Brush Controls</h4>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={handleClearMask}
+                          >
+                            Clear Mask
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label htmlFor="brushSize" className="text-xs">Brush Size</Label>
+                            <Input
+                              id="brushSize"
+                              type="range"
+                              min="5"
+                              max="50"
+                              value={brushSize}
+                              onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                              className="h-8"
+                            />
+                            <div className="text-xs text-right">{brushSize}px</div>
+                          </div>
+                          
+                          <div className="flex items-center justify-center">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox 
+                                id="eraser" 
+                                checked={isEraser}
+                                onCheckedChange={(checked) => setIsEraser(checked === true)}
+                              />
+                              <Label htmlFor="eraser" className="text-sm">Eraser Mode</Label>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="customPrompt" className="text-sm font-medium">Prompt</Label>
+                          <Textarea
+                            id="customPrompt"
+                            placeholder="Describe what should appear in the masked area..."
+                            value={customPrompt}
+                            onChange={(e) => setCustomPrompt(e.target.value)}
+                            className="h-20"
+                          />
+                        </div>
+                        
+                        <Button 
+                          onClick={handleEditAction}
+                          disabled={!canvasRef.current || isProcessing || isPolling || isLoading}
+                          className="w-full"
+                        >
+                          {isProcessing || isPolling ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <Paintbrush className="mr-2 h-4 w-4" />
+                              Generate with ComfyUI
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
-              </div>
-              
-              {editedImage && (
-                <div className="flex justify-end space-x-3 mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={handleBackToOriginal}
-                    className="flex items-center gap-2"
-                  >
-                    <Undo className="h-4 w-4" />
-                    <span>Reset</span>
-                  </Button>
-                  <Button
-                    onClick={handleDownload}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Download</span>
-                  </Button>
-                </div>
-              )}
             </div>
-          )}
+            
+            {editedImage && (
+              <div className="flex justify-end space-x-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={handleBackToOriginal}
+                  className="flex items-center gap-2"
+                >
+                  <Undo className="h-4 w-4" />
+                  <span>Reset</span>
+                </Button>
+                <Button
+                  onClick={handleDownload}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Download</span>
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
         </div>
       </div>
     </div>

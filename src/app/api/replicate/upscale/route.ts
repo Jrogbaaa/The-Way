@@ -56,40 +56,48 @@ export async function POST(req: NextRequest) {
         scale: 2
       },
       {
-        name: "sczhou/codeformer",
-        version: "7de2ea26c616d5bf2245ad0d5e24f0ff9a6204578a5c876db53142edd9d2cd56",
-        description: "CodeFormer upscaler - good for faces",
+        name: "tencentarc/gfpgan",
+        version: "9283608cc6b7be6b65a8e44983db012355fde4132009bf99d976b2f0896856a3",
+        description: "GFPGAN face restoration",
         scale: 2
       },
       {
-        name: "jingyunliang/swinir",
-        version: "660d922d33153019e8c263a3bba265de882e7f4f70396546b6c9c8f9d47a021a",
-        description: "SwinIR upscaler - high quality but slower",
+        name: "nightmareai/upscale-plus",
+        version: "f9f9be8c59d606761c6eeaedf1b2e07f5c9fea8289cac15b85dc69abdae6f5e8",
+        description: "Upscale Plus - high quality upscaler",
         scale: 4
       }
     ];
 
     // Try each model in sequence
     for (const model of upscaleModels) {
-      console.log(`Trying upscale model: ${model.name} (${model.description})`);
+      console.log(`Trying upscaling model: ${model.name} (${model.description})`);
       
       try {
-        // Configure input parameters based on the model
-        let input = {
+        // Configure appropriate input parameters based on the model
+        let input: any = {
           image: imageDataUrl,
-          scale: model.scale
         };
-
-        if (model.name === "sczhou/codeformer") {
-          // CodeFormer has extra parameters for face restoration
-          Object.assign(input, {
-            codeformer_fidelity: 0.7, // Balance between quality and fidelity
-            face_upsample: true,      // Enhance faces specifically
-            background_enhance: true  // Also enhance non-face regions
-          });
-        }
         
-        console.log(`Attempting upscaling with model: ${model.name}`);
+        // Model-specific parameter adjustments
+        if (model.name === "nightmareai/real-esrgan") {
+          input.scale = model.scale;
+          input.face_enhance = true;
+        } else if (model.name === "tencentarc/gfpgan") {
+          input.version = "v1.4";
+          input.scale = model.scale;
+        } else if (model.name === "nightmareai/upscale-plus") {
+          input.scale = model.scale;
+        }
+
+        console.log(`Attempting upscaling with model: ${model.name} (${model.description})`);
+        
+        // Debug info for troubleshooting
+        console.log(`Upscaling parameters:
+          - Model: ${model.name} (v${model.version})
+          - Scale: ${model.scale}x
+          - Image data URL length: ${imageDataUrl.length} chars
+        `);
         
         const prediction = await replicate.predictions.create({
           model: model.name,
@@ -97,7 +105,7 @@ export async function POST(req: NextRequest) {
           input: input,
         });
 
-        console.log(`✓ Success! ${model.name} prediction initiated:`, prediction.id);
+        console.log(`✓ Success! ${model.name} prediction initiated:`, prediction.id, prediction.status);
         return NextResponse.json({
           ...prediction,
           modelUsed: model.name
@@ -112,7 +120,7 @@ export async function POST(req: NextRequest) {
         }
         
         // Otherwise continue to the next model
-        console.log(`Trying next upscale model...`);
+        console.log(`Trying next model...`);
         continue;
       }
     }
@@ -121,6 +129,7 @@ export async function POST(req: NextRequest) {
     throw new Error("All upscaling models failed");
 
   } catch (error: any) {
+    // Handle errors from all models
     console.error('All upscaling models failed:', error);
     
     const errorDetail = error?.response?.data?.detail || error.message || 'Unknown error';
@@ -128,8 +137,9 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json(
       { 
-        error: `Replicate upscale prediction creation failed after trying multiple models`,
-        detail: errorDetail 
+        error: `Replicate prediction creation failed after trying multiple models`,
+        detail: errorDetail,
+        status: statusCode
       },
       { status: statusCode }
     );

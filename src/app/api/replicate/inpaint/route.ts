@@ -75,19 +75,19 @@ export async function POST(req: NextRequest) {
     // Updated inpainting models with current versions
     const inpaintingModels = [
       {
-        name: "stability-ai/sdxl-inpainting",
-        version: "a62d8f6f9fb5aeab6582b6e0d9f692c8210937b5cf77a308528e3e72ed049177", 
-        description: "Latest SDXL Inpainting model from Stability AI"
+        name: "runwayml/stable-diffusion-inpainting",
+        version: "c28b92a7ecd66eee4aefcd8a94eb9e7f6c3805d5f06038165407fb5cb355ba67",
+        description: "Stable Diffusion Inpainting model"
       },
       {
-        name: "stability-ai/stable-diffusion-xl-base-1.0",
-        version: "b739fc042e8a19504d4f422aa118c8b32e996f143ad9b2537494905ccc8ff29f",
-        description: "Stability AI SDXL base model with inpainting capability"
+        name: "black-forest-labs/flux-fill-dev",
+        version: "a66c0043c82d72de9edebd0bcbd87c55f40d7a8b5e7cee9e53a15091503de29b",
+        description: "Flux Fill model - good for inpainting and generative fill"
       },
       {
-        name: "fofr/sdxl-inpainting-fallback",
-        version: "c51ee1c8bec94f687eb2ce4998602139bfb590f960b9cf512862bbb12a0c9cc6",
-        description: "Community SDXL inpainting fallback model"
+        name: "wereCatf/juggernaut-xl-inpainting",
+        version: "8a3df7f76bcc85302ef83793534eecd38d10fb66c3e359365bb6a80d10a3f693",
+        description: "Juggernaut XL inpainting model"
       }
     ];
 
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
         // Configure appropriate input parameters based on the model
         let input;
         
-        // All models now have similar parameters (all are SDXL-based)
+        // All models have similar parameters but might need model-specific adjustments
         input = {
           prompt: prompt || "A beautiful bush or tree",
           image: imageDataUrl,
@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
       
       // Use SDXL text-to-image as fallback (known to work)
       const fallbackModel = "stability-ai/sdxl";
-      const fallbackVersion = "a00d0b7dcbb9c3fbb34ba87d2d5b46c56969c84a628bf778a7fdaec30b1b99c5";
+      const fallbackVersion = "39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b";
       
       // Create a more descriptive prompt based on original prompt
       const enhancedPrompt = savedPrompt ? 

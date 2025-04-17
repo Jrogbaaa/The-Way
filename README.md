@@ -12,31 +12,26 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
   - Google Vertex AI Imagen (fully implemented)
   
 - 📷 **Photo Editor**:
-  - Rebuilding with direct Bria AI integration ([https://docs.bria.ai/](https://docs.bria.ai/))
-  - Features being added:
+  - Fully implemented with Replicate API integration
+  - Features include:
     - Image Upload & Preview
-    - Increase Resolution (Upscale) (`/increase_resolution`)
-    - Image Expansion (Outpaint) (`/image_expansion`)
-  - More features (Background Removal, Eraser, etc.) to come.
-  - Combines Bria AI for direct image edits and Replicate for AI generation tasks.
-  - **Bria AI Features (Direct API - `/api/bria/...` or `/api/edit-image/...`)**:
+    - Inpainting (using `stability-ai/sdxl-inpainting`)
+    - Generative Fill (using `black-forest-labs/flux-fill-dev`)
+    - Increase Resolution (Upscale) (via Replicate models)
+    - Drawing tools for precise editing
+  - **Replicate-Powered Editing Features**:
     - Image Upload & Preview
-    - Prompt Edit
-    - Eraser
-    - Expand Image (Outpaint)
-    - Remove Background
-    - Blur Background
-    - Increase Resolution (Upscale)
-  - **Replicate Features (Inpaint/GenFill - `/api/replicate/inpaint`)**:
-    - Uses `black-forest-labs/flux-fill-dev` model ([Source](https://replicate.com/black-forest-labs/flux-fill-dev)).
-    - **Workflow**: 
-      1. Frontend (`PhotoEditor.tsx`) sends image, mask, prompt to `/api/replicate/inpaint`.
-      2. Backend starts Replicate prediction & returns prediction ID.
-      3. Frontend polls `/api/replicate/predictions/[id]` for status.
-      4. On success, frontend gets `replicate.delivery` URL.
-      5. Frontend uses `/api/proxy` to fetch the image (bypassing CORS).
-      6. Result is displayed.
-    - **Key Parameters**: `guidance_scale` (prompt adherence), `strength` (image influence).
+    - Prompt-based editing
+    - Canvas drawing for masking specific areas
+    - Generative Fill for content creation
+    - Inpainting to replace selected areas
+    - Upscaling for higher resolution images
+  - **Workflow**: 
+    1. Frontend (`PhotoEditor.tsx`) allows users to upload images and draw masks
+    2. Selected editing mode (inpaint/genfill) and prompt are sent to appropriate Replicate API endpoint
+    3. Backend starts Replicate prediction & returns prediction ID
+    4. Frontend polls for prediction status
+    5. On success, edited image is displayed and can be downloaded
   
 - 🎬 **Video Creator**:
   - Convert still images to high-quality videos
@@ -755,3 +750,40 @@ To ensure the application remains functional and stable during development, foll
   - Verify route is correctly defined in ROUTES object
   - Check if the page component exists at the expected path
   - Ensure layout components are properly wrapping content
+
+## Local Development with ComfyUI Integration
+
+The application now supports local image editing using ComfyUI, providing faster processing and more privacy compared to cloud-based solutions.
+
+### Setting up ComfyUI
+
+1. **Install ComfyUI**:
+   ```bash
+   git clone https://github.com/comfyanonymous/ComfyUI
+   cd ComfyUI
+   pip install -r requirements.txt
+   ```
+
+2. **Download Required Models**:
+   - Download an inpainting model like `sd_xl_turbo_1.0_fp16.safetensors` or `sd-v1-5-inpainting.ckpt`
+   - Place the model in the `ComfyUI/models/checkpoints` directory
+
+3. **Start ComfyUI**:
+   ```bash
+   cd ComfyUI
+   python main.py
+   ```
+   ComfyUI will start on `http://127.0.0.1:8188` by default
+
+4. **Using ComfyUI in The Way**:
+   - After uploading an image in The Way app, select "ComfyUI Inpaint" from the editing options
+   - Draw a mask over the area you want to modify
+   - Enter a prompt describing what should appear in the masked area
+   - Click "Generate with ComfyUI" to process locally
+
+### Troubleshooting
+
+- Ensure ComfyUI is running before attempting local inpainting
+- Check the browser console and server logs for any errors
+- Verify that the models are correctly placed in the ComfyUI directories
+- Make sure you have enough GPU memory for processing

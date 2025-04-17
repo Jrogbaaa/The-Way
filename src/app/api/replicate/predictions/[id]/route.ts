@@ -17,7 +17,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const predictionId = params.id;
+  // Ensure params is properly awaited in Next.js 13+
+  const predictionId = params?.id;
   
   if (!predictionId) {
     return NextResponse.json({ error: 'Prediction ID is required' }, { status: 400 });
