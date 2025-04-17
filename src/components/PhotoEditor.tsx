@@ -528,26 +528,37 @@ const PhotoEditor = () => {
       } else if (editingMode === EDITING_MODES.INCREASE_RES) {
         console.log('Starting Upscale process...');
         
+        if (!selectedImage) {
+          throw new Error("No image is selected for upscaling.");
+        }
+        
+        const formData = new FormData();
+        formData.append('image', selectedImage);
+        
+        setProcessingMessage("Preparing image for upscaling...");
+        
         const response = await fetch('/api/replicate/upscale', {
-            method: 'POST',
-            body: formData,
+          method: 'POST',
+          body: formData,
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Upscale request failed');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Upscale request failed');
         }
 
         const prediction = await response.json();
         console.log('Upscale prediction initiated:', prediction);
+        setCurrentPredictionId(prediction.id);
 
-        setIsPolling(true);
-        setPollingStatus(prediction.status);
+        setProcessingMessage("AI is enhancing your image resolution...");
+        
+        // Poll the prediction until it's ready
         const imageUrl = await pollPrediction(prediction.id);
-
+        
         if (imageUrl) {
           setEditedImage(imageUrl);
-          setIsLoading(false);
+          setProcessingMessage("Upscaling complete!");
         }
 
       } else if (editingMode === EDITING_MODES.ERASE) {
