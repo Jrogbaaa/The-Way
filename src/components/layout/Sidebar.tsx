@@ -5,7 +5,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useUIStore } from '@/lib/store';
 import { ROUTES } from '@/lib/config';
 import Logo from '@/components/ui/Logo';
-import { LayoutGrid, Sparkles, Clapperboard, Image, BarChart, MessageSquare, GalleryVerticalEnd } from 'lucide-react';
+import { 
+    LayoutGrid, Sparkles, Clapperboard, Image, BarChart, 
+    MessageSquare, GalleryVerticalEnd, User, Upload, MessageCircle, 
+    Wand2,
+    ListChecks,
+    UploadCloud
+} from 'lucide-react';
 
 type NavItem = {
   name: string;
@@ -22,177 +28,44 @@ const Sidebar = () => {
 
   const navItems: NavItem[] = [
     {
-      name: 'Dashboard',
+      name: 'Action Items',
       href: ROUTES.dashboard,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <rect width="7" height="9" x="3" y="3" rx="1" />
-          <rect width="7" height="5" x="14" y="3" rx="1" />
-          <rect width="7" height="9" x="14" y="12" rx="1" />
-          <rect width="7" height="5" x="3" y="16" rx="1" />
-        </svg>
-      ),
-      label: 'View your dashboard',
+      icon: <ListChecks className="h-5 w-5" />,
+      label: 'View your action items',
       color: 'blue',
     },
     {
-      name: 'Image Creator',
-      href: ROUTES.models,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <path d="M12 2H2v10h10V2Z" />
-          <path d="M12 12H2v10h10V12Z" />
-          <path d="M22 2h-10v10h10V2Z" />
-          <path d="M22 12h-10v10h10V12Z" />
-        </svg>
-      ),
-      label: 'Create images with AI models',
+      name: 'Create Content',
+      href: ROUTES.models || '/create',
+      icon: <Wand2 className="h-5 w-5" />,
+      label: 'Create images, videos, and edit photos',
       color: 'purple',
     },
     {
-      name: 'Video Creator',
-      href: ROUTES.imageToVideo,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <polygon points="23 7 16 12 23 17 23 7" />
-          <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-        </svg>
-      ),
-      label: 'Create videos with AI',
-      color: 'red',
-    },
-    {
-      name: 'Photo Editor',
-      href: ROUTES.photoEditor,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <polyline points="21 15 16 10 5 21" />
-        </svg>
-      ),
-      label: 'Edit your photos',
-      color: 'green',
-    },
-    {
-      name: 'Social Analyzer',
+      name: 'Analyze a Post',
       href: ROUTES.uploadPost,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" x2="12" y1="3" y2="15" />
-        </svg>
-      ),
+      icon: <UploadCloud className="h-5 w-5" />,
       label: 'Analyze a new post',
       color: 'green',
     },
     {
-      name: 'Chat',
+      name: 'My Expert Chat',
       href: ROUTES.chat,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v5Z" />
-          <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
-        </svg>
-      ),
-      label: 'Chat with AI',
+      icon: <MessageCircle className="h-5 w-5" />,
+      label: 'Chat with your AI expert',
       color: 'cyan',
     },
     {
-      name: 'Gallery',
+      name: 'My Gallery',
       href: ROUTES.gallery,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" />
-          <path d="m21 9-9 6-9-6" />
-          <path d="M3 9v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9" />
-        </svg>
-      ),
-      label: 'Browse content gallery',
+      icon: <GalleryVerticalEnd className="h-5 w-5" />,
+      label: 'Browse your content gallery',
       color: 'amber',
     },
     {
       name: 'Profile',
       href: ROUTES.profile,
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-        >
-          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
-      ),
+      icon: <User className="h-5 w-5" />,
       label: 'View your profile',
       color: 'orange',
     },

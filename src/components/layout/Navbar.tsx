@@ -109,48 +109,6 @@ const Navbar = () => {
             <Logo size="md" />
             <span style={{ border: 'none', outline: 'none' }}>Content AI Agent</span>
           </Link>
-          <nav className="hidden md:flex gap-6 ml-12">
-            <Link 
-              href={ROUTES.models}
-              className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-              tabIndex={0}
-              aria-label="Browse AI models"
-            >
-              Models
-            </Link>
-            <Link 
-              href={ROUTES.gallery}
-              className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-              tabIndex={0}
-              aria-label="Browse gallery"
-            >
-              Gallery
-            </Link>
-            <Link 
-              href={ROUTES.chat}
-              className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-              tabIndex={0}
-              aria-label="Chat with AI"
-            >
-              Chat
-            </Link>
-            <Link 
-              href={ROUTES.photoEditor}
-              className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-              tabIndex={0}
-              aria-label="Edit photos with AI"
-            >
-              Photo Editor
-            </Link>
-            <Link 
-              href={ROUTES.uploadPost}
-              className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-              tabIndex={0}
-              aria-label="Analyze a post"
-            >
-              Analyze Post
-            </Link>
-          </nav>
         </div>
         <div className="flex items-center gap-6">
           {/* Notifications button */}

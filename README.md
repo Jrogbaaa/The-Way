@@ -2,6 +2,13 @@
 
 A cutting-edge platform that empowers content creators with AI-powered tools to optimize their social media content.
 
+## Recent Updates (July/August 2024)
+
+- **Content Suggestions UI Enhancement**: The A/B Testing Content Suggestions component now displays actual images (or relevant placeholders from Unsplash) instead of text previews, providing a better visual experience. This required creating `next.config.mjs` to configure allowed remote image domains.
+- **Stability AI Inpainting API Tuning**: Adjusted API parameters (`strength`, `cfg_scale`, `model`) and fixed parameter names (`mask`) in the `/api/stability/inpaint` route handler to improve inpainting results.
+- **Replicate API Fixes**: Ensured the `/api/replicate/predictions/[id]` route handler correctly handles asynchronous operations for polling prediction status.
+- **API Key Security**: Verified that the Stability AI API key (`STABILITY_AI_API_KEY`) is correctly handled server-side and not exposed to the client.
+
 ## Features
 
 - 🖌️ **Image Creator** (formerly Models):
@@ -12,26 +19,30 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
   - Google Vertex AI Imagen (fully implemented)
   
 - 📷 **Photo Editor**:
-  - Fully implemented with Replicate API integration
+  - Integrated with Stability AI for Generative Fill / Inpainting
   - Features include:
     - Image Upload & Preview
-    - Inpainting (using `stability-ai/sdxl-inpainting`)
-    - Generative Fill (using `black-forest-labs/flux-fill-dev`)
-    - Increase Resolution (Upscale) (via Replicate models)
+    - Inpainting (using Stability AI - e.g., `stable-diffusion-xl-1024-v1-0`)
+    - Generative Fill (using Stability AI - e.g., `stable-diffusion-xl-1024-v1-0`)
+    - Increase Resolution (Upscale) (Currently via Replicate models - *migration pending*)
     - Drawing tools for precise editing
-  - **Replicate-Powered Editing Features**:
+  - **Stability AI-Powered Editing Features**:
     - Image Upload & Preview
     - Prompt-based editing
     - Canvas drawing for masking specific areas
     - Generative Fill for content creation
     - Inpainting to replace selected areas
-    - Upscaling for higher resolution images
-  - **Workflow**: 
+  - **Workflow (Inpainting/GenFill)**: 
     1. Frontend (`PhotoEditor.tsx`) allows users to upload images and draw masks
-    2. Selected editing mode (inpaint/genfill) and prompt are sent to appropriate Replicate API endpoint
+    2. Selected editing mode (inpaint/genfill) and prompt are sent to the `/api/stability/inpaint` endpoint
+    3. Backend converts data URLs, calls the Stability AI API, and waits for the synchronous response
+    4. On success, the generated image is returned directly to the frontend and displayed
+  - **Workflow (Upscale)**: 
+    1. Frontend (`PhotoEditor.tsx`) allows users to upload images
+    2. Request sent to `/api/replicate/upscale`
     3. Backend starts Replicate prediction & returns prediction ID
-    4. Frontend polls for prediction status
-    5. On success, edited image is displayed and can be downloaded
+    4. Frontend polls for prediction status via `/api/replicate/predictions/[id]` (Note: Polling endpoint might be removed/changed if upscale migrates)
+    5. On success, upscaled image is displayed
   
 - 🎬 **Video Creator**:
   - Convert still images to high-quality videos
@@ -49,7 +60,7 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
   
 - 🔄 **Modular Architecture**: Easily extensible for adding new AI models and capabilities
 
-- 🧩 **Robust API Integration**: Seamless communication with Replicate API, Google AI services, and Hugging Face
+- 🧩 **Robust API Integration**: Seamless communication with Stability AI, Replicate API, Google AI services, and Hugging Face
 
 - 🛡️ **Error Handling**: Graceful error handling and fallbacks for API failures
 
@@ -154,6 +165,7 @@ The Content Suggestions component offers AI-driven recommendations for social me
 - Caption and hashtag recommendations
 - Trend alignment indicators
 - Goal-oriented suggestion groups
+- **Visual Previews**: Displays actual images or relevant placeholders for each suggestion.
 
 **Technical Implementation:**
 - Responsive UI with modern design patterns
@@ -161,6 +173,7 @@ The Content Suggestions component offers AI-driven recommendations for social me
 - Visual engagement prediction scoring
 - Platform-specific icons and integrations
 - Support for multiple content formats
+- Uses `next/image` with `next.config.mjs` configured for remote image domains.
 
 ### ⚠️ Feature Removal Notice: Custom AI Model Training
 
@@ -370,34 +383,6 @@ To access the storyboard creator, navigate to:
 
 For more detailed documentation on the storyboard system, see the [Storyboard Documentation](./the-way/docs/storyboard.md).
 
-## Recent Updates
-
-### ComfyUI Integration (New)
-
-The application now supports local image editing using ComfyUI, providing faster processing and more privacy compared to cloud-based solutions.
-
-**Features:**
-- Local inpainting using your own hardware
-- Custom workflows for precise control
-- Faster processing times
-- Enhanced privacy (images don't leave your machine)
-
-**Technical Implementation:**
-- API endpoints for interacting with local ComfyUI instance
-- Seamless integration with existing UI
-- Proper state management for loading and error handling
-- Fallback to Replicate API when ComfyUI is unavailable
-
-### Bug Fixes
-
-#### PhotoEditor Component Improvements
-- Fixed issue with processing state management in inpainting operations
-- Updated UI loading indicators to properly reflect processing state
-- Improved error handling and reporting
-- Fixed Next.js API route parameters handling for prediction status endpoint
-
-For detailed setup instructions for ComfyUI, see the [ComfyUI Integration](#local-development-with-comfyui-integration) section.
-
 ## Getting Started
 
 ### Prerequisites
@@ -435,6 +420,7 @@ For detailed setup instructions for ComfyUI, see the [ComfyUI Integration](#loca
       - `DATABASE_URL`: Your full database connection string (used by Prisma).
       - `REPLICATE_WEBHOOK_URL`: URL for Replicate webhooks (if used).
       - `REPLICATE_WEBHOOK_SECRET`: Secret for verifying Replicate webhooks (if used).
+      - `STABILITY_API_KEY`: Your Stability AI API key.
 
 4. **Database Setup (Prisma & Supabase):**
     - Ensure your `DATABASE_URL` in `.env.local` points to your Supabase PostgreSQL database.

@@ -216,8 +216,8 @@ export default function Dashboard() {
         {/* Dashboard header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="text-gray-600 mt-1">Welcome back! Here's your content overview</p>
+            <h1 className="text-3xl font-bold">Action Items</h1>
+            <p className="text-gray-600 mt-1">Review your AI-suggested tasks and content plan</p>
           </div>
           
           <div className="px-4 py-2 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center">
@@ -273,191 +273,29 @@ export default function Dashboard() {
           )}
         </div>
         
-        {/* Stats overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard 
-            title="Total Posts" 
-            value={42} 
-            icon={<Calendar className="h-6 w-6 text-blue-600" />}
-            trendValue={12}
-            color="blue"
-          />
-          <StatCard 
-            title="Published Posts" 
-            value={38} 
-            icon={<Image className="h-6 w-6 text-violet-600" />}
-            trendValue={8}
-            color="violet"
-          />
-          <StatCard 
-            title="Engagement Rate" 
-            value="24%" 
-            icon={<TrendingUp className="h-6 w-6 text-pink-600" />}
-            trendValue={-3}
-            color="pink"
-          />
-          <StatCard 
-            title="AI Analyses" 
-            value={56} 
-            icon={<BarChart2 className="h-6 w-6 text-amber-600" />}
-            trendValue={22}
-            color="amber"
-          />
-        </div>
-        
-        {/* Other content */}
-        <div>
-          <ContentCalendar />
-        </div>
-        
-        <div>
-          <ActionItems />
-        </div>
-        
-        <div>
-          <ABTestingContentSuggestions />
-        </div>
-        
-        <div>
-          <SocialMediaTrends />
-        </div>
-        
-        {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md">
-          <div className="p-6 border-b flex justify-between items-center">
-            <div className="flex items-center">
-              <Activity className="h-5 w-5 text-gray-500 mr-2" />
-              <h2 className="text-xl font-semibold">Recent Activity</h2>
-            </div>
-            <Tooltip content="View all activity history">
-              <button className="text-sm text-indigo-600 font-medium hover:text-indigo-800 flex items-center">
-                View All
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </button>
-            </Tooltip>
-          </div>
+        {/* Main content area - Changed from grid to stacked column */}
+        <div className="space-y-8"> 
+          {/* 1. Action Items */}
           <div>
-            {recentActivities.map((activity, index) => (
-              <div
-                key={activity.id}
-                className="flex items-center justify-between p-4 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer"
-              >
-                <div className="flex items-center">
-                  <div className="mr-4 p-2 rounded-full bg-gray-100">
-                    <ActivityIcon type={activity.type} />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-medium">{activity.title}</h3>
-                    <div className="flex items-center text-xs text-gray-500">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {activity.timeText}
-                    </div>
-                  </div>
-                </div>
-                <StatusBadge status={activity.status} />
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Achievements & Goals section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div 
-            className="col-span-2 bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md"
-          >
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold flex items-center">
-                <Award className="h-5 w-5 text-amber-500 mr-2" />
-                Your Content Goals
-              </h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">Weekly Content Goal (5/7)</span>
-                  <span className="text-sm text-gray-500">71%</span>
-                </div>
-                <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full" 
-                    style={{ width: '71%' }}
-                  ></div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">Engagement Growth (Monthly)</span>
-                  <span className="text-sm text-gray-500">42%</span>
-                </div>
-                <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full"
-                    style={{ width: '42%' }}
-                  ></div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">AI Optimization Usage</span>
-                  <span className="text-sm text-gray-500">85%</span>
-                </div>
-                <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full"
-                    style={{ width: '85%' }}
-                  ></div>
-                </div>
-              </div>
-            </div>
+            <ActionItems />
           </div>
           
-          <div 
-            className="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md"
-          >
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold flex items-center">
-                <MessageCircle className="h-5 w-5 text-green-500 mr-2" />
-                Quick Actions
-              </h2>
-            </div>
-            <div className="p-4 space-y-3">
-              <button className="w-full p-3 rounded-xl flex items-center justify-between bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 hover:shadow-md hover:translate-x-1">
-                <div className="flex items-center">
-                  <div className="p-2 rounded-full bg-indigo-100 mr-3">
-                    <Image className="h-4 w-4 text-indigo-600" />
-                  </div>
-                  <span className="font-medium text-sm">Create New Post</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-indigo-400" />
-              </button>
-              
-              <button className="w-full p-3 rounded-xl flex items-center justify-between bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-100 hover:shadow-md hover:translate-x-1">
-                <div className="flex items-center">
-                  <div className="p-2 rounded-full bg-purple-100 mr-3">
-                    <BarChart2 className="h-4 w-4 text-purple-600" />
-                  </div>
-                  <span className="font-medium text-sm">Analyze Content</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-purple-400" />
-              </button>
-              
-              <button className="w-full p-3 rounded-xl flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 hover:shadow-md hover:translate-x-1">
-                <div className="flex items-center">
-                  <div className="p-2 rounded-full bg-green-100 mr-3">
-                    <Settings className="h-4 w-4 text-green-600" />
-                  </div>
-                  <span className="font-medium text-sm">Train Custom Model</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-green-400" />
-              </button>
-            </div>
+          {/* 2. Content Suggestions */}
+          <div>
+            <ABTestingContentSuggestions />
+          </div>
+          
+          {/* 3. Content Calendar */}
+          <div>
+            <ContentCalendar />
+          </div>
+          
+          {/* 4. Social Media Trends */}
+          <div>
+            <SocialMediaTrends />
           </div>
         </div>
       </div>
-      
-      {/* Remove all animation styles completely */}
     </MainLayout>
   );
 } 

@@ -6,7 +6,7 @@ import {
   Camera, Pencil, RotateCw, Trash, Image as ImageIcon,
   Eraser, Move, Paintbrush, Palette, Layers, Search,
   SlidersHorizontal, Check, Info, Zap, Plus, CircleDashed,
-  Wand2, AlertTriangle, X
+  Wand2, AlertTriangle, X, Save
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,15 +16,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 
-// Define editing modes
+// Constants for editing modes
 const EDITING_MODES = {
-  PROMPT: 'PROMPT',
-  INPAINT: 'INPAINT',
-  ERASE: 'ERASE',
-  GENFILL: 'GENFILL',
-  INCREASE_RES: 'INCREASE_RES',
-  COMFY_INPAINT: 'COMFY_INPAINT',
-};
+  PROMPT: 'prompt',
+  INPAINT: 'inpaint',
+  ERASE: 'erase',
+  GENFILL: 'genfill',
+  INCREASE_RES: 'increase_res',
+  COMFY_INPAINT: 'comfy_inpaint',
+  REMOVE_BG: 'remove_bg',
+} as const;
+
+type EditingMode = typeof EDITING_MODES[keyof typeof EDITING_MODES];
 
 // Define common editing presets
 const EDITING_PRESETS = [
@@ -47,14 +50,14 @@ const EDIT_FEATURES = [
     name: 'Generative Fill', 
     description: 'Fill selected areas with AI', 
     icon: <Paintbrush className="h-5 w-5" />,
-    apiEndpoint: '/api/replicate/inpaint'
+    apiEndpoint: '/api/stability/inpaint'
   },
   {
     id: EDITING_MODES.GENFILL, 
     name: 'GenFill', 
     description: 'Generate content in masked areas', 
     icon: <Wand2 className="h-5 w-5" />,
-    apiEndpoint: '/api/replicate/inpaint'
+    apiEndpoint: '/api/stability/inpaint'
   },
   {
     id: EDITING_MODES.INCREASE_RES, 
@@ -65,6 +68,104 @@ const EDIT_FEATURES = [
   }
 ];
 
+// Helper function to convert Blob to Data URL
+const blobToDataURL = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+// Helper function to convert File to Data URL
+const fileToDataURL = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('Failed to read file as Data URL.'));
+      }
+    };
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
+};
+
+// Helper function to resize image for SDXL requirements
+const resizeImageForSDXL = (
+  file: File,
+  targetWidth: number = 1024,
+  targetHeight: number = 1024
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          return reject(
+            new Error('Could not get canvas context for resizing.')
+          );
+        }
+
+        // Calculate scaling factor to maintain aspect ratio
+        const scale = Math.min(
+          targetWidth / img.width,
+          targetHeight / img.height
+        );
+        const scaledWidth = img.width * scale;
+        const scaledHeight = img.height * scale;
+
+        // Calculate positioning to center the image
+        const dx = (targetWidth - scaledWidth) / 2;
+        const dy = (targetHeight - scaledHeight) / 2;
+
+        // Optional: Fill background if padding is added (e.g., white)
+        // ctx.fillStyle = 'white';
+        // ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+        // Draw the scaled image onto the canvas
+        ctx.drawImage(img, dx, dy, scaledWidth, scaledHeight);
+
+        // Export canvas as a PNG data URL
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = (error) =>
+        reject(new Error(`Image loading failed for resizing: ${error}`));
+
+      if (event.target?.result && typeof event.target.result === 'string') {
+        img.src = event.target.result;
+      } else {
+        reject(new Error('FileReader did not return a valid string result.'));
+      }
+    };
+    reader.onerror = (error) =>
+      reject(new Error(`FileReader error during resizing setup: ${error}`));
+    reader.readAsDataURL(file); // Read file to get Data URL for Image src
+  });
+};
+
+// Allowed dimensions for Stability AI SDXL v1.0
+const ALLOWED_SDXL_DIMENSIONS = new Set([
+  '1024x1024',
+  '1152x896',
+  '1216x832',
+  '1344x768',
+  '1536x640',
+  '640x1536',
+  '768x1344',
+  '832x1216',
+  '896x1152',
+]);
+
 const PhotoEditor = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -73,7 +174,7 @@ const PhotoEditor = () => {
   const [error, setError] = useState<string | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
-  const [editingMode, setEditingMode] = useState(EDITING_MODES.PROMPT);
+  const [editingMode, setEditingMode] = useState<EditingMode>(EDITING_MODES.GENFILL);
   const [maskCanvas, setMaskCanvas] = useState<HTMLCanvasElement | null>(null);
   const [isPainting, setIsPainting] = useState(false);
   const [brushSize, setBrushSize] = useState(20);
@@ -82,11 +183,15 @@ const PhotoEditor = () => {
   const [isPolling, setIsPolling] = useState<boolean>(false);
   const [pollingStatus, setPollingStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [currentPredictionId, setCurrentPredictionId] = useState<string | null>(null);
   const [processingMessage, setProcessingMessage] = useState<string | null>(null);
+  const [maskDataUrlForDownload, setMaskDataUrlForDownload] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -299,25 +404,125 @@ const PhotoEditor = () => {
 
   }, [isPainting, isEraser, brushSize]);
   
-  // Updated stopPainting
-  const stopPainting = useCallback(() => {
-    if (isPainting) {
-    setIsPainting(false);
-        if (contextRef.current) {
-            contextRef.current.beginPath(); // Reset path after stopping
-        }
-        console.log("Stop painting");
+  /**
+   * Core function to generate the final black & white mask canvas.
+   */
+  const generateFinalMaskCanvas = useCallback(async (
+    targetWidth: number = 1024,
+    targetHeight: number = 1024
+  ): Promise<HTMLCanvasElement | null> => {
+    if (!canvasRef.current || !imageDimensions || !contextRef.current) {
+      console.error("Cannot generate final mask canvas: Missing refs or dimensions.");
+      return null;
     }
-  }, [isPainting]);
+
+    const originalMaskCanvas = canvasRef.current;
+    const originalMaskCtx = contextRef.current;
+
+    // Check if the drawing canvas is empty
+    let isEmpty = true;
+    try {
+      const imageData = originalMaskCtx.getImageData(0, 0, originalMaskCanvas.width, originalMaskCanvas.height);
+      for (let i = 3; i < imageData.data.length; i += 4) {
+        if (imageData.data[i] > 0) {
+          isEmpty = false;
+          break;
+        }
+      }
+    } catch (e) {
+      console.error("Could not check if mask canvas is empty:", e);
+      isEmpty = false; // Assume not empty if check fails
+    }
+
+    if (isEmpty) {
+      console.log("Skipping final mask generation: Drawing canvas is empty.");
+      return null; // Return null if empty
+    }
+
+    // Create the final mask canvas
+    const finalMaskCanvas = document.createElement('canvas');
+    finalMaskCanvas.width = targetWidth;
+    finalMaskCanvas.height = targetHeight;
+    const finalCtx = finalMaskCanvas.getContext('2d');
+    if (!finalCtx) {
+      console.error('Could not get context for final mask canvas');
+      return null;
+    }
+
+    // Fill white
+    finalCtx.fillStyle = 'white';
+    finalCtx.fillRect(0, 0, targetWidth, targetHeight);
+
+    // Transfer drawing as black
+    finalCtx.fillStyle = 'black';
+    const scaleX = targetWidth / imageDimensions.width;
+    const scaleY = targetHeight / imageDimensions.height;
+
+    try {
+      const originalImageData = originalMaskCtx.getImageData(0, 0, originalMaskCanvas.width, originalMaskCanvas.height);
+      for (let y = 0; y < originalImageData.height; y++) {
+        for (let x = 0; x < originalImageData.width; x++) {
+          const index = (y * originalImageData.width + x) * 4;
+          const alpha = originalImageData.data[index + 3];
+          if (alpha > 10) {
+            const finalX = Math.floor(x * scaleX);
+            const finalY = Math.floor(y * scaleY);
+            const finalW = Math.ceil(scaleX);
+            const finalH = Math.ceil(scaleY);
+            finalCtx.fillRect(finalX, finalY, finalW, finalH);
+          }
+        }
+      }
+      console.log('Final B&W mask canvas generated.');
+      return finalMaskCanvas; // Return the canvas element
+    } catch (error) {
+      console.error("Error transferring drawing to final mask canvas:", error);
+      return null;
+    }
+  }, [imageDimensions]); // Depends only on imageDimensions
 
   /**
-   * Clear the mask canvas (canvasRef)
+   * Prepares the mask for download by generating the canvas and setting the state.
    */
+  const prepareMaskForDownload = useCallback(async () => {
+    console.log("Attempting to prepare mask for download...");
+    const finalMaskCanvas = await generateFinalMaskCanvas(); // Call the core generator
+
+    if (finalMaskCanvas) {
+      try {
+        const maskDataUrl = finalMaskCanvas.toDataURL('image/png');
+        setMaskDataUrlForDownload(maskDataUrl);
+        console.log("Mask data URL set for download.");
+      } catch (dataUrlError) {
+        console.error("Error creating data URL from final mask canvas:", dataUrlError);
+        setMaskDataUrlForDownload(null);
+      }
+    } else {
+      // If canvas generation failed or was skipped (empty), ensure state is null
+      console.log("Final mask canvas not generated (likely empty), clearing download URL.");
+      setMaskDataUrlForDownload(null);
+    }
+  }, [generateFinalMaskCanvas]); // Depends on the generator function
+
+  // stopPainting calls prepareMaskForDownload (definition order is correct now)
+  const stopPainting = useCallback(() => {
+    if (isPainting) {
+      setIsPainting(false);
+      if (contextRef.current) {
+        contextRef.current.beginPath();
+      }
+      console.log("Stop painting");
+      prepareMaskForDownload(); // Call the prep function
+    }
+  }, [isPainting, prepareMaskForDownload]);
+
+  // handleClearMask clears the state
   const handleClearMask = useCallback(() => {
     if (contextRef.current && canvasRef.current) {
       contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       console.log("Mask cleared");
     }
+    setMaskDataUrlForDownload(null); // Clear download state
   }, []);
 
   /**
@@ -330,37 +535,33 @@ const PhotoEditor = () => {
   };
 
   /**
-   * Get mask data from the drawing canvas (canvasRef)
+   * Get mask data, create B&W mask, and prepare download link.
    */
-  const getMaskBlob = async (): Promise<Blob | null> => {
-    // Use canvasRef for mask generation
-    if (!canvasRef.current) { 
-      console.error('Drawing canvas ref not available for mask generation');
+  const getMaskBlob = async (
+    targetWidth: number = 1024,
+    targetHeight: number = 1024
+  ): Promise<Blob | null> => {
+    const finalMaskCanvas = await generateFinalMaskCanvas(targetWidth, targetHeight); // Call the core generator
+
+    if (!finalMaskCanvas) {
+      console.error("Failed to generate final mask canvas for blob creation.");
       return null;
     }
-    const canvas = canvasRef.current; // Get the drawing canvas
-    
-    // Create a temporary canvas at original image dimensions if needed for scaling
-    // Or simply export the current canvas content if scaling is handled elsewhere
-    // For simplicity now, let's export the current drawing canvas directly
-    
+
+    // Convert the generated canvas to Blob
     try {
       return await new Promise<Blob | null>((resolve, reject) => {
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              console.log("Mask blob generated from drawing canvas", blob.size, blob.type);
-        resolve(blob);
-            } else {
-              reject(new Error('Failed to create blob from drawing canvas'));
-            }
-          },
-          'image/png', // Ensure PNG for potential transparency
-          1.0 // Max quality
-        );
+        finalMaskCanvas.toBlob((blob) => {
+          if (blob) {
+            console.log(`Final B&W Mask blob generated (${finalMaskCanvas.width}x${finalMaskCanvas.height})`, blob.size, blob.type);
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create blob from final mask canvas'));
+          }
+        }, 'image/png', 1.0);
       });
     } catch (error) {
-      console.error('Error converting drawing canvas to blob:', error);
+      console.error('Error converting final mask canvas to blob:', error);
       return null;
     }
   };
@@ -369,222 +570,327 @@ const PhotoEditor = () => {
    * Function to poll prediction status
    */
   const pollPrediction = async (predictionId: string): Promise<string | null> => {
-    try {
-      let attempts = 0;
-      const maxAttempts = 40; // ~5 min with 8s interval
-      
-      setIsPolling(true);
-      setPollingStatus('Starting prediction...');
-      
-      while (attempts < maxAttempts) {
+    setPollingStatus('Checking status...');
+    let attempts = 0;
+    const maxAttempts = 60; // Poll for up to 5 minutes (60 attempts * 5 seconds)
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
         const response = await fetch(`/api/replicate/predictions/${predictionId}`);
         if (!response.ok) {
-          throw new Error(`Failed to fetch prediction status: ${response.status}`);
+          // Handle non-2xx responses during polling if needed
+          console.error(`Polling error: Status ${response.status}`);
+          setPollingStatus(`Error fetching status (Attempt ${attempts})`);
+          await sleep(5000); // Wait before retrying on error
+          continue;
         }
-        
-        const prediction = await response.json();
-        console.log(`Poll status [${attempts}]:`, prediction.status);
-        
-        // Check if this was a fallback prediction from a text-to-image model
-        if (prediction.isFallback) {
-          setPollingStatus('Using text-to-image as fallback (inpainting unavailable)...');
-        } else {
-          setPollingStatus(`Processing: ${prediction.status || 'unknown'}`);
-        }
-        
-        if (prediction.status === 'succeeded') {
-          // The prediction output is either a URL string or an array of URLs
-          const output = prediction.output;
-          
-          if (!output) {
-            throw new Error('Prediction succeeded but no output was returned');
-          }
-          
-          // Handle different output formats
-          let imageUrl;
-          if (Array.isArray(output)) {
-            imageUrl = output[0]; // Take first image if it's an array
-          } else if (typeof output === 'string') {
-            imageUrl = output;
+
+        const predictionResult = await response.json();
+        setPollingStatus(`Status: ${predictionResult.status} (Attempt ${attempts})`);
+
+        if (predictionResult.status === 'succeeded') {
+          console.log('Prediction succeeded:', predictionResult);
+          setPollingStatus('Success!');
+          setIsPolling(false);
+          setIsProcessing(false); // Processing ends on success
+          setProcessingMessage(null);
+          setCurrentPredictionId(null); // Clear ID after completion
+          if (predictionResult.output && predictionResult.output.length > 0) {
+            // Assuming the first output is the image URL
+             setEditedImage(predictionResult.output[0]);
+             toast.success('Image processing complete!');
+             return predictionResult.output[0]; 
           } else {
-            throw new Error(`Unexpected output format: ${typeof output}`);
+              setError('Prediction succeeded but no output image found.');
+              toast.error('Processing finished, but no image was returned.');
+              return null;
           }
-          
-          return imageUrl;
+        } else if (predictionResult.status === 'failed') {
+          console.error('Prediction failed:', predictionResult);
+          setError(`Prediction failed: ${predictionResult.error || 'Unknown reason'}`);
+          setPollingStatus('Failed.');
+          toast.error('Image processing failed.');
+          setIsPolling(false);
+          setIsProcessing(false); // Processing ends on failure
+          setProcessingMessage(null);
+          setCurrentPredictionId(null); // Clear ID after failure
+          return null;
+        } else if (predictionResult.status === 'canceled') {
+           console.log('Prediction canceled:', predictionResult);
+           setError('Prediction was canceled.');
+           setPollingStatus('Canceled.');
+           toast.error('Image processing was canceled.');
+           setIsPolling(false);
+           setIsProcessing(false); 
+           setProcessingMessage(null);
+           setCurrentPredictionId(null);
+           return null;
         }
-        
-        if (prediction.status === 'failed') {
-          throw new Error(`Prediction failed: ${prediction.error || 'Unknown error'}`);
-        }
-        
-        // Wait before polling again
-        await sleep(8000); // 8 second interval
-        attempts++;
+        // If still processing or starting, wait and poll again
+        await sleep(5000); // Poll every 5 seconds
+
+      } catch (err) {
+        console.error('Polling fetch error:', err);
+        setError('Error checking prediction status.');
+        setPollingStatus('Polling error, retrying...');
+        // Add more robust retry logic if needed
+        await sleep(7000); // Longer wait on fetch error
       }
-      
-      throw new Error('Prediction timed out after multiple attempts');
-    } catch (error: any) {
-      console.error('Polling error:', error);
-      throw new Error(`Error polling for results: ${error.message}`);
-    } finally {
-      setIsPolling(false);
-      setPollingStatus(null);
     }
+
+    // Max attempts reached
+    setError('Prediction timed out after 5 minutes.');
+    setPollingStatus('Timed out.');
+    toast.error('Image processing timed out.');
+    setIsPolling(false);
+    setIsProcessing(false); // Processing ends on timeout
+    setProcessingMessage(null);
+    setCurrentPredictionId(null); // Clear ID after timeout
+    return null;
   };
 
   /**
    * Handles the primary edit action based on the selected mode.
    */
   const handleEditAction = async () => {
-    if (isProcessing) return;
+    setError(null);
+    setWarning(null);
+    setIsProcessing(true);
+    setProcessingMessage('Preparing image and mask...');
 
+    const finalPrompt = typeof selectedPreset === 'number' && selectedPreset < EDITING_PRESETS.length
+      ? `${EDITING_PRESETS[selectedPreset].prompt}, ${customPrompt}` 
+      : customPrompt;
+
+    let body: any = {};
+    let apiEndpoint = '';
+    let imageDataUrl = ''; // Variable to hold the final image data URL
+    let targetWidth = 1024; // Default target for SDXL
+    let targetHeight = 1024;
+
+    // --- Mode-Specific Preparation ---
     try {
-      setIsProcessing(true);
-      setError(null);
-      setProcessingMessage("Processing your request...");
-
-      // Check if we're in inpainting/genfill mode requiring a mask
-      if ((editingMode === EDITING_MODES.INPAINT || 
-           editingMode === EDITING_MODES.GENFILL || 
-           editingMode === EDITING_MODES.COMFY_INPAINT) && !canvasRef.current) {
-        console.log("Canvas not ready for inpainting/genfill");
-        throw new Error("Canvas not ready for drawing. Please try refreshing the page.");
-      }
-
-      // For inpainting, genfill, and comfy inpaint modes, we need to get mask data
-      if (editingMode === EDITING_MODES.INPAINT || 
-          editingMode === EDITING_MODES.GENFILL || 
-          editingMode === EDITING_MODES.COMFY_INPAINT) {
-        console.log('Calling getMaskBlob. canvasRef.current is:', canvasRef.current);
-        const maskBlob = await getMaskBlob();
-        
-        if (!maskBlob) {
-          if (!canvasRef.current) {
-            throw new Error("Canvas not initialized. Please try refreshing the page.");
-          } else {
-            throw new Error("Could not generate mask data. Try drawing a more visible area.");
+      if (editingMode === EDITING_MODES.GENFILL) {
+          if (!imageDimensions || !selectedImage) {
+             throw new Error('Image dimensions or selected image not available.');
           }
-        }
-
-        if (!selectedImage) {
-          throw new Error("No image is selected for editing.");
-          return; // Early return after throwing error
-        }
-
-        setProcessingMessage("Sending to AI model for processing...");
-        
-        // Create a new FormData instance
-        const formData = new FormData();
-        // We've already checked selectedImage is not null above
-        formData.append('image', selectedImage);
-        formData.append('mask', maskBlob);
-        
-        // Use prompt from state, or default to a descriptive prompt
-        let apiPrompt = customPrompt || (selectedPreset !== null ? EDITING_PRESETS[selectedPreset].prompt : "A beautiful scene");
-        formData.append('prompt', apiPrompt);
-        
-        setProcessingMessage(`Generating content with prompt: "${apiPrompt}"...`);
-        
-        // Determine the API endpoint based on the editing mode
-        let apiEndpoint = '';
-        if (editingMode === EDITING_MODES.COMFY_INPAINT) {
-          apiEndpoint = '/api/comfy/inpaint';
-        } else {
-          const route = editingMode === EDITING_MODES.INPAINT ? 'inpaint' : 'genfill';
-          apiEndpoint = `/api/replicate/${route}`;
-        }
-        
-        const response = await fetch(apiEndpoint, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Server error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("API Response:", data);
-
-        // Handle ComfyUI response differently than Replicate
-        if (editingMode === EDITING_MODES.COMFY_INPAINT) {
-          setProcessingMessage("Processing with ComfyUI...");
           
-          // Poll for ComfyUI results
-          const resultData = await pollComfyResult(data.id);
-          
-          if (resultData.output) {
-            setEditedImage(resultData.output);
-            setIsProcessing(false);
-            setProcessingMessage(null);
+          const currentDimensions = `${imageDimensions.width}x${imageDimensions.height}`;
+          const isDimensionValid = ALLOWED_SDXL_DIMENSIONS.has(currentDimensions);
+
+          // *** Resize if dimensions are invalid, otherwise convert directly ***
+          if (!isDimensionValid) {
+              console.log(`Resizing image from ${currentDimensions} to ${targetWidth}x${targetHeight} for Stability AI.`);
+              setProcessingMessage('Resizing image for AI...');
+              imageDataUrl = await resizeImageForSDXL(selectedImage, targetWidth, targetHeight); 
           } else {
-            throw new Error(resultData.error || "Failed to get result from ComfyUI");
+              imageDataUrl = await fileToDataURL(selectedImage);
+              // If original dimensions *are* valid, use them as target for mask
+              targetWidth = imageDimensions.width; 
+              targetHeight = imageDimensions.height;
           }
-        } else {
-          // This is a Replicate job - use the existing polling
-          setProcessingMessage("Processing with Replicate...");
-          setIsPolling(true);
-          setPollingStatus("Starting AI model...");
           
-          // Poll for Replicate results
-          const predictionResult = await pollPrediction(data.id);
-          
-          if (predictionResult) {
-            // Set the edited image URL
-            setEditedImage(predictionResult);
-            setProcessingMessage(null);
-          } else {
-            throw new Error("Failed to get result from Replicate");
+          // Process mask, passing the target dimensions
+          setProcessingMessage('Preparing mask...'); // Update status
+          const maskBlob = await getMaskBlob(targetWidth, targetHeight);
+          if (!maskBlob) {
+              throw new Error('Could not generate or resize mask.');
           }
-        }
+          const maskDataUrl = await blobToDataURL(maskBlob);
+          
+          body = { image: imageDataUrl, mask: maskDataUrl, prompt: finalPrompt };
+          apiEndpoint = '/api/stability/inpaint'; 
+
+      } else if (editingMode === EDITING_MODES.REMOVE_BG) { // *** Check against added mode ***
+          if (!selectedImage) {
+               throw new Error('Missing image for background removal.');
+          }
+          const imageDataUrl = await fileToDataURL(selectedImage);
+          body = { image: imageDataUrl };
+          apiEndpoint = '/api/replicate/remove-background'; // Example
+
       } else if (editingMode === EDITING_MODES.INCREASE_RES) {
-        console.log('Starting Upscale process...');
-        
-        if (!selectedImage) {
-          throw new Error("No image is selected for upscaling.");
-        }
-        
-        const formData = new FormData();
-        formData.append('image', selectedImage);
-        
-        setProcessingMessage("Preparing image for upscaling...");
-        
-        const response = await fetch('/api/replicate/upscale', {
-          method: 'POST',
-          body: formData,
-        });
+          const imageSourceForConversion = editedImage ? null : selectedImage; // Prefer edited Blob URL if exists
+          if (!editedImage && !imageSourceForConversion) { // Check both editedImage (blob URL) and selectedImage (File)
+               throw new Error('Missing image for upscaling.');
+          }
+          // If editedImage exists, assume it's a Blob URL and we need to fetch and convert it.
+          // If only selectedImage exists, convert that File.
+          let imageDataUrl: string;
+          if (editedImage) {
+             // Fetch the blob URL content and convert
+             const response = await fetch(editedImage);
+             const blob = await response.blob();
+             imageDataUrl = await blobToDataURL(blob);
+          } else if (imageSourceForConversion) {
+             imageDataUrl = await fileToDataURL(imageSourceForConversion);
+          } else {
+             // This case should theoretically not be reached due to the check above, but added for safety
+             throw new Error('Could not determine image source for upscaling.');
+          }
+          body = { image: imageDataUrl };
+          apiEndpoint = '/api/replicate/upscale'; // Example
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Upscale request failed');
-        }
-
-        const prediction = await response.json();
-        console.log('Upscale prediction initiated:', prediction);
-        setCurrentPredictionId(prediction.id);
-
-        setProcessingMessage("AI is enhancing your image resolution...");
-        
-        // Poll the prediction until it's ready
-        const imageUrl = await pollPrediction(prediction.id);
-        
-        if (imageUrl) {
-          setEditedImage(imageUrl);
-          setProcessingMessage("Upscaling complete!");
-        }
-      } else if (editingMode === EDITING_MODES.ERASE) {
-        console.log('Erase mode selected - implementation pending.');
-        setError('Erase functionality not yet implemented.');
-        setIsLoading(false);
+      } else {
+          // Fallback or unhandled modes
+          throw new Error(`Editing mode "${editingMode}" is not fully implemented for API calls.`);
       }
 
-    } catch (err: any) {
-      console.error('Edit action error:', err);
-      setError(err.message || "An unexpected error occurred during processing.");
+    } catch (preparationError) {
+        // --- Catch errors during image/mask preparation/conversion ---
+        console.error("Error preparing data for API call:", preparationError);
+        const message = preparationError instanceof Error ? preparationError.message : 'Unknown preparation error';
+        setError(`Failed to prepare data: ${message}`);
+        setIsProcessing(false);
+        setProcessingMessage(null);
+        toast.error('Could not prepare data for AI processing.');
+        return; // Stop execution
+    }
+    // --- End of Mode-Specific Preparation ---
+
+
+    if (!apiEndpoint) { // Should not happen if preparation succeeds, but good safety check
+        setError(`API endpoint not determined for mode: ${editingMode}`);
+        setIsProcessing(false);
+        setProcessingMessage(null);
+        return;
+    }
+
+    setProcessingMessage('Sending request to AI model...');
+
+    // --- API Call ---
+    try {
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      // --- Handle NON-OK Response ---
+      if (!response.ok) {
+        let errorTitle = `API Error (${response.status})`; // Default title
+        let errorDetails = 'No details available.';      // Default details
+        
+        try {
+            const responseBody = await response.json();
+            console.error("API Error Response (JSON Parsed):", responseBody);
+            
+            // Extract specific fields if they exist
+            errorTitle = responseBody.error || responseBody.name || errorTitle; // Use 'name' field from Stability as title if 'error' isn't present
+            errorDetails = responseBody.details || responseBody.message || JSON.stringify(responseBody);
+            
+        } catch (e) {
+            // If parsing JSON fails, try getting text
+            try {
+              const textError = await response.text();
+              errorDetails = textError.substring(0, 500) + (textError.length > 500 ? '...' : ''); // Limit length
+              console.error("API Non-JSON Error Response (Text):", textError);
+            } catch (textE) {
+               console.error("Failed to read API error response as JSON or text.", textE);
+               errorDetails = "Failed to read error response body.";
+            }
+        }
+        // Set state and show toast with structured error
+        setError(`${errorTitle}. Details: ${errorDetails}`);
+        toast.error(`${errorTitle}`); // Show the main error/name in the toast
+        
+        setIsProcessing(false);
+        setProcessingMessage(null);
+        return; // Stop execution
+      }
+
+      // --- Handle OK Response ---
+      let result;
+      try {
+          result = await response.json();
+      } catch (jsonError) {
+          // Handle cases where the server returns OK status but non-JSON body (shouldn't happen with current API routes, but good practice)
+          console.error("Failed to parse successful API response as JSON:", jsonError);
+           let responseText = '';
+          try {
+              responseText = await response.text();
+              console.error("Successful API response text:", responseText);
+          } catch { /* Ignore if reading text also fails */ }
+          
+          setError(`API Success (${response.status}) but failed to parse response. Body: ${responseText.substring(0, 200)}...`);
+          toast.error('Received an invalid successful response from the server.');
+          setIsProcessing(false);
+          setProcessingMessage(null);
+          return; // Exit the function
+      }
+
+      // --- Process OK Response based on Endpoint ---
+      
+      // Stability AI (Synchronous Response)
+      if (apiEndpoint === '/api/stability/inpaint') {
+          setProcessingMessage('Processing complete!');
+          if (result.generatedImage) {
+              setEditedImage(result.generatedImage);
+              toast.success('Image successfully generated!');
+              handleClearMask(); // Clear mask after success
+          } else {
+              console.error("Stability Success Response Missing Data:", result);
+              setError('AI processed successfully, but returned no image data.');
+              toast.error('Processing finished, but no image was returned.');
+          }
+          setIsProcessing(false); 
+          setProcessingMessage(null);
+
+      } 
+      // Replicate (Asynchronous - Needs Polling - e.g., Upscale, Remove BG)
+      else if (apiEndpoint === '/api/replicate/upscale' || apiEndpoint === '/api/replicate/remove-background') { 
+          if (result.prediction && result.prediction.id) {
+              const predictionId = result.prediction.id;
+              setCurrentPredictionId(predictionId);
+              setProcessingMessage('AI processing started. Waiting for results...');
+              setIsPolling(true); 
+              pollPrediction(predictionId); // Start polling
+              // isProcessing remains true until polling finishes
+          } else {
+              console.error("Replicate Start Error:", result);
+              setError('Failed to start Replicate prediction job.');
+              setIsProcessing(false);
+              setProcessingMessage(null);
+              toast.error('Could not initiate AI processing.');
+          }
+      }
+      // ComfyUI (Assuming Asynchronous - Needs Polling)
+      else if (apiEndpoint === '/api/comfy/inpaint') {
+          if (result.prompt_id) {
+              const promptId = result.prompt_id;
+              setCurrentPredictionId(promptId); 
+              setProcessingMessage('Local processing started. Waiting for results...');
+              setIsPolling(true); 
+              pollComfyResult(promptId); 
+              // isProcessing remains true
+          } else {
+              console.error("ComfyUI Start Error:", result);
+              setError(`Failed to start ComfyUI job: ${result.error || 'Unknown error'}`);
+              setIsProcessing(false);
+              setProcessingMessage(null);
+              toast.error('Could not initiate local AI processing.');
+          }
+      }
+      // --- Add other endpoint handlers if needed ---\
+      else {
+          console.warn(`Unhandled successful API endpoint response: ${apiEndpoint}`);
+          setError(`Received successful response from unhandled endpoint: ${apiEndpoint}`);
+          setIsProcessing(false);
+          setProcessingMessage(null);
+      }
+
+    } catch (networkOrOtherError) { // Catch network errors or errors *outside* the fetch response handling
+      console.error('Network or unexpected error during API call:', networkOrOtherError);
+      const message = networkOrOtherError instanceof Error ? networkOrOtherError.message : 'An unknown network or processing error occurred.';
+      setError(`Error: ${message}`);
+      toast.error(`An error occurred: ${message}`);
       setIsProcessing(false);
       setProcessingMessage(null);
-    }
+      setCurrentPredictionId(null); // Reset polling state
+      setIsPolling(false); 
+    } 
+    // Note: isProcessing is now managed within the success/error/polling logic
   };
 
   /**
@@ -762,10 +1068,10 @@ const PhotoEditor = () => {
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 flex items-center mb-2">
           <ImageIcon className="w-8 h-8 mr-3 text-indigo-600" />
-            Replicate AI Photo Editor
+            AI Photo Editor
         </h1>
         <p className="text-gray-600 text-lg">
-            Enhance and transform your photos with Replicate AI's powerful image editing capabilities
+            Enhance and transform your photos with powerful AI image editing capabilities
         </p>
       </header>
       
@@ -926,30 +1232,30 @@ const PhotoEditor = () => {
                   <h3 className="text-lg font-semibold text-gray-900">Result</h3>
                 </div>
                 <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm flex items-center justify-center">
-                  {(isEditing || isPolling) && !error && (
+                  {(isEditing || isPolling || isProcessing) && !error && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-white/80 backdrop-blur-sm">
                       <Loader2 className="h-10 w-10 animate-spin text-indigo-600 mb-3" />
-                      <p className="text-sm font-medium text-indigo-700">Processing your image...</p>
+                      <p className="text-sm font-medium text-indigo-700">{processingMessage || "Processing your image..."}</p>
                       {isPolling && pollingStatus && (
                          <p className="text-xs text-indigo-600 mt-1">Status: {pollingStatus}</p>
                       )}
                     </div>
                   )}
-                  {editedImage && !isEditing && !isPolling && (
+                  {editedImage && !isEditing && !isPolling && !isProcessing && (
                     <img 
                       src={editedImage} 
                       alt="Edited Result"
                       className="w-full h-full object-contain" 
                     />
                   )}
-                  {!editedImage && !isEditing && !isPolling && !error && (
+                  {!editedImage && !isEditing && !isPolling && !isProcessing && !error && (
                      <div className="text-center text-gray-500">
                        <ImageIcon className="h-12 w-12 mx-auto text-gray-400" />
                        <p className="mt-2 text-sm">Your edited image will appear here.</p>
                      </div>
                   )}
                 </div>
-                {editedImage && !isEditing && !isPolling && (
+                {editedImage && !isEditing && !isPolling && !isProcessing && (
                   <Button 
                     onClick={handleDownload}
                     className="w-full bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center gap-2"
@@ -1027,14 +1333,26 @@ const PhotoEditor = () => {
                             <span className="flex items-center justify-center bg-purple-100 text-purple-800 w-5 h-5 rounded-full text-xs mr-2">1</span>
                             Mask Selection Tools
                           </h4>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={handleClearMask}
-                            className="text-xs"
-                          >
-                            Clear Mask
-                          </Button>
+                          <div className="flex items-center space-x-2">
+                            {maskDataUrlForDownload && (
+                                <a
+                                    href={maskDataUrlForDownload}
+                                    download="generated_mask.png"
+                                    className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                >
+                                    <Save className="-ml-0.5 mr-1.5 h-4 w-4" aria-hidden="true" />
+                                    Download Mask
+                                </a>
+                            )}
+                             <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleClearMask}
+                                className="text-xs"
+                             >
+                                Clear Mask
+                             </Button>
+                           </div>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

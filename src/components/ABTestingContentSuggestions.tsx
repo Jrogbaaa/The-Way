@@ -20,6 +20,7 @@ import {
   Maximize2,
   RefreshCw
 } from 'lucide-react';
+import Image from 'next/image';
 import { Tooltip } from '@/components/ui/tooltip';
 
 // Types
@@ -66,7 +67,7 @@ const mockSuggestionGroups: SuggestionGroup[] = [
         hashtags: ['sustainablefashion', 'newcollection', 'ecofriendly'],
         predictedEngagement: 87,
         targetPlatforms: ['instagram', 'facebook'],
-        imageUrl: '/images/suggestions/product-flatlay.jpg',
+        imageUrl: 'https://images.unsplash.com/photo-1526947425960-945c6e72858f?q=80&w=600&auto=format&fit=crop',
         trend: 'Minimalist product photography'
       },
       {
@@ -78,7 +79,7 @@ const mockSuggestionGroups: SuggestionGroup[] = [
         hashtags: ['sustainablestyle', 'ecofashion', 'recycledmaterials'],
         predictedEngagement: 82,
         targetPlatforms: ['instagram', 'facebook'],
-        imageUrl: '/images/suggestions/product-carousel.jpg',
+        imageUrl: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?q=80&w=600&auto=format&fit=crop',
         trend: 'Educational carousels'
       },
       {
@@ -90,7 +91,7 @@ const mockSuggestionGroups: SuggestionGroup[] = [
         hashtags: ['sustainableliving', 'ecofriendly', 'lifestylevideo'],
         predictedEngagement: 91,
         targetPlatforms: ['instagram', 'tiktok'],
-        imageUrl: '/images/suggestions/product-lifestyle.jpg',
+        imageUrl: 'https://images.unsplash.com/photo-1556740772-1a741367b93e?q=80&w=600&auto=format&fit=crop',
         trend: 'Day-in-the-life content'
       }
     ]
@@ -111,6 +112,7 @@ const mockSuggestionGroups: SuggestionGroup[] = [
         hashtags: ['fashionrevolution', 'sustainablefashion', 'fashionfuture'],
         predictedEngagement: 78,
         targetPlatforms: ['instagram', 'twitter'],
+        imageUrl: 'https://images.unsplash.com/photo-1588675646184-f5b0b0b0b2de?q=80&w=600&auto=format&fit=crop',
         trend: 'Conversation starters'
       },
       {
@@ -122,7 +124,7 @@ const mockSuggestionGroups: SuggestionGroup[] = [
         hashtags: ['thisorthat', 'fashionpoll', 'stylecheck'],
         predictedEngagement: 85,
         targetPlatforms: ['instagram', 'facebook'],
-        imageUrl: '/images/suggestions/this-or-that.jpg',
+        imageUrl: 'https://images.unsplash.com/photo-1556740738-b6a63e2775df?q=80&w=600&auto=format&fit=crop',
         trend: 'Interactive polls'
       },
       {
@@ -134,7 +136,7 @@ const mockSuggestionGroups: SuggestionGroup[] = [
         hashtags: ['hottakes', 'sustainablefashion', 'unpopularopinion'],
         predictedEngagement: 89,
         targetPlatforms: ['instagram', 'linkedin'],
-        imageUrl: '/images/suggestions/hot-takes.jpg',
+        imageUrl: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=600&auto=format&fit=crop',
         trend: 'Controversial statements'
       }
     ]
@@ -228,14 +230,21 @@ const SuggestionCard = ({
     {/* Image or placeholder */}
     <div className="aspect-video bg-gray-100 relative">
       {suggestion.imageUrl ? (
-        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-          {/* In real implementation, this would be an actual image */}
-          <div className="text-sm text-gray-500">Image Preview</div>
-        </div>
+        <Image 
+          src={suggestion.imageUrl} 
+          alt={suggestion.title} 
+          layout="fill" 
+          objectFit="cover" 
+          className="transition-transform duration-300 group-hover:scale-105" 
+        />
       ) : (
-        <div className="w-full h-full flex items-center justify-center bg-gray-50">
-          <TypeBadge type={suggestion.type} size={showFullDetails ? 'lg' : 'sm'} />
-        </div>
+        <Image 
+          src={`https://picsum.photos/seed/${suggestion.id}/300/200`}
+          alt={`Placeholder for ${suggestion.title}`}
+          layout="fill" 
+          objectFit="cover" 
+          className="transition-transform duration-300 group-hover:scale-105" 
+        />
       )}
       
       {/* Prediction score overlay */}

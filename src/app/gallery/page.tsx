@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import MainLayout from '@/components/layout/MainLayout';
 import { Tooltip } from '@/components/ui/tooltip';
-import { Heart, MessageCircle, Share2, Plus, Filter, Zap, Camera, Clock, ImageIcon } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Plus, Filter, Zap, Camera, Clock, ImageIcon, Upload } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 type GalleryItem = {
   id: string;
@@ -114,6 +115,10 @@ export default function GalleryPage() {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [animateIn, setAnimateIn] = useState(false);
   const [showTip, setShowTip] = useState(true);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filters = [
     { name: 'all', label: 'All' },
@@ -140,6 +145,74 @@ export default function GalleryPage() {
     };
   }, []);
 
+  // Handle file selection
+  const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Basic validation (optional)
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file.');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) { // Example: 10MB limit
+        toast.error('Image file size should not exceed 10MB.');
+        return;
+      }
+      
+      setSelectedFile(file);
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      }
+      reader.readAsDataURL(file);
+      console.log('Selected file:', file.name);
+      toast.success(`${file.name} selected. Ready to upload.`);
+      // Clear the input value so the same file can be selected again if needed
+      if (fileInputRef.current) {
+          fileInputRef.current.value = ""; 
+      }
+    } else {
+      setSelectedFile(null);
+      setImagePreview(null);
+    }
+  };
+
+  // Trigger hidden file input click
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+  
+  // Placeholder for actual upload logic
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      toast.error('No file selected for upload.');
+      return;
+    }
+    console.log('Uploading file:', selectedFile.name);
+    // --- Add your actual upload API call here --- 
+    // Example: 
+    // const formData = new FormData();
+    // formData.append('image', selectedFile);
+    // try {
+    //   const response = await fetch('/api/upload-gallery', { method: 'POST', body: formData });
+    //   if (!response.ok) throw new Error('Upload failed');
+    //   const result = await response.json();
+    //   toast.success('Image uploaded successfully!');
+    //   // Add result to galleryItems, clear selection, etc.
+    //   setSelectedFile(null);
+    //   setImagePreview(null);
+    // } catch (error) {
+    //   console.error("Upload error:", error);
+    //   toast.error('Failed to upload image.');
+    // }
+    
+    // Using basic toast call instead of toast.info
+    toast('Upload functionality not yet implemented.', {
+        icon: 'ℹ️', // Example: using an info emoji as icon
+    }); 
+  };
+
   const filteredItems = selectedFilter === 'all'
     ? galleryItems
     : galleryItems.filter(item => item.tags.includes(selectedFilter));
@@ -155,10 +228,18 @@ export default function GalleryPage() {
               animationFillMode: 'forwards'
             }}
           >
-            <h1 className="text-3xl font-bold">Content Gallery</h1>
-            <p className="text-gray-600 mt-1">Browse and manage your visual content</p>
+            <h1 className="text-3xl font-bold">My Gallery</h1>
+            <p className="text-gray-600 mt-1">Upload and manage your visual content</p>
           </div>
           
+          <input 
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept="image/*"
+            style={{ display: 'none' }}
+          />
+
           <div
             className="flex space-x-2 opacity-0 animate-slide-in"
             style={{
@@ -177,14 +258,39 @@ export default function GalleryPage() {
             </Tooltip>
             <Button 
               className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md transition-all duration-300 hover:-translate-y-1"
+              onClick={handleUploadClick}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Post
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Image
             </Button>
           </div>
         </div>
 
-        {/* AI Tip */}
+        {selectedFile && imagePreview && (
+          <div className="p-4 border border-blue-200 bg-blue-50 rounded-lg flex flex-col md:flex-row items-center gap-4 opacity-0 animate-fade-in" style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}>
+            <img src={imagePreview} alt="Selected preview" className="w-20 h-20 object-cover rounded-md border" />
+            <div className="flex-grow text-sm">
+              <p className="font-medium text-gray-800">Ready to upload:</p>
+              <p className="text-gray-600">{selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)</p>
+            </div>
+            <Button 
+              onClick={handleUpload}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Confirm Upload
+            </Button>
+             <Button 
+              onClick={() => { setSelectedFile(null); setImagePreview(null); }} 
+              variant="ghost"
+              size="sm"
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
+
         {showTip && (
           <div
             className="p-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white flex items-center justify-between transition-all duration-500 ease-in-out opacity-0 animate-fade-in"
@@ -206,7 +312,6 @@ export default function GalleryPage() {
           </div>
         )}
 
-        {/* Filters */}
         <div 
           className="flex flex-wrap gap-2 bg-gray-50 p-4 rounded-lg dark:bg-gray-800/50 mb-6 opacity-0 animate-fade-in"
           style={{
@@ -237,7 +342,6 @@ export default function GalleryPage() {
           ))}
         </div>
 
-        {/* Gallery */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item, index) => (
             <div 
@@ -326,7 +430,6 @@ export default function GalleryPage() {
           ))}
         </div>
 
-        {/* Load more button */}
         <div 
           className="flex justify-center mt-8 opacity-0 animate-fade-in"
           style={{
