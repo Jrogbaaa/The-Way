@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
+import { toast } from 'react-hot-toast';
 
 // Define editing modes
 const EDITING_MODES = {
@@ -73,6 +74,8 @@ const PhotoEditor = () => {
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [currentPredictionId, setCurrentPredictionId] = useState<string | null>(null);
+  const [processingMessage, setProcessingMessage] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -421,76 +424,89 @@ const PhotoEditor = () => {
    * Handles the primary edit action based on the selected mode.
    */
   const handleEditAction = async () => {
-    setIsLoading(true);
-    setError(null);
-    setEditedImage(null);
+    if (isProcessing) return;
 
     try {
-      if (!selectedImage) {
-        throw new Error('Please select an image first.');
+      setIsProcessing(true);
+      setError(null);
+      setProcessingMessage("Processing your request...");
+
+      // Check if we're in inpainting/genfill mode requiring a mask
+      if ((editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.GENFILL) && !canvasRef.current) {
+        console.log("Canvas not ready for inpainting/genfill");
+        throw new Error("Canvas not ready for drawing. Please try refreshing the page.");
       }
-      
-      // Prepare the form data (common for most actions)
-      const formData = new FormData();
-      formData.append('image', selectedImage);
 
-      // Handle different editing modes
+      // For inpainting and genfill modes, we need to get mask data
       if (editingMode === EDITING_MODES.INPAINT || editingMode === EDITING_MODES.GENFILL) {
-        // Use canvasRef for the check
-        if (!canvasRef.current) { 
-           throw new Error('Canvas not ready for inpainting/genfill');
-        }
-        // Use getMaskBlob which now reads from canvasRef
         console.log('Calling getMaskBlob. canvasRef.current is:', canvasRef.current);
-        const maskBlob = await getMaskBlob(); 
+        const maskBlob = await getMaskBlob();
+        
         if (!maskBlob) {
-           // Explicitly check if the reason was canvasRef being null INSIDE getMaskBlob
-           if (!canvasRef.current) {
-               throw new Error('handleEditAction Error: canvasRef became null before mask generation!');
-           } else {
-               // Otherwise, blob creation itself failed
-               throw new Error('handleEditAction Error: Failed to generate mask blob from canvas.');
-           }
+          if (!canvasRef.current) {
+            throw new Error("Canvas not initialized. Please try refreshing the page.");
+          } else {
+            throw new Error("Could not generate mask data. Try drawing a more visible area.");
+          }
         }
 
+        if (!selectedImage) {
+          throw new Error("No image is selected for editing.");
+          return; // Early return after throwing error
+        }
+
+        setProcessingMessage("Sending to AI model for processing...");
+        
+        // Create a new FormData instance
+        const formData = new FormData();
+        // We've already checked selectedImage is not null above
+        formData.append('image', selectedImage);
         formData.append('mask', maskBlob);
         
-        if (!customPrompt) {
-          throw new Error('Please enter a prompt describing what you want to add/change');
-        }
-        formData.append('prompt', customPrompt);
-
-        console.log(`Starting ${editingMode} with:`, {
-          imageSize: `${selectedImage.size} bytes`,
-          maskSize: `${maskBlob.size} bytes`,
-          prompt: customPrompt
-        });
-
-        // Call the Replicate inpainting endpoint
-        const response = await fetch('/api/replicate/inpaint', {
+        // Use prompt from state, or default to a descriptive prompt
+        let apiPrompt = customPrompt || (selectedPreset !== null ? EDITING_PRESETS[selectedPreset].prompt : "A beautiful scene");
+        formData.append('prompt', apiPrompt);
+        
+        setProcessingMessage(`Generating content with prompt: "${apiPrompt}"...`);
+        
+        const route = editingMode === EDITING_MODES.INPAINT ? 'inpaint' : 'genfill';
+        const response = await fetch(`/api/replicate/${route}`, {
           method: 'POST',
-          body: formData
+          body: formData,
         });
-
+        
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Failed to process ${editingMode} request`);
+          const data = await response.json();
+          console.error('API error:', data);
+          
+          // More descriptive error messages based on status code
+          if (response.status === 422) {
+            throw new Error("The AI model rejected the request. The model might be temporarily unavailable.");
+          } else if (response.status === 429) {
+            throw new Error("Too many requests. Please wait a moment and try again.");
+          } else if (response.status >= 500) {
+            throw new Error(`Server error: ${data.detail || 'The AI service is currently unavailable'}`);
+          } else {
+            // Include more details from the API in the error message
+            throw new Error(`Processing failed: ${data.error || data.detail || 'Unknown error'}`);
+          }
         }
-
+        
         const prediction = await response.json();
-        console.log(`${editingMode} initiated:`, prediction);
-
-        // Start polling for results
-        setIsPolling(true);
-        setPollingStatus(prediction.status);
-        const imageUrl = await pollPrediction(prediction.id);
-
-        if (imageUrl) {
-          setEditedImage(imageUrl);
-          setIsLoading(false);
+        setCurrentPredictionId(prediction.id);
+        
+        // If this is a fallback response (we used text-to-image instead of inpainting)
+        if (prediction.isFallback) {
+          setProcessingMessage("Inpainting models unavailable. Using text-to-image as fallback...");
+        } else {
+          setProcessingMessage("AI is working on your image...");
         }
-
-      } else if (editingMode === EDITING_MODES.PROMPT) {
+        
+        // Poll the prediction until it's ready
+        await pollPrediction(prediction.id);
+      }
+      // If we're just using prompt-based editing
+      else if (editingMode === EDITING_MODES.PROMPT) {
         let promptToUse = customPrompt;
         if (selectedPreset !== null && selectedPreset >= 0 && selectedPreset < EDITING_PRESETS.length) {
           promptToUse = EDITING_PRESETS[selectedPreset].prompt;
@@ -500,7 +516,11 @@ const PhotoEditor = () => {
           throw new Error('Please enter an editing prompt or select a preset');
         }
         
+        // Create form data for the API
+        const formData = new FormData();
+        formData.append('image', selectedImage);
         formData.append('prompt', promptToUse);
+        
         console.log(`Editing with prompt: "${promptToUse}"`);
         setError("Prompt-based editing endpoint not yet implemented.");
         setIsLoading(false);
@@ -536,15 +556,11 @@ const PhotoEditor = () => {
         setIsLoading(false);
       }
 
-    } catch (error: any) {
-      console.error('Edit action failed:', error);
-      setError(error.message || 'Failed to process edit action');
-      setIsLoading(false);
-      setIsPolling(false);
-      setPollingStatus(null);
-    } finally {
-       setIsPolling(false);
-       setPollingStatus(null);
+    } catch (err: any) {
+      console.error('Edit action error:', err);
+      setError(err.message || "An unexpected error occurred during processing.");
+      setIsProcessing(false);
+      setProcessingMessage(null);
     }
   };
 
@@ -742,31 +758,16 @@ const PhotoEditor = () => {
           )}
           
           {error && (
-            <div className="rounded-md bg-red-50 p-4 mt-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">
-                    Error
-                  </h3>
-                  <div className="mt-2 text-sm text-red-700">
-                    <p>{error}</p>
-                  </div>
-                  <div className="mt-4">
-                    <Button 
-                      variant="secondary"
-                      onClick={handleEditAction} 
-                      className="flex items-center text-red-800 hover:text-red-900 bg-red-100 hover:bg-red-200"
-                    >
-                      <RotateCw className="h-4 w-4 mr-2" />
-                      Retry
-                    </Button>
-                  </div>
-                </div>
+            <div className="p-3 bg-red-100 border border-red-300 text-red-800 rounded-md flex items-start space-x-2">
+              <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Processing Error</p>
+                <p className="text-sm">{error}</p>
+                {error.includes("model") && (
+                  <p className="text-xs mt-1">
+                    The AI model may be temporarily unavailable. Please try again later or try a different edit mode.
+                  </p>
+                )}
               </div>
             </div>
           )}

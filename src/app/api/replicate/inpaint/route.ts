@@ -72,22 +72,22 @@ export async function POST(req: NextRequest) {
     const imageDataUrl = await imageToDataUrl(imageFile);
     const maskDataUrl = await imageToDataUrl(maskFile);
 
-    // Try three different community inpainting models in order, if one fails try the next
+    // Updated inpainting models with current versions
     const inpaintingModels = [
       {
-        name: "stabilityai/stable-diffusion-2-inpainting",
-        version: "9c34d792f0e1f6aeda465dd5605a67196176633b557c7656f0f36c3f8ac52fc2",
-        description: "Stability AI Stable Diffusion 2 Inpainting - Most reliable model"
+        name: "stability-ai/sdxl-inpainting",
+        version: "a62d8f6f9fb5aeab6582b6e0d9f692c8210937b5cf77a308528e3e72ed049177", 
+        description: "Latest SDXL Inpainting model from Stability AI"
       },
       {
-        name: "runwayml/stable-diffusion-inpainting",
-        version: "c28b92a7ecd66eee4aefadb71161d3c9d8d47ef9744b312183b2eb353724cd21",
-        description: "RunwayML Stable Diffusion Inpainting - Community model"
+        name: "stability-ai/stable-diffusion-xl-base-1.0",
+        version: "b739fc042e8a19504d4f422aa118c8b32e996f143ad9b2537494905ccc8ff29f",
+        description: "Stability AI SDXL base model with inpainting capability"
       },
       {
-        name: "madebyollin/sdxl-inpainting",
-        version: "4e34dfb5d7332177f3f472a0b325a7e3782dd4c455d14b5b1ea2f1705c4cb77d",
-        description: "SDXL Inpainting - Higher quality inpainting"
+        name: "fofr/sdxl-inpainting-fallback",
+        version: "c51ee1c8bec94f687eb2ce4998602139bfb590f960b9cf512862bbb12a0c9cc6",
+        description: "Community SDXL inpainting fallback model"
       }
     ];
 
@@ -98,30 +98,17 @@ export async function POST(req: NextRequest) {
       try {
         // Configure appropriate input parameters based on the model
         let input;
-
-        if (model.name.includes('sdxl')) {
-          // SDXL inpainting has different parameters
-          input = {
-            prompt: prompt || "A beautiful bush or tree",
-            image: imageDataUrl,
-            mask: maskDataUrl,
-            negative_prompt: "blurry, ugly, duplicate, distorted, low quality",
-            width: 1024,
-            height: 1024,
-            num_inference_steps: 25,
-            guidance_scale: 7.5,
-          };
-        } else {
-          // Standard SD inpainting parameters
-          input = {
-            prompt: prompt || "A beautiful bush or tree",
-            image: imageDataUrl,
-            mask: maskDataUrl,
-            negative_prompt: "blurry, ugly, duplicate, distorted, low quality",
-            num_inference_steps: 30,
-            guidance_scale: 7.5,
-          };
-        }
+        
+        // All models now have similar parameters (all are SDXL-based)
+        input = {
+          prompt: prompt || "A beautiful bush or tree",
+          image: imageDataUrl,
+          mask: maskDataUrl,
+          negative_prompt: "blurry, ugly, duplicate, distorted, low quality, out of frame",
+          guidance_scale: 7.5,
+          num_inference_steps: 25,
+          scheduler: "K_EULER_ANCESTRAL",
+        };
 
         console.log(`Attempting inpainting with model: ${model.name} (${model.description})`);
         
@@ -173,13 +160,17 @@ export async function POST(req: NextRequest) {
     console.log("FALLBACK: All inpainting models failed. Switching to text-to-image as fallback");
     
     try {
+      // Get the prompt from earlier scope to fix the reference error
+      const formData = await req.formData();
+      const savedPrompt = formData.get('prompt') as string | null;
+      
       // Use SDXL text-to-image as fallback (known to work)
       const fallbackModel = "stability-ai/sdxl";
-      const fallbackVersion = "39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b";
+      const fallbackVersion = "a00d0b7dcbb9c3fbb34ba87d2d5b46c56969c84a628bf778a7fdaec30b1b99c5";
       
       // Create a more descriptive prompt based on original prompt
-      const enhancedPrompt = prompt ? 
-        `A detailed image of ${prompt}. High quality, realistic, detailed photography.` : 
+      const enhancedPrompt = savedPrompt ? 
+        `A detailed image of ${savedPrompt}. High quality, realistic, detailed photography.` : 
         "A beautiful detailed landscape with trees and natural elements. High quality, realistic, detailed photography.";
       
       const fallbackInput = {
