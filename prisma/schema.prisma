@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model based on Supabase Auth structure and type usage
+model User {
+  id            String       @id @default(uuid())
+  email         String?      @unique // Making email optional as per Supabase
+  emailVerified DateTime?    @map("email_verified") // Field mentioned in Omit<PrismaUser, 'emailVerified'>
+  // Add other fields relevant to your app, e.g., name, created_at
+  // name          String?
+  // created_at    DateTime @default(now())
+  trainedModels TrainedModel[] // Relation to TrainedModel
+
+  @@map("users") // Optional: Explicitly map to Supabase 'auth.users' table if needed, adjust schema name if different
+}
+
+// Model for trained models based on API routes interaction
+model TrainedModel {
+  id                   String    @id // Using String based on nanoid usage
+  userId               String?   @map("user_id")
+  modelName            String?   @map("model_name")
+  description          String?
+  version              String? // Can store Replicate version or trainer version
+  modelUrl             String?   @map("model_url")
+  status               String? // e.g., starting, processing, succeeded, failed
+  createdAt            DateTime? @map("created_at") @db.Timestamptz(6) // Assuming timestamptz from Supabase
+  keyword              String?
+  inputParameters      Json?     @map("input_parameters") // Store input parameters as JSON
+  inputData            Json?     @map("input_data") // Store input data reference (like zip URL) as JSON
+  category             String?
+  isPublic             Boolean?  @default(false) @map("is_public")
+  replicateDestination String?   @map("replicate_destination") // e.g., user/modelname
+  runId                String?   @map("run_id") // Replicate training/prediction ID
+  errorMessage         String?   @map("error_message")
+  thumbnail            String? // From mock data example
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("trained_models") // Map to the 'trained_models' table in Supabase
+}
+
+// Define your database models here
+// model User {
+//   id    Int     @id @default(autoincrement())
+//   email String  @unique
+//   name  String?
+// } 
