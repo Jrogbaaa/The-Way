@@ -203,6 +203,20 @@ Generates images using the Cristina model. The response includes URLs to the gen
 
 Generates images using the Jaime model. The response includes URLs to the generated images.
 
+#### Implementation Details
+
+The Jaime Model integration includes:
+- Robust error handling for various API response formats
+- Exponential backoff polling mechanism for prediction status
+- Support for both direct output and prediction ID-based responses
+- Consistent error messaging for client debugging
+
+Sample workflow:
+1. Client sends request to `/api/replicate` with model ID and input parameters
+2. Backend forwards request to Replicate API
+3. If response contains a prediction ID, the client polls for status with exponential backoff
+4. Once complete, client receives image URLs for display
+
 ## Handling API Responses
 
 When working with these APIs:

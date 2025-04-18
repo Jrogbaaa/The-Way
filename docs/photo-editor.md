@@ -9,6 +9,14 @@ The Photo Editor feature leverages multiple AI services for advanced image editi
 
 ## Current Status (Features Implemented)
 
+### Basic Photo Editor Implementation
+
+1. **Basic Image Upload & Preview:**
+   * Users can upload images through a simple file selector interface
+   * A preview of the uploaded image is displayed
+   * Basic "Remove" button to clear the uploaded image
+   * "Apply Filters" button (functionality coming soon)
+
 ### Bria AI Features
 
 1.  **Image Upload & Preview:**
@@ -51,6 +59,14 @@ The Photo Editor feature leverages multiple AI services for advanced image editi
         *   Write specific, descriptive prompts.
         *   Experiment with different prompts if the initial result isn't satisfactory.
 
+## Features In Development
+
+1. **Basic Photo Editing Tools:**
+   * Apply preset filters
+   * Adjust brightness, contrast, and saturation
+   * Crop and rotate functionality
+   * Text overlay capabilities
+
 ## Features To Be Implemented
 
 Based on Bria AI documentation:
@@ -66,11 +82,16 @@ Based on Bria AI documentation:
 
 ## Technical Details
 
-*   **Frontend:** Built with React, Next.js, TypeScript, Tailwind CSS, and Shadcn UI components.
+*   **Frontend:** 
+    * Built with React, Next.js, TypeScript, Tailwind CSS, and Shadcn UI components.
+    * Basic PhotoEditor component in `src/components/PhotoEditor.tsx`
+    * PhotoEditorContainer component in `src/components/PhotoEditorContainer.tsx`
+
 *   **Bria AI Backend:**
     *   API Routes: Located under `src/app/api/bria/`.
     *   Authentication: `api-token` header using `BRIA_AI_API_KEY`.
     *   Environment Variables: `BRIA_AI_API_KEY`, `BRIA_AI_BASE_URL`.
+
 *   **Replicate Backend:**
     *   API Routes: `src/app/api/replicate/inpaint/route.ts`, `src/app/api/replicate/predictions/[id]/route.ts`.
     *   Model Used: `stability-ai/stable-diffusion-inpainting:95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3` (or latest working version).

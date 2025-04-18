@@ -498,6 +498,8 @@ The application integrates with Replicate API for the following models, all feat
 - Includes custom parameters for optimal generation
 - Features the same professional UI as other models for a consistent experience
 - Includes enhanced form elements and loading states for better user feedback
+- Recently improved with robust error handling and polling mechanism for API responses
+- Supports fallback paths and better validation for enhanced reliability
 
 #### Bea Generator Model
 - Uses Replicate's custom model for generating realistic images of Bea
