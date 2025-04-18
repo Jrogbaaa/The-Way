@@ -4,6 +4,13 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Recent Updates (July/August 2024)
 
+- **Authentication Bypass Development Mode**: Added temporary authentication bypass to simplify development and testing. This includes:
+  - Added a middleware file (`src/middleware.ts`) that bypasses authentication checks.
+  - Created a mock user in the auth store (`src/lib/store/index.ts`) to prevent client-side authentication redirects.
+  - These changes allow developers to access all pages without authentication during development.
+
+- **Next.js Image Configuration**: Extended the `next.config.mjs` file to allow additional remote image domains, specifically adding `i.pravatar.cc` to the `remotePatterns` array to fix the error: "Invalid src prop on `next/image`, hostname is not configured under images in your `next.config.js`".
+
 - **Content Suggestions UI Enhancement**: The A/B Testing Content Suggestions component now displays actual images (or relevant placeholders from Unsplash) instead of text previews, providing a better visual experience. This required creating `next.config.mjs` to configure allowed remote image domains.
 - **Stability AI Inpainting API Tuning**: Adjusted API parameters (`strength`, `cfg_scale`, `model`) and fixed parameter names (`mask`) in the `/api/stability/inpaint` route handler to improve inpainting results.
 - **Replicate API Fixes**: Ensured the `/api/replicate/predictions/[id]` route handler correctly handles asynchronous operations for polling prediction status.
@@ -619,6 +626,27 @@ If you encounter issues:
 3. Verify API keys and service account credentials are valid
 4. Run the environment check script: `node -r dotenv/config scripts/check-env.js`
 5. See documentation in the `docs/` directory for specific services
+
+### Authentication Bypass for Development
+
+The application includes a development mode that bypasses authentication checks:
+
+- The middleware (`src/middleware.ts`) is configured to bypass authentication restrictions
+- A mock user is provided in the auth store (`src/lib/store/index.ts`) to prevent client-side redirects
+- This allows developers to access all pages without proper authentication during development
+- To restore authentication:
+  - Remove or disable the middleware implementation
+  - Reset the auth store to use `null` as the default user state
+  - Restart the development server
+
+### Next.js Image Configuration
+
+If you encounter errors with remote images like `Invalid src prop on next/image, hostname is not configured`:
+
+1. Check which remote domain is causing the issue in the error message
+2. Open `next.config.mjs` and add the domain to the `remotePatterns` array
+3. Follow the existing pattern for domains like `i.pravatar.cc` and `images.unsplash.com`
+4. Restart the development server after making changes
 
 ## Contributing
 

@@ -2,10 +2,19 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AppState, AuthState, User } from '../types';
 
-// Initial auth state
+// Mock user for development (to bypass auth checks)
+const mockUser: User = {
+  id: 'dev-user-123',
+  email: 'dev@example.com',
+  full_name: 'Development User',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
+// Initial auth state (with mock user for development)
 const initialAuthState: AuthState = {
-  user: null,
-  isLoading: true,
+  user: mockUser, // Mock user instead of null
+  isLoading: false, // Set to false since we're providing a user
   error: null,
 };
 

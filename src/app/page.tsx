@@ -87,30 +87,6 @@ export default function Home() {
                 Test Models
               </Link>
               <Link 
-                href="/photo-editor"
-                className="text-sm font-medium hover:text-primary px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
-                tabIndex={0}
-                aria-label="BRIA AI Photo Editor"
-              >
-                Photo Editor
-              </Link>
-              <Link 
-                href="/api-test"
-                className="text-sm font-medium hover:text-primary px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
-                tabIndex={0}
-                aria-label="Test API Connections"
-              >
-                API Tests
-              </Link>
-              <Link 
-                href={ROUTES.uploadPost}
-                className="text-sm font-medium hover:text-primary px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
-                tabIndex={0}
-                aria-label="Analyze Post"
-              >
-                Analyze Post
-              </Link>
-              <Link 
                 href={ROUTES.login}
                 className="text-sm font-medium hover:text-primary px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
                 tabIndex={0}
@@ -147,33 +123,6 @@ export default function Home() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Test Models
-              </Link>
-              <Link 
-                href="/photo-editor"
-                className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                tabIndex={mobileMenuOpen ? 0 : -1}
-                aria-label="BRIA AI Photo Editor"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Photo Editor
-              </Link>
-              <Link 
-                href="/api-test"
-                className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                tabIndex={mobileMenuOpen ? 0 : -1}
-                aria-label="Test API Connections"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                API Tests
-              </Link>
-              <Link 
-                href={ROUTES.uploadPost}
-                className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                tabIndex={mobileMenuOpen ? 0 : -1}
-                aria-label="Analyze a post"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Analyze Post
               </Link>
               <Link 
                 href={ROUTES.login}
