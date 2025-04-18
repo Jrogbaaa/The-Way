@@ -48,6 +48,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Fix for Vercel deployment with Next.js 15
+  output: 'standalone',
 };
 
 export default nextConfig; 
