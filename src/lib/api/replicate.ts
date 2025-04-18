@@ -57,8 +57,81 @@ export const runCristinaModel = async (input: PredictionInput) => {
       throw new Error(error.error || `Failed to generate image. Status: ${response.status}`);
     }
 
-    const { output } = await response.json();
-    return output;
+    // Handle the API response - this is the key part that needs fixing
+    const data = await response.json();
+    
+    // Check if we got a prediction object instead of direct output
+    if (data && data.id && data.status === 'starting') {
+      console.log('Received a prediction object instead of output. Prediction ID:', data.id);
+      
+      // Implement proper polling with exponential backoff
+      const maxRetries = 5;
+      const initialBackoff = 2000; // 2 seconds
+      
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        // Wait with exponential backoff
+        const backoffTime = initialBackoff * Math.pow(1.5, attempt);
+        console.log(`Waiting ${backoffTime}ms before polling prediction status (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
+        
+        // Poll for the prediction result
+        const resultResponse = await fetch(`/api/replicate/predictions/${data.id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!resultResponse.ok) {
+          const error = await resultResponse.json().catch(() => ({ 
+            error: `Failed to fetch prediction result: ${resultResponse.status}` 
+          }));
+          
+          // If this is the last attempt, throw error
+          if (attempt === maxRetries - 1) {
+            throw new Error(error.error || 'Failed to generate image: could not get prediction result');
+          }
+          // Otherwise continue polling
+          continue;
+        }
+        
+        const resultData = await resultResponse.json();
+        
+        // Handle the prediction result
+        if (resultData.status === 'succeeded' && resultData.output) {
+          console.log('Prediction completed successfully on attempt', attempt + 1);
+          return resultData.output;
+        } else if (resultData.status === 'failed') {
+          throw new Error(resultData.error || 'Image generation failed');
+        } else if (resultData.status === 'completed' && resultData.output) {
+          // Some APIs use 'completed' instead of 'succeeded'
+          console.log('Prediction completed successfully on attempt', attempt + 1);
+          return resultData.output;
+        } else if (resultData.status === 'processing' || resultData.status === 'starting') {
+          // Still processing, continue the loop for another attempt
+          console.log('Prediction still processing, status:', resultData.status);
+          continue;
+        } else {
+          // If this is the last attempt and we don't have a definitive status, throw an error
+          if (attempt === maxRetries - 1) {
+            console.log('Max retries reached with status:', resultData.status);
+            throw new Error('Image generation timed out. Please try again.');
+          }
+        }
+      }
+      
+      // If we've exhausted all retries
+      throw new Error('Image generation timed out after multiple attempts. Please try again.');
+    }
+    
+    // If we got direct output, return it
+    if (data.output) {
+      return data.output;
+    }
+    
+    // If we reached here, the format is unexpected
+    console.error('Unexpected response format:', data);
+    throw new Error('Unexpected response format from the Cristina model');
   } catch (error) {
     console.error("Error running Cristina model:", error);
     // Provide more diagnostic info when the error might be related to an ad blocker
@@ -96,8 +169,81 @@ export const runJaimeModel = async (input: PredictionInput) => {
       throw new Error(error.error || `Failed to generate image. Status: ${response.status}`);
     }
 
-    const { output } = await response.json();
-    return output;
+    // Handle the API response - update to match Cristina model implementation
+    const data = await response.json();
+    
+    // Check if we got a prediction object instead of direct output
+    if (data && data.id && data.status === 'starting') {
+      console.log('Received a prediction object instead of output. Prediction ID:', data.id);
+      
+      // Implement proper polling with exponential backoff
+      const maxRetries = 5;
+      const initialBackoff = 2000; // 2 seconds
+      
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        // Wait with exponential backoff
+        const backoffTime = initialBackoff * Math.pow(1.5, attempt);
+        console.log(`Waiting ${backoffTime}ms before polling prediction status (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
+        
+        // Poll for the prediction result
+        const resultResponse = await fetch(`/api/replicate/predictions/${data.id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!resultResponse.ok) {
+          const error = await resultResponse.json().catch(() => ({ 
+            error: `Failed to fetch prediction result: ${resultResponse.status}` 
+          }));
+          
+          // If this is the last attempt, throw error
+          if (attempt === maxRetries - 1) {
+            throw new Error(error.error || 'Failed to generate image: could not get prediction result');
+          }
+          // Otherwise continue polling
+          continue;
+        }
+        
+        const resultData = await resultResponse.json();
+        
+        // Handle the prediction result
+        if (resultData.status === 'succeeded' && resultData.output) {
+          console.log('Prediction completed successfully on attempt', attempt + 1);
+          return resultData.output;
+        } else if (resultData.status === 'failed') {
+          throw new Error(resultData.error || 'Image generation failed');
+        } else if (resultData.status === 'completed' && resultData.output) {
+          // Some APIs use 'completed' instead of 'succeeded'
+          console.log('Prediction completed successfully on attempt', attempt + 1);
+          return resultData.output;
+        } else if (resultData.status === 'processing' || resultData.status === 'starting') {
+          // Still processing, continue the loop for another attempt
+          console.log('Prediction still processing, status:', resultData.status);
+          continue;
+        } else {
+          // If this is the last attempt and we don't have a definitive status, throw an error
+          if (attempt === maxRetries - 1) {
+            console.log('Max retries reached with status:', resultData.status);
+            throw new Error('Image generation timed out. Please try again.');
+          }
+        }
+      }
+      
+      // If we've exhausted all retries
+      throw new Error('Image generation timed out after multiple attempts. Please try again.');
+    }
+    
+    // If we got direct output, return it
+    if (data.output) {
+      return data.output;
+    }
+    
+    // If we reached here, the format is unexpected
+    console.error('Unexpected response format:', data);
+    throw new Error('Unexpected response format from the Jaime model');
   } catch (error) {
     console.error("Error running Jaime model:", error);
     // Provide more diagnostic info when the error might be related to an ad blocker
