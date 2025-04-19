@@ -50,8 +50,9 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
     3. Backend starts Replicate prediction & returns prediction ID
     4. Frontend polls for prediction status via `/api/replicate/predictions/[id]` (Note: Polling endpoint might be removed/changed if upscale migrates)
     5. On success, upscaled image is displayed
+  - Graceful error handling and fallbacks for API failures
   
-- 🎬 **Video Creator**:
+- �� **Video Creator**:
   - Convert still images to high-quality videos
   - Uses Replicate's Wan 2.1 Image-to-Video model
   - Customizable motion parameters
@@ -75,6 +76,9 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
   - Image to Video conversion using Replicate's Stable Video Diffusion
   - Simple one-click interface to animate any image
   - Optimized for quality with minimal user configuration
+
+- 🔑 **Authentication**:
+  - Google Sign-In via Supabase Auth
 
 ## Navigation Structure
 
