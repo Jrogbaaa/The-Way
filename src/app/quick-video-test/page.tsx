@@ -99,7 +99,16 @@ export default function LongformVideoPage() {
               continue; // Skip the API call for placeholders
             }
             
-            const response = await fetch(`http://localhost:3000/api/video/image-to-video/status?id=${frame.predictionId}`);
+            // Use relative URL for the status check
+            const response = await fetch(`/api/video/image-to-video/status?id=${frame.predictionId}`, {
+              // Add a timeout to prevent hanging requests
+              signal: AbortSignal.timeout(15000) // 15-second timeout
+            });
+            
+            if (!response.ok) {
+              throw new Error(`Failed to check status: ${response.status}`);
+            }
+            
             const data = await response.json();
             
             console.log(`Received status for ${frame.predictionId}:`, data);
@@ -168,6 +177,23 @@ export default function LongformVideoPage() {
             }
           } catch (error) {
             console.error(`Error checking video status for ${frame.predictionId}:`, error);
+            
+            // After several failures, provide a better user experience by giving a fallback
+            if (pollingCount > 5) {
+              setFrames(prevFrames => 
+                prevFrames.map(f => 
+                  f.predictionId === frame.predictionId 
+                    ? { 
+                        ...f, 
+                        status: `Error checking status. Will retry...`,
+                        processingProgress: Math.min((f.processingProgress || 0) + 5, 90) // Still show some progress
+                      }
+                    : f
+                )
+              );
+            }
+            
+            // Don't mark as completed on error, keep retrying
             allCompleted = false;
           }
         }
@@ -176,6 +202,24 @@ export default function LongformVideoPage() {
       if (allCompleted || pollingCount > 30) { // Maximum 5 minutes (30 * 10 seconds)
         console.log(`Polling complete after ${pollingCount} attempts. All completed: ${allCompleted}`);
         clearInterval(intervalId);
+        
+        // If maxed out polling attempts but not completed, show an error
+        if (pollingCount > 30 && !allCompleted) {
+          setStatus("Video generation timed out. Please try again.");
+          
+          // Update any frames that are still processing
+          setFrames(prevFrames => 
+            prevFrames.map(f => 
+              f.status.includes('progress')
+                ? { 
+                    ...f, 
+                    status: "Generation timed out. Please try again.",
+                    processingProgress: 100 
+                  }
+                : f
+            )
+          );
+        }
       }
     }, 10000); // Check every 10 seconds
     
@@ -425,26 +469,46 @@ export default function LongformVideoPage() {
     status?: string;
     message?: string;
   }> => {
-    const response = await fetch('/api/quick-video-test/generate-video', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        imageUrl,
-        prompt: videoPrompt
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to generate video');
+    try {
+      const response = await fetch('/api/quick-video-test/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          imageUrl,
+          prompt: videoPrompt
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // If there's a fallback URL in the error response, use it
+        if (data.fallbackVideoUrl) {
+          console.warn("Using fallback video URL due to error:", data.error);
+          return {
+            videoUrl: data.fallbackVideoUrl,
+            status: 'error_with_fallback',
+            message: data.error || 'An error occurred, using placeholder video'
+          };
+        }
+        throw new Error(data.error || 'Failed to generate video');
+      }
+      
+      return {
+        videoUrl: data.videoUrl || data.fallbackVideoUrl,
+        predictionId: data.predictionId,
+        status: data.status,
+        message: data.message
+      };
+    } catch (err) {
+      console.error("Video generation error:", err);
+      // Provide a fallback video URL when an error occurs
+      return {
+        videoUrl: "https://placehold.co/600x400/black/white?text=Video+Generation+Failed",
+        status: 'error',
+        message: err instanceof Error ? err.message : 'Failed to generate video'
+      };
     }
-    
-    const data = await response.json();
-    return {
-      videoUrl: data.videoUrl,
-      predictionId: data.predictionId,
-      status: data.status,
-      message: data.message
-    };
   };
 
   const generateVideo = async () => {

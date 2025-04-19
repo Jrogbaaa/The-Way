@@ -70,6 +70,13 @@ export async function POST(request: Request) {
       });
       
       console.log('Generic handler: Prediction created:', prediction.id, prediction.status);
+      
+      // Check if we have an immediate result (some models return this)
+      if (prediction.output !== undefined && prediction.output !== null) {
+        return NextResponse.json({ output: prediction.output }, { status: 200 });
+      }
+      
+      // For starting predictions, return the prediction object for polling later
       return NextResponse.json(prediction, { status: 201 });
 
     } catch (error: any) {

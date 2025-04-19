@@ -167,9 +167,9 @@ export default function Home() {
                     href={ROUTES.signup}
                     size="lg" 
                     className="bg-white text-indigo-600 hover:bg-gray-100 w-full sm:w-auto text-center py-4 px-8 text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-                    aria-label="Start your free trial"
+                    aria-label="Create Posts"
                   >
-                    Start Free Trial
+                    Create Posts
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </LinkButton>
                   

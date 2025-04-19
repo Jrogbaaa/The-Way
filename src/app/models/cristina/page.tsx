@@ -10,6 +10,7 @@ import { getProxiedImageUrl } from '@/lib/utils';
 import AdBlockerDetector from '@/components/AdBlockerDetector';
 import ProgressBar from '@/components/ProgressBar';
 import { useGenerationProgress } from '@/hooks/useGenerationProgress';
+import { nanoid } from 'nanoid';
 
 export default function CristinaModelPage() {
   const [prompt, setPrompt] = useState('CRISTINA ');
@@ -74,19 +75,19 @@ export default function CristinaModelPage() {
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+    setLoading(true);
     setImageUrls([]);
-    resetProgress();
-    setShowGeneratedOverlay(false);
-    
-    // Start the progress indicator immediately
-    const fakeId = `cristina-${Date.now()}`;
-    startGeneration(fakeId);
+    startGeneration(nanoid());
     
     try {
-      // Use all the required parameters
-      const output = await runCristinaModel({
+      // Add timeout handling
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out after 120 seconds')), 120000)
+      );
+      
+      // Run model with timeout
+      const modelPromise = runCristinaModel({
         prompt,
         negative_prompt: negativePrompt,
         model: "dev",
@@ -103,17 +104,29 @@ export default function CristinaModelPage() {
         num_inference_steps: 28
       });
       
+      // Race between model execution and timeout
+      const output = await Promise.race([modelPromise, timeoutPromise]);
+      
+      // Add defensive code to handle null response
+      if (output === null || output === undefined) {
+        console.error('Received null or undefined output from Cristina model');
+        failGeneration('No output received from model. Please try again.');
+        return;
+      }
+      
       // The output is typically an array of image URLs
       if (Array.isArray(output)) {
-        setImageUrls(output);
+        // Ensure we have valid URLs
+        const validUrls = output.filter(url => typeof url === 'string' && url.length > 0);
         
-        // Complete the progress with the first image URL
-        if (output.length > 0) {
-          completeGeneration(output[0]);
+        if (validUrls.length > 0) {
+          setImageUrls(validUrls);
+          completeGeneration(validUrls[0]);
         } else {
-          failGeneration('No images were generated');
+          console.error('Received empty array or array with invalid URLs', output);
+          failGeneration('No valid image URLs were generated');
         }
-      } else if (typeof output === 'string') {
+      } else if (typeof output === 'string' && output.length > 0) {
         setImageUrls([output]);
         completeGeneration(output);
       } else {
@@ -123,8 +136,31 @@ export default function CristinaModelPage() {
       }
     } catch (err) {
       console.error('Error generating image:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      failGeneration(err instanceof Error ? err.message : 'An error occurred');
+      
+      // Provide more user-friendly error messages
+      let errorMessage = 'An error occurred during image generation';
+      
+      if (err instanceof Error) {
+        const errMsg = err.message.toLowerCase();
+        
+        if (errMsg.includes('timed out')) {
+          errorMessage = 'Generation timed out. The server might be experiencing heavy load - please try again in a few minutes.';
+        } else if (errMsg.includes('rate limit') || errMsg.includes('quota')) {
+          errorMessage = 'Rate limit exceeded. Please wait a few minutes and try again.';
+        } else if (errMsg.includes('auth') || errMsg.includes('token')) {
+          errorMessage = 'API authorization error. Please check your settings or contact support.';
+        } else if (errMsg.includes('network') || errMsg.includes('fetch')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.';
+        } else if (errMsg.includes('processing') || errMsg.includes('progress')) {
+          errorMessage = 'The model is still processing your previous request. Please wait a moment before trying again.';
+        } else {
+          // Use the original error message if it's informative
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
+      failGeneration(errorMessage);
     } finally {
       setLoading(false);
     }

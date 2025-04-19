@@ -34,7 +34,8 @@ export async function POST(request: Request) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30-second timeout
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/video/image-to-video`, {
+      // Use a relative URL to avoid connection issues
+      const response = await fetch(`/api/video/image-to-video`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,13 +163,34 @@ export async function POST(request: Request) {
         );
       }
       
+      // Handle network connection errors
+      if (error instanceof Error && 
+          (error.message.includes('ECONNREFUSED') || 
+           error.message.includes('fetch failed'))) {
+        return NextResponse.json(
+          { 
+            error: "Failed to connect to the video generation service. Please try again later.",
+            details: error.message,
+            fallbackVideoUrl: "https://placehold.co/600x400/black/white?text=Video+Generation+Error",
+            success: false
+          },
+          { status: 500 }
+        );
+      }
+      
       throw error;
     }
     
   } catch (error) {
     console.error('Error generating video:', error);
+    
+    // Return a fallback video URL for demonstration purposes
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
+      { 
+        error: error instanceof Error ? error.message : String(error),
+        fallbackVideoUrl: "https://placehold.co/600x400/black/white?text=Video+Generation+Error",
+        success: false
+      },
       { status: 500 }
     );
   }

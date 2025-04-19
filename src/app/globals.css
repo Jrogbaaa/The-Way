@@ -136,7 +136,7 @@
 }
 
 .hover-highlight:hover {
-  @apply ring-2 ring-primary/40 shadow-sm;
+  @apply ring-2 ring-primary/40;
 }
 
 a[href]:not(.hover-disabled),
@@ -154,7 +154,7 @@ button:not([disabled]):not(.hover-disabled):hover,
 input[type="button"]:not([disabled]):not(.hover-disabled):hover,
 input[type="submit"]:not([disabled]):not(.hover-disabled):hover,
 input[type="reset"]:not([disabled]):not(.hover-disabled):hover {
-  @apply ring-2 ring-primary/40 shadow-sm;
+  @apply ring-2 ring-primary/40;
 }
 
 /* All fade animations removed */

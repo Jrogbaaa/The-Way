@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/config';
 import OnboardingWelcome from '@/components/OnboardingWelcome';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -41,6 +42,20 @@ export default function LoginPage() {
     // Redirect to dashboard after onboarding is closed
     window.location.href = ROUTES.dashboard;
   };
+
+  const handleGoogleSignIn = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        // Optional: Redirect URL after login (defaults usually work)
+        // redirectTo: `${window.location.origin}/auth/callback` 
+      }
+    });
+    if (error) {
+      console.error('Error signing in with Google:', error.message);
+      // Handle error appropriately (e.g., show a notification)
+    }
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
@@ -147,17 +162,21 @@ export default function LoginPage() {
 
             <div className="mt-6 grid grid-cols-2 gap-3">
               <div>
-                <a
-                  href="#"
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={handleGoogleSignIn}
                   className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
+                  aria-label="Sign in with Google"
                 >
-                  <span className="sr-only">Sign in with Google</span>
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                      d="M12.545 12.151c0 .83-.674 1.5-1.505 1.5-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5c.831 0 1.505.67 1.505 1.5zm-1.505-9.2C6.075 2.951 2 7.032 2 12c0 4.973 4.063 9 9.04 9a9.03 9.03 0 0 0 6.255-2.494l-2.335-2.252a5.515 5.515 0 0 1-3.912 1.626c-3.345 0-6.045-2.699-6.045-5.988s2.7-6.045 6.045-6.045c3.338 0 6.045 2.7 6.045 6.045 0 .452-.055.905-.16 1.348h-9.04v2.999H16.8c-.031-1.485-.701-2.684-1.748-3.558l2.446-2.446A9.01 9.01 0 0 0 21 12c0-4.973-4.063-9-9.04-9l.08.151z"
-                    />
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                      <path d="M1 1h22v22H1z" fill="none" />
                   </svg>
-                </a>
+                </Button>
               </div>
 
               <div>
