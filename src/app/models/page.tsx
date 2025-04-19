@@ -15,6 +15,8 @@ import Image from 'next/image';
 import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/config';
+import { useAuth } from '@/components/AuthProvider';
+import { useRouter } from 'next/navigation';
 
 // Define a model type for type safety
 interface Model {
@@ -49,6 +51,13 @@ const getModelRoute = (modelId: string) => {
 };
 
 export default function ImageCreatorPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    console.log(`MODELS PAGE Mounted. Loading: ${loading}, User: ${!!user}`);
+  }, [loading, user, router]);
+
   // Sample data for models
   const [models, setModels] = useState<Model[]>([
     {

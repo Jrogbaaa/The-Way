@@ -42,6 +42,7 @@ export const API_CONFIG = {
 
 export const ROUTES = {
   home: "/",
+  landing: "/",
   login: "/auth/login",
   signup: "/auth/signup",
   dashboard: "/dashboard",

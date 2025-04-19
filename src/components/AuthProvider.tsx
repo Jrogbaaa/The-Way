@@ -11,13 +11,15 @@ interface AuthContextProps {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  showWelcomeModal: boolean;
   signOut: () => Promise<void>;
+  markUserOnboarded: () => Promise<void>;
 }
 
-// Create the context with a default value (can be undefined or null, handled by consumer)
+// Create the context
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-// Custom hook to use the AuthContext
+// Custom hook
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -26,11 +28,12 @@ export function useAuth() {
   return context;
 }
 
-// The AuthProvider component
+// AuthProvider component
 const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -44,81 +47,205 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
         // Clear local state immediately for faster UI update
         setUser(null);
         setSession(null);
+        setShowWelcomeModal(false);
         // Redirect to home or login page after sign out
-        router.push(ROUTES.home);
+        router.push(ROUTES.landing);
         router.refresh(); // Ensure layout reflects logged-out state
     }
   }, [router]);
 
-  useEffect(() => {
-    // Initial check for session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    }).catch(error => {
-      console.error("Error getting initial session:", error);
-      setLoading(false);
-    });
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false); // Ensure loading is false after state change
+  // Mark User Onboarded function
+  const markUserOnboarded = useCallback(async () => {
+    if (!user) return; 
+    
+    setShowWelcomeModal(false); 
+    
+    try {
+      // Add credentials: 'include' to this fetch call
+      const response = await fetch('/api/user/mark-onboarded', {
+         method: 'POST',
+         credentials: 'include' // Explicitly include cookies
+      });
       
-      // If user signs out, redirect them from protected areas (example)
-      if (_event === 'SIGNED_OUT' && pathname.startsWith(ROUTES.dashboard)) {
-           router.push(ROUTES.login);
+      if (!response.ok) {
+        // Use response.json() cautiously, might not be JSON on failure
+        let errorData = { error: `Request failed with status ${response.status}` };
+        try {
+           errorData = await response.json(); 
+        } catch (jsonError) {
+           console.error('Could not parse error response as JSON:', jsonError);
+        }
+        console.error('Failed to mark user as onboarded:', errorData.error);
+      }
+      // Successfully marked on server or handled error
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error calling mark-onboarded API:', errorMessage);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    // Initial Session Check (No profile API call here)
+    const getSession = async () => {
+      setLoading(true);
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('Error getting initial session:', sessionError);
+      } else {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+      setLoading(false);
+    };
+
+    getSession();
+
+    // Auth State Change Listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('AuthProvider Event:', event, '- Path:', pathname, '- Has Session:', !!session);
+      setSession(session);
+      setUser(session?.user ?? null);
+      let shouldSetLoadingFalse = true; 
+      const isAuthPage = pathname === ROUTES.login || pathname === ROUTES.signup;
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('AuthProvider: SIGNED_IN handling');
+        shouldSetLoadingFalse = false; 
+        setLoading(true); 
+        try {
+          // Ensure session and access token are available
+          if (!session?.access_token) {
+             console.error('No access token found in session after SIGNED_IN event.');
+             throw new Error("No access token available after sign in.");
+          }
+
+          // --- Call Edge Function instead of API Route ---
+          const edgeFunctionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/ensure-profile`;
+          console.log(`Calling Edge Function: ${edgeFunctionUrl}`); // Log the URL
+
+          const profileResponse = await fetch(edgeFunctionUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json' // Good practice to set Content-Type
+            },
+            // No 'credentials: include' needed now
+            // body: JSON.stringify({}) // Can send empty body if function doesn't expect one
+          });
+          // --- End Edge Function Call ---
+
+          console.log('Edge Function response status:', profileResponse.status); // Log status
+
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            console.log('Profile check response (from Edge Function):', profileData); // Updated log message
+            if (profileData.success && profileData.onboarded === false) {
+              console.log('Setting showWelcomeModal to true');
+              setShowWelcomeModal(true);
+            } else {
+              console.log('Setting showWelcomeModal to false (already onboarded or error)');
+              setShowWelcomeModal(false);
+            }
+          } else {
+             const errorBody = await profileResponse.text(); // Get error body for more info
+             console.error('Failed Edge Function call to ensure/check profile, status:', profileResponse.status, 'Body:', errorBody);
+             setShowWelcomeModal(false);
+          }
+        } catch (error) {
+           // Add type check for error
+           const errorMessage = error instanceof Error ? error.message : String(error);
+           console.error('Error calling ensure-profile Edge Function after SIGNED_IN:', errorMessage);
+           setShowWelcomeModal(false);
+        }
+        
+        // Redirect to dashboard (existing logic)
+        if (pathname !== ROUTES.dashboard) { 
+            console.log(`AuthProvider: SIGNED_IN - Redirecting to dashboard from ${pathname}`);
+            router.push(ROUTES.dashboard);
+        }
+        setLoading(false); // Set loading false after async check
+
+      } else if (event === 'SIGNED_OUT') {
+        console.log('AuthProvider: SIGNED_OUT handling');
+        setShowWelcomeModal(false); 
+        console.log(`AuthProvider: SIGNED_OUT - Redirecting to landing from ${pathname}`);
+        router.push(ROUTES.landing);
+        // setLoading(false); // Set below
+
+      } else if (event === 'INITIAL_SESSION' && session) {
+         console.log('AuthProvider: INITIAL_SESSION (with session) handling');
+         if (isAuthPage) {
+             console.log(`AuthProvider: INITIAL_SESSION - Redirecting logged-in user from auth page (${pathname}) to dashboard`);
+             router.push(ROUTES.dashboard); 
+         }
+         // setLoading(false); // Set below
+      } else if (event === 'INITIAL_SESSION' && !session) {
+          console.log('AuthProvider: INITIAL_SESSION (no session) handling');
+          // Allow access to public pages and specific dashboard-related pages when logged out
+          const isPubliclyAccessible = 
+            pathname === ROUTES.landing || 
+            pathname === ROUTES.dashboard ||
+            pathname === ROUTES.models ||
+            pathname === ROUTES.chat ||
+            pathname === ROUTES.gallery ||
+            pathname === ROUTES.profile ||
+            pathname === ROUTES.uploadPost; // Add other public routes if needed
+            
+          if (!isAuthPage && !isPubliclyAccessible) {
+              console.log(`AuthProvider: INITIAL_SESSION - Redirecting logged-out user to login from protected page (${pathname})`);
+              router.push(ROUTES.login);
+          }
+          // setLoading(false); // Set below
+      } else if (session && isAuthPage) {
+          console.log('AuthProvider: Session exists, on auth page - Redirecting to dashboard');
+          router.push(ROUTES.dashboard);
+          // setLoading(false); // Set below
+      } else if (!session && !isAuthPage) {
+         // Allow access to public pages and specific dashboard-related pages when logged out
+         const isPubliclyAccessible = 
+            pathname === ROUTES.landing || 
+            pathname === ROUTES.dashboard ||
+            pathname === ROUTES.models ||
+            pathname === ROUTES.chat ||
+            pathname === ROUTES.gallery ||
+            pathname === ROUTES.profile ||
+            pathname === ROUTES.uploadPost; // Add other public routes if needed
+            
+         if (!isPubliclyAccessible) {
+             console.log('AuthProvider: No session, not on public/dashboard page - Redirecting to login');
+             router.push(ROUTES.login);
+         }
+         // setLoading(false); // Set below
+      } else {
+         console.log('AuthProvider: No redirect condition met.');
+      }
+
+      // Set loading false if not handled by async SIGNED_IN logic
+      if (shouldSetLoadingFalse) {
+          console.log('AuthProvider: Setting loading to false (end of sync handling)');
+          setLoading(false);
       }
     });
 
-    // Cleanup subscription on unmount
     return () => {
-      subscription?.unsubscribe();
+      authListener?.subscription.unsubscribe();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Router dependency removed based on common patterns, monitor if needed
-
-  useEffect(() => {
-    if (loading) return; // Don't redirect until session status is known
-
-    const isAuthPage = pathname === ROUTES.login || pathname === ROUTES.signup;
-
-    // Only redirect logged-in users if they are specifically on the login/signup pages
-    if (session && isAuthPage) {
-      console.log("User logged in, redirecting from auth page to dashboard...");
-      router.push(ROUTES.dashboard);
-    }
-    
-    // --- Removed Redirect Block ---
-    // Protect dashboard route if user is logged out - Now handled at action level
-    // if (!session && pathname.startsWith(ROUTES.dashboard)) {
-    //    console.log("User logged out, redirecting from protected page to login...");
-    //    router.push(ROUTES.login); 
-    // }
-    // --- End Removed Redirect Block ---
-
-  }, [session, pathname, router, loading]); // Dependencies for the redirect logic
+  }, [pathname, router]);
 
   // Context value
   const value: AuthContextProps = {
     user,
     session,
     loading,
-    signOut: handleSignOut, // Provide the signOut function via context
+    showWelcomeModal,
+    signOut: handleSignOut,
+    markUserOnboarded,
   };
 
-  // Don't render children until loading is complete to avoid flashes
-  // or render a specific loading UI
-  // if (loading) {
-  //   return <div>Loading Application...</div>; // Or a proper spinner component
-  // }
-
   return (
-      <AuthContext.Provider value={value}>
-          {children}
-      </AuthContext.Provider>
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
   );
 };
 

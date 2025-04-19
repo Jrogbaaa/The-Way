@@ -5,13 +5,18 @@ import { Button } from '@/components/ui/button';
 import { LinkButton } from '@/components/ui/link-button';
 import { ROUTES } from '@/lib/config';
 import Logo from '@/components/ui/Logo';
-import { useState } from 'react';
-import { ArrowRight, Sparkles, Check, LogOut, User as UserIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowRight, Sparkles, Check, LogOut, User as UserIcon, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import Image from 'next/image';
+import { useTheme } from 'next-themes';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, loading, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -20,6 +25,77 @@ export default function Home() {
   const handleMobileMenuKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       toggleMobileMenu();
+    }
+  };
+
+  // Ensure component is mounted before using theme
+  useEffect(() => setMounted(true), []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    setMobileMenuOpen(false); 
+  };
+
+  const renderThemeToggle = () => {
+    if (!mounted) return <Skeleton className="h-8 w-8 rounded-full" />;
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+        aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+      >
+        {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+      </Button>
+    );
+  };
+
+  const renderAuthButtons = (isMobile: boolean) => {
+    const buttonSize = isMobile ? 'default' : 'sm';
+    const commonButtonClasses = isMobile ? "w-full justify-start" : "whitespace-nowrap";
+    const linkClasses = isMobile ? "text-base font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400" : "";
+
+    if (loading) {
+      return (
+        <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center space-x-2'}`}>
+          <Skeleton className={`h-9 ${isMobile ? 'w-full' : 'w-20'}`} />
+          <Skeleton className={`h-9 ${isMobile ? 'w-full' : 'w-20'}`} />
+        </div>
+      );
+    }
+    
+    if (user) {
+      const displayName = user.user_metadata?.full_name || user.email || 'Account';
+      const avatarUrl = user.user_metadata?.avatar_url;
+      return (
+        <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center space-x-2'}`}>
+          <Button asChild variant={isMobile ? "ghost" : "outline"} size={buttonSize} className={commonButtonClasses}>
+            <Link href={ROUTES.dashboard} className={`${linkClasses} flex items-center gap-2`}>
+              {avatarUrl ? (
+                <Image src={avatarUrl} alt="User avatar" width={24} height={24} className="rounded-full" />
+              ) : (
+                <UserIcon className={`h-4 w-4 ${isMobile ? 'mr-2' : ''}`} />
+              )}
+              <span className={isMobile ? '' : 'whitespace-nowrap'}>{displayName}</span>
+            </Link>
+          </Button>
+          <Button variant={isMobile ? "ghost" : "outline"} size={buttonSize} onClick={handleSignOut} className={`${commonButtonClasses} ${isMobile ? 'text-red-600 dark:text-red-400' : ''}`}>
+            <LogOut className={`h-4 w-4 ${isMobile ? 'mr-2' : ''}`}/> {isMobile ? 'Sign Out' : ''}
+            {!isMobile && <span className="whitespace-nowrap">Sign Out</span>}
+          </Button>
+        </div>
+      );
+    } else {
+      return (
+        <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center space-x-2'}`}>
+          <Button asChild variant="outline" size={buttonSize} className={commonButtonClasses}>
+            <Link href={ROUTES.login} className={linkClasses}>Sign In</Link>
+          </Button>
+          <Button asChild size={buttonSize} className={`${commonButtonClasses} bg-indigo-600 hover:bg-indigo-700 text-white`}>
+            <Link href={ROUTES.signup} className={linkClasses}>Sign Up</Link>
+          </Button>
+        </div>
+      );
     }
   };
 
@@ -231,9 +307,9 @@ export default function Home() {
                 
                 <div className="space-y-4">
                   <LinkButton 
-                    href={ROUTES.signup}
+                    href={ROUTES.dashboard}
                     size="lg" 
-                    className="bg-white text-indigo-600 hover:bg-gray-100 w-full sm:w-auto text-center py-4 px-8 text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                    className={`bg-white text-indigo-600 hover:bg-gray-100 w-full sm:w-auto text-center py-4 px-8 text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}
                     aria-label="Create Posts"
                   >
                     Create Posts

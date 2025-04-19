@@ -5,6 +5,7 @@ import { APP_NAME } from "@/lib/config";
 import { initializeScheduler } from '@/lib/services/scheduler';
 import ClientErrorBoundary from "@/components/ClientErrorBoundary";
 import AuthProvider from "@/components/AuthProvider";
+import { WelcomeModal } from '@/components/WelcomeModal';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -34,6 +35,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <AuthProvider>
+          <WelcomeModal />
           <div className="min-h-screen w-full bg-gray-50 dark:bg-gray-900">
             <ClientErrorBoundary>
               {children}
