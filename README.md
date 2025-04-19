@@ -52,7 +52,7 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
     5. On success, upscaled image is displayed
   - Graceful error handling and fallbacks for API failures
   
-- �� **Video Creator**:
+- 🎬 **Video Creator**:
   - Convert still images to high-quality videos
   - Uses Replicate's Wan 2.1 Image-to-Video model
   - Customizable motion parameters
@@ -77,8 +77,11 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
   - Simple one-click interface to animate any image
   - Optimized for quality with minimal user configuration
 
-- 🔑 **Authentication**:
-  - Google Sign-In via Supabase Auth
+## Authentication & Access
+
+- **Google Sign-In**: Users can sign up and log in using their Google accounts via Supabase Auth.
+- **Personalized Navigation**: Once logged in, the main navigation bar displays the user's Google profile picture and name (or email), providing a direct link to their dashboard.
+- **Gated Feature Access**: Core features like the AI Chat, Image-to-Video Generation, and Gallery Upload require users to be signed in. Attempting to access these features while logged out will redirect the user to the signup page.
 
 ## Navigation Structure
 

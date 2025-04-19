@@ -11,8 +11,13 @@ import AdBlockerDetector from '@/components/AdBlockerDetector';
 import ProgressBar from '@/components/ProgressBar';
 import { useGenerationProgress } from '@/hooks/useGenerationProgress';
 import { nanoid } from 'nanoid';
+import { useAuth } from '@/components/AuthProvider';
+import { useRouter } from 'next/navigation';
+import { ROUTES } from '@/lib/config';
 
 export default function CristinaModelPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [prompt, setPrompt] = useState('CRISTINA ');
   const [negativePrompt, setNegativePrompt] = useState('');
   const [loading, setLoading] = useState(false);
@@ -75,6 +80,12 @@ export default function CristinaModelPage() {
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+      router.push(ROUTES.signup);
+      return;
+    }
+
     setError(null);
     setLoading(true);
     setImageUrls([]);
@@ -342,21 +353,22 @@ export default function CristinaModelPage() {
                   </div>
                 )}
                 
-                <button 
-                  type="submit" 
-                  disabled={loading} 
-                  className="w-full inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                  aria-label={loading ? 'Generating image...' : 'Generate image'}
+                <Button 
+                  type="submit"
+                  disabled={loading || !prompt} 
+                  className="w-full"
                 >
                   {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
+                    <span className="flex items-center justify-center">
+                      <Loader2 className="animate-spin mr-2 h-4 w-4" /> Generating...
+                    </span>
                   ) : (
-                    'Generate Image'
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Generate Image
+                    </>
                   )}
-                </button>
+                </Button>
               </form>
             </div>
           </div>

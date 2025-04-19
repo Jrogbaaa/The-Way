@@ -5,9 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { getProxiedImageUrl } from '@/lib/utils';
+import { useAuth } from '@/components/AuthProvider';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { ROUTES } from '@/lib/config';
 
 export default function BeaModelPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('');
   const [numOutputs, setNumOutputs] = useState(1);
@@ -17,6 +22,12 @@ export default function BeaModelPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+      router.push(ROUTES.signup);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setImages([]);
@@ -41,7 +52,6 @@ export default function BeaModelPage() {
       }
 
       if (data.output) {
-        // Handle either array of image URLs or a single URL
         const imageUrls = Array.isArray(data.output) ? data.output : [data.output];
         setImages(imageUrls);
       } else {
@@ -108,10 +118,11 @@ export default function BeaModelPage() {
               </select>
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={loading || !prompt}
-              className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full"
+              variant="default"
             >
               {loading ? (
                 <span className="flex items-center justify-center">
@@ -120,7 +131,7 @@ export default function BeaModelPage() {
               ) : (
                 'Generate Images'
               )}
-            </button>
+            </Button>
           </form>
 
           {error && (

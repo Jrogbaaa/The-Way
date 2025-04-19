@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import MainLayout from '@/components/layout/MainLayout';
 import { MessageCircle, Clock, Send, Plus, ArrowRight, User2, Bot, X, Zap } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useAuth } from '@/components/AuthProvider';
+import { useRouter } from 'next/navigation';
+import { ROUTES } from '@/lib/config';
 
 // Define ChatSession interface directly to avoid dependency on replicateChat module
 interface ChatSession {
@@ -151,6 +154,8 @@ const sampleChats: Record<string, {
 };
 
 export default function ChatPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [activeChat, setActiveChat] = useState('current');
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -197,6 +202,11 @@ export default function ChatPage() {
   }, [activeChat, isClient]);
 
   const handleSendMessage = async () => {
+    if (!user) {
+      router.push(ROUTES.signup);
+      return;
+    }
+
     if (!newMessage.trim()) return;
 
     const userMessage: Message = {

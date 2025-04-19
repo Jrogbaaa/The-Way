@@ -7,6 +7,9 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Heart, MessageCircle, Share2, Plus, Filter, Zap, Camera, Clock, ImageIcon, Upload } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '@/components/AuthProvider';
+import { useRouter } from 'next/navigation';
+import { ROUTES } from '@/lib/config';
 
 type GalleryItem = {
   id: string;
@@ -24,6 +27,8 @@ type GalleryItem = {
 };
 
 export default function GalleryPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   // Example gallery items for presentation
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([
     {
@@ -180,36 +185,30 @@ export default function GalleryPage() {
 
   // Trigger hidden file input click
   const handleUploadClick = () => {
+    if (!user) {
+      router.push(ROUTES.signup);
+      return;
+    }
+    
     fileInputRef.current?.click();
   };
   
   // Placeholder for actual upload logic
   const handleUpload = async () => {
+    if (!user) {
+      router.push(ROUTES.signup);
+      return;
+    }
+    
     if (!selectedFile) {
       toast.error('No file selected for upload.');
       return;
     }
     console.log('Uploading file:', selectedFile.name);
     // --- Add your actual upload API call here --- 
-    // Example: 
-    // const formData = new FormData();
-    // formData.append('image', selectedFile);
-    // try {
-    //   const response = await fetch('/api/upload-gallery', { method: 'POST', body: formData });
-    //   if (!response.ok) throw new Error('Upload failed');
-    //   const result = await response.json();
-    //   toast.success('Image uploaded successfully!');
-    //   // Add result to galleryItems, clear selection, etc.
-    //   setSelectedFile(null);
-    //   setImagePreview(null);
-    // } catch (error) {
-    //   console.error("Upload error:", error);
-    //   toast.error('Failed to upload image.');
-    // }
     
-    // Using basic toast call instead of toast.info
     toast('Upload functionality not yet implemented.', {
-        icon: 'ℹ️', // Example: using an info emoji as icon
+        icon: 'ℹ️',
     }); 
   };
 
@@ -256,13 +255,23 @@ export default function GalleryPage() {
                 Most Recent
               </Button>
             </Tooltip>
+            
             <Button 
-              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md transition-all duration-300 hover:-translate-y-1"
               onClick={handleUploadClick}
+              className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white"
             >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Image
+              <Upload className="mr-2 h-4 w-4" />
+              Upload Photo
             </Button>
+            
+            {selectedFile && (
+              <Button 
+                onClick={handleUpload}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                Confirm Upload
+              </Button>
+            )}
           </div>
         </div>
 

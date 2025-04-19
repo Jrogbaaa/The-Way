@@ -6,12 +6,17 @@ import { ImageDisplay } from '@/components/ui/image-display';
 import { runImageToVideoModel, checkVideoGenerationStatus } from '@/lib/api/replicate';
 import { Loader2, Upload, Sparkles, AlertCircle, Sliders, RefreshCw, Film, Download, Check } from 'lucide-react';
 import { useGenerationProgress } from '@/hooks/useGenerationProgress';
+import { useAuth } from '@/components/AuthProvider';
+import { useRouter } from 'next/navigation';
+import { ROUTES } from '@/lib/config';
 
 interface ImageToVideoConverterProps {
   onVideoGenerated?: (videoUrl: string) => void;
 }
 
 export default function ImageToVideoConverter({ onVideoGenerated }: ImageToVideoConverterProps) {
+  const router = useRouter();
+  const { user } = useAuth();
   // State for the input image
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -152,6 +157,11 @@ export default function ImageToVideoConverter({ onVideoGenerated }: ImageToVideo
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      router.push(ROUTES.signup);
+      return;
+    }
     
     if (!imageBase64) {
       setError('Please upload an image first');
@@ -477,17 +487,17 @@ export default function ImageToVideoConverter({ onVideoGenerated }: ImageToVideo
           {/* Submit button */}
           <Button 
             type="submit" 
-            disabled={loading || !imageBase64} 
+            disabled={loading || !imageFile || progress.status === 'starting' || progress.status === 'processing'}
             className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
           >
-            {loading ? (
+            {(loading || progress.status === 'starting' || progress.status === 'processing') ? (
               <span className="flex items-center justify-center">
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Generating...
+                <Loader2 className="animate-spin mr-2 h-4 w-4" /> 
+                {progress.status === 'processing' ? `Generating... (${Math.round(progress.progress * 100)}%)` : 'Starting...'}
               </span>
             ) : (
               <span className="flex items-center justify-center">
-                <Sparkles className="w-5 h-5 mr-2" />
+                <Sparkles className="mr-2 h-4 w-4" /> 
                 Generate Video
               </span>
             )}

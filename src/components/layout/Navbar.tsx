@@ -3,18 +3,19 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore, useUIStore } from '@/lib/store';
+import { useUIStore } from '@/lib/store';
+import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/config';
 import Logo from '@/components/ui/Logo';
 import ButtonLink from '@/components/ui/button-link';
 import { useState } from 'react';
-import { Bell, Menu, X } from 'lucide-react';
+import { Bell, Menu, X, LogOut, User as UserIcon } from 'lucide-react';
 
 const Navbar = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, signOut } = useAuthStore();
+  const { user, signOut, loading } = useAuth();
   const { sidebarOpen, toggleSidebar, setSidebarOpen } = useUIStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -23,8 +24,7 @@ const Navbar = () => {
   const isInteriorPage = pathname !== ROUTES.home;
 
   const handleSignOut = async () => {
-    signOut();
-    router.push(ROUTES.home);
+    await signOut();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -112,7 +112,7 @@ const Navbar = () => {
         </div>
         <div className="flex items-center gap-6">
           {/* Notifications button */}
-          {user && (
+          {user && !loading && (
             <div className="relative">
               <button
                 type="button"
@@ -162,7 +162,7 @@ const Navbar = () => {
           )}
           
           {/* Mobile Sign Up button */}
-          {!user && (
+          {!user && !loading && (
             <div className="md:hidden">
               <ButtonLink 
                 href={ROUTES.signup}
@@ -175,36 +175,40 @@ const Navbar = () => {
             </div>
           )}
           
-          {user ? (
+          {/* Desktop Auth Area */}
+          {loading ? (
+             // Loading placeholders for desktop
+            <div className="hidden md:flex items-center gap-4">
+                <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div className="h-9 w-24 bg-gray-300 dark:bg-gray-600 rounded animate-pulse"></div>
+            </div>
+          ) : user ? (
+            // Logged In state for desktop (should now use correct user object)
             <div className="hidden md:flex items-center gap-4">
               <Link 
                 href={ROUTES.dashboard}
-                className="text-sm font-medium hover:text-primary"
+                className="flex items-center gap-2 text-sm font-medium hover:text-primary p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
                 tabIndex={0}
                 aria-label="Go to dashboard"
               >
-                Dashboard
-              </Link>
-              <Link 
-                href={ROUTES.profile}
-                className="flex items-center gap-2"
-                tabIndex={0}
-                aria-label="View profile"
-              >
-                <div className="relative h-8 w-8 overflow-hidden rounded-full">
-                  {user.avatar_url ? (
+                <div className="relative h-8 w-8 overflow-hidden rounded-full border border-gray-300 dark:border-gray-600">
+                  {user.user_metadata?.avatar_url ? (
                     <Image
-                      src={user.avatar_url}
+                      src={user.user_metadata.avatar_url}
                       alt="User avatar"
                       fill
                       className="object-cover"
+                      referrerPolicy="no-referrer"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-primary text-primary-foreground">
-                      {user.full_name?.[0] || user.email[0]}
+                       {(user.user_metadata?.name || user.user_metadata?.full_name || user.email)?.[0]?.toUpperCase() || 'U'}
                     </div>
                   )}
                 </div>
+                <span className="truncate max-w-[150px]">
+                  {user.user_metadata?.name || user.user_metadata?.full_name || user.email}
+                </span>
               </Link>
               <Button 
                 variant="ghost" 
@@ -212,11 +216,14 @@ const Navbar = () => {
                 onKeyDown={handleKeyDown}
                 tabIndex={0}
                 aria-label="Sign out"
+                className="whitespace-nowrap"
               >
+                <LogOut className="mr-2 h-4 w-4"/> 
                 Sign Out
               </Button>
             </div>
           ) :
+            // Logged Out state for desktop
             <div className="hidden md:flex items-center gap-2">
               <ButtonLink 
                 href={ROUTES.login}

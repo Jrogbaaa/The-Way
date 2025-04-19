@@ -6,10 +6,12 @@ import { LinkButton } from '@/components/ui/link-button';
 import { ROUTES } from '@/lib/config';
 import Logo from '@/components/ui/Logo';
 import { useState } from 'react';
-import { ArrowRight, Sparkles, Check } from 'lucide-react';
+import { ArrowRight, Sparkles, Check, LogOut, User as UserIcon } from 'lucide-react';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, loading, signOut } = useAuth();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -78,70 +80,135 @@ export default function Home() {
             
             {/* Desktop navigation */}
             <nav className="hidden md:flex items-center gap-4">
-              <Link 
-                href="/models"
-                className="text-sm font-medium hover:text-primary px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
-                tabIndex={0}
-                aria-label="Test AI Models"
-              >
-                Test Models
-              </Link>
-              <Link 
-                href={ROUTES.login}
-                className="text-sm font-medium hover:text-primary px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
-                tabIndex={0}
-                aria-label="Sign in to your account"
-              >
-                Sign In
-              </Link>
-              <Button 
-                asChild
-              >
-                <Link 
-                  href={ROUTES.signup}
-                  tabIndex={0}
-                  aria-label="Create a new account"
-                >
-                  Sign Up
-                </Link>
-              </Button>
+              {/* Conditional Auth Buttons - Desktop */}
+              {loading ? (
+                <>
+                  <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-9 w-24 bg-gray-300 dark:bg-gray-600 rounded animate-pulse"></div>
+                </>
+              ) : user ? (
+                <>
+                  <Link 
+                    href={ROUTES.dashboard}
+                    className="flex items-center gap-2 text-sm font-medium hover:text-primary px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+                    tabIndex={0}
+                    aria-label="Go to dashboard"
+                  >
+                    {user.user_metadata?.avatar_url ? (
+                      <img 
+                        src={user.user_metadata.avatar_url}
+                        alt="User Avatar"
+                        className="h-6 w-6 rounded-full border border-gray-300 dark:border-gray-700"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600">
+                        <UserIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                      </span>
+                    )}
+                    <span className="truncate max-w-[150px]"> 
+                      {user.user_metadata?.name || user.user_metadata?.full_name || user.email}
+                    </span>
+                  </Link>
+                  <Button 
+                    variant="outline"
+                    onClick={signOut} 
+                    aria-label="Sign out"
+                    className="text-sm whitespace-nowrap"
+                  >
+                    <LogOut className="mr-2 h-4 w-4"/>
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link 
+                    href={ROUTES.login}
+                    className="text-sm font-medium hover:text-primary px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+                    tabIndex={0}
+                    aria-label="Sign in to your account"
+                  >
+                    Sign In
+                  </Link>
+                  <Button asChild>
+                    <Link 
+                      href={ROUTES.signup}
+                      tabIndex={0}
+                      aria-label="Create a new account"
+                    >
+                      Sign Up
+                    </Link>
+                  </Button>
+                </>
+              )}
             </nav>
           </div>
           
           {/* Mobile menu dropdown */}
           <div 
             className={`md:hidden transition-all duration-300 overflow-hidden ${
-              mobileMenuOpen ? 'max-h-72 py-3 border-t border-gray-200 dark:border-gray-800' : 'max-h-0'
+              mobileMenuOpen ? 'max-h-96 py-3 border-t border-gray-200 dark:border-gray-800' : 'max-h-0'
             }`}
           >
             <nav className="flex flex-col space-y-2">
-              <Link 
-                href="/models"
-                className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                tabIndex={mobileMenuOpen ? 0 : -1}
-                aria-label="Test AI Models"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Test Models
-              </Link>
-              <Link 
-                href={ROUTES.login}
-                className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                tabIndex={mobileMenuOpen ? 0 : -1}
-                aria-label="Sign in to your account"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Sign In
-              </Link>
-              <Link 
-                href={ROUTES.signup}
-                className="text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 px-3 py-2.5 rounded-md"
-                tabIndex={mobileMenuOpen ? 0 : -1}
-                aria-label="Create a new account"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Sign Up
-              </Link>
+              {/* Conditional Auth Buttons - Mobile */}
+              {loading ? (
+                  <>
+                    <div className="px-3 py-2.5">
+                      <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                    </div>
+                    <div className="px-3 py-2.5">
+                       <div className="h-8 w-full bg-gray-300 dark:bg-gray-600 rounded animate-pulse"></div>
+                    </div>
+                  </>
+              ) : user ? (
+                <>
+                  <LinkButton 
+                    href={ROUTES.dashboard}
+                    variant="ghost"
+                    className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 justify-start"
+                    tabIndex={mobileMenuOpen ? 0 : -1}
+                    aria-label="Go to dashboard"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <UserIcon className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <span className="truncate max-w-[150px]"> 
+                      {user.user_metadata?.name || user.user_metadata?.full_name || user.email}
+                    </span>
+                  </LinkButton>
+                  <Button 
+                    variant="ghost"
+                    onClick={() => { signOut(); setMobileMenuOpen(false); }} 
+                    aria-label="Sign out"
+                    tabIndex={mobileMenuOpen ? 0 : -1}
+                    className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 justify-start text-red-600 dark:text-red-500 dark:hover:bg-red-900/20 hover:text-red-700"
+                  >
+                     <LogOut className="mr-2 h-4 w-4"/>
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link 
+                    href={ROUTES.login}
+                    className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                    tabIndex={mobileMenuOpen ? 0 : -1}
+                    aria-label="Sign in to your account"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                  <Link 
+                    href={ROUTES.signup}
+                    className="text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 px-3 py-2.5 rounded-md text-center"
+                    tabIndex={mobileMenuOpen ? 0 : -1}
+                    aria-label="Create a new account"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Sign Up
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
         </div>

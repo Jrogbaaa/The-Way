@@ -21,6 +21,9 @@ All notable changes to this project will be documented in this file.
 - Added Bria AI integration for image upscaling (`/increase_resolution`)
 - Added Bria AI integration for image expansion (`/image_expansion`)
 - Added basic image upload and preview to the new Photo Editor page
+- Google Sign-In integration using Supabase Auth.
+- Personalized navigation bar showing user's Google photo and name/email when logged in.
+- Gated feature access: Redirects logged-out users to signup when attempting to access core features.
 
 ### Changed
 - Updated navigation menu to replace standalone GenFill page with consolidated Photo Editor functionality
