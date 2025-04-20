@@ -4,6 +4,14 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Recent Updates (July/August 2024)
 
+- **Gallery Upload and Display Enhancements**: Improved the gallery functionality with several key updates:
+  - Added robust image upload to Supabase storage with proper authentication
+  - Implemented automatic gallery refresh after successful uploads
+  - Created a manual refresh button with loading indicator
+  - Enhanced the UI with better error handling and feedback
+  - Added a "no images" state with guidance for new users
+  - Optimized gallery display for various device sizes
+
 - **Authentication Bypass Development Mode**: Added temporary authentication bypass to simplify development and testing. This includes:
   - Added a middleware file (`src/middleware.ts`) that bypasses authentication checks.
   - Created a mock user in the auth store (`src/lib/store/index.ts`) to prevent client-side authentication redirects.
@@ -307,6 +315,37 @@ We've added an alternative social media content analyzer powered by open-source 
 - No account required for quick analysis
 
 For detailed documentation, see [Post Analysis Documentation](./the-way/docs/post-analysis.md).
+
+### Gallery Management with Supabase Storage
+
+We've implemented a comprehensive gallery system for users to upload, view, and manage their content. This feature uses Supabase Storage for secure, authenticated image management.
+
+**How to Access:**
+1. Click on "Gallery" in the sidebar navigation
+2. Upload images using the "Upload Photo" button
+3. View and manage your uploaded content
+4. Organize and filter content by categories
+
+**Features:**
+- Secure image uploads to user-specific storage locations
+- Automatic gallery refresh after successful uploads
+- Manual refresh functionality with loading indicator
+- Empty state guidance for first-time users
+- Responsive grid layout for optimal viewing on all devices
+- Image categorization and filtering options
+- Visual feedback during upload and processing
+- Bearer token and cookie-based authentication
+
+**Technical Implementation:**
+- Utilizes Supabase Storage for secure, scalable image hosting
+- Implements row-level security policies for data protection
+- User-specific storage paths (`user_id/filename`) for proper organization
+- Real-time UI updates following successful uploads
+- Optimized image loading and display
+- Comprehensive error handling with user-friendly messages
+
+For detailed documentation on managing your content, see [Gallery Documentation](./the-way/docs/gallery.md).
+For information on setting up Supabase storage, see [Storage Setup Guide](./the-way/docs/storage-setup.md).
 
 ### Free Video Generation with Replicate
 
