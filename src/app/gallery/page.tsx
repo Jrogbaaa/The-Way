@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/config';
+import { supabase } from '@/lib/supabase';
 
 type GalleryItem = {
   id: string;
@@ -122,6 +123,7 @@ export default function GalleryPage() {
   const [showTip, setShowTip] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -193,9 +195,10 @@ export default function GalleryPage() {
     fileInputRef.current?.click();
   };
   
-  // Placeholder for actual upload logic
+  // Updated function to call the new API route
   const handleUpload = async () => {
     if (!user) {
+      toast.error('Please sign in to upload images.');
       router.push(ROUTES.signup);
       return;
     }
@@ -204,12 +207,87 @@ export default function GalleryPage() {
       toast.error('No file selected for upload.');
       return;
     }
-    console.log('Uploading file:', selectedFile.name);
-    // --- Add your actual upload API call here --- 
     
-    toast('Upload functionality not yet implemented.', {
-        icon: 'ℹ️',
-    }); 
+    setIsUploading(true);
+    const uploadToastId = toast.loading('Uploading image...');
+    console.log('GalleryPage: Starting upload for:', selectedFile.name);
+    console.log('GalleryPage: User authenticated status:', !!user);
+    
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    
+    try {
+      // Ensure we have a valid session first
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error || !data.session) {
+        console.error('GalleryPage: Session check failed:', error?.message || 'No active session');
+        throw new Error('Authentication session error. Please sign in again.');
+      }
+      
+      const response = await fetch('/api/gallery/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      let result;
+      try {
+        result = await response.json();
+      } catch (parseError) {
+        console.error('GalleryPage: Error parsing response:', parseError);
+        throw new Error(`Server response error: ${response.status} ${response.statusText}`);
+      }
+      
+      if (!response.ok) {
+        console.error('GalleryPage: Upload failed with status:', response.status);
+        console.error('GalleryPage: Upload error details:', result);
+        
+        // More specific error messages based on status code
+        let errorMessage;
+        switch (response.status) {
+          case 401:
+            errorMessage = 'Authentication error. Please sign in again.';
+            break;
+          case 403:
+            errorMessage = 'You do not have permission to upload to this gallery.';
+            break;
+          case 404:
+            errorMessage = 'Upload destination not found. Please contact support.';
+            break;
+          case 413:
+            errorMessage = 'File is too large.';
+            break;
+          default:
+            errorMessage = result.error || `Upload failed with status ${response.status}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      console.log('GalleryPage: Upload successful:', result);
+      toast.success(`Successfully uploaded ${selectedFile.name}!`, { id: uploadToastId });
+      
+      setSelectedFile(null);
+      setImagePreview(null);
+      
+      // Optionally: refresh gallery items list here
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed. Please try again.';
+      console.error('GalleryPage: Upload error:', errorMessage);
+      toast.error(`Upload failed: ${errorMessage}`, { id: uploadToastId });
+      
+      // If authentication error, redirect to login
+      if (errorMessage.includes('Authentication') || errorMessage.includes('sign in')) {
+        toast.error('Please sign in to upload images');
+        setTimeout(() => {
+          router.push(ROUTES.signup);
+        }, 2000);
+      }
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const filteredItems = selectedFilter === 'all'

@@ -56,31 +56,41 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
   // Mark User Onboarded function
   const markUserOnboarded = useCallback(async () => {
-    if (!user) return; 
+    console.log('AuthProvider: markUserOnboarded called'); // Log start
+    if (!user) { 
+      console.log('AuthProvider: No user found, exiting markUserOnboarded');
+      return; 
+    }
     
+    // Immediately hide modal for better UX
     setShowWelcomeModal(false); 
+    console.log('AuthProvider: Hiding welcome modal');
     
     try {
+      console.log('AuthProvider: Attempting fetch to /api/user/mark-onboarded'); // Log before fetch
       // Add credentials: 'include' to this fetch call
       const response = await fetch('/api/user/mark-onboarded', {
          method: 'POST',
          credentials: 'include' // Explicitly include cookies
       });
       
+      console.log('AuthProvider: Fetch response status:', response.status); // Log fetch status
       if (!response.ok) {
         // Use response.json() cautiously, might not be JSON on failure
         let errorData = { error: `Request failed with status ${response.status}` };
         try {
            errorData = await response.json(); 
         } catch (jsonError) {
-           console.error('Could not parse error response as JSON:', jsonError);
+           console.error('AuthProvider: Could not parse error response as JSON:', jsonError);
         }
-        console.error('Failed to mark user as onboarded:', errorData.error);
+        console.error('AuthProvider: Failed to mark user as onboarded:', errorData.error);
+      } else {
+        console.log('AuthProvider: Successfully marked user as onboarded on server.'); // Log success
       }
       // Successfully marked on server or handled error
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Error calling mark-onboarded API:', errorMessage);
+      console.error('AuthProvider: Error calling mark-onboarded API:', errorMessage);
     }
   }, [user]);
 

@@ -79,9 +79,51 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Authentication & Access
 
-- **Google Sign-In**: Users can sign up and log in using their Google accounts via Supabase Auth.
-- **Personalized Navigation**: Once logged in, the main navigation bar displays the user's Google profile picture and name (or email), providing a direct link to their dashboard.
-- **Gated Feature Access**: Core features like the AI Chat, Image-to-Video Generation, and Gallery Upload require users to be signed in. Attempting to access these features while logged out will redirect the user to the signup page.
+This application uses Supabase for user authentication and management, primarily leveraging Google OAuth for sign-in and sign-up.
+
+### Core Technologies & Concepts
+
+- **Supabase Auth**: Handles user registration, login (Google OAuth), and session management.
+- **`@supabase/ssr`**: The official Supabase helper library for Next.js, used to manage authentication state seamlessly across Server Components, Client Components, and API Routes. It utilizes `createBrowserClient` for the client-side and `createServerClient` (with `cookies()` from `next/headers`) for server-side operations.
+- **`src/components/AuthProvider.tsx`**: A key client-side component that wraps the application. It listens for authentication state changes, manages the user session, fetches the user's profile data (including onboarding status) from the `profiles` table, and controls the visibility of the `WelcomeModal`.
+- **`profiles` Table**: A Supabase database table storing additional user information linked to the `auth.users` table via the user ID. It contains an `onboarded` boolean flag to track whether a user has completed the initial welcome/onboarding flow.
+- **Row Level Security (RLS)**: RLS policies are **enabled** on the `profiles` table in Supabase. These policies typically restrict users to only view and modify their *own* profile data. Crucially, they often prevent direct modification of certain fields (like `onboarded`) through the Supabase dashboard UI or generic API calls, ensuring that updates happen through designated application logic (like the `/api/user/mark-onboarded` route). This is why you might not be able to manually toggle the `onboarded` flag in the Supabase table browser.
+- **`supabase/functions/ensure-profile` Edge Function**: A Supabase Edge Function written in Deno.
+    - **Purpose**: Automatically triggered (likely by a database trigger on `auth.users` insertion) when a new user signs up. It ensures a corresponding row is created in the `profiles` table for the new user, typically setting `onboarded` to `false` by default.
+    - **Environment**: Runs in a separate **Deno environment** on Supabase infrastructure, distinct from the Next.js application environment on Vercel.
+    - **Secrets**: Requires its own environment variables/secrets (e.g., `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) configured directly within the Supabase dashboard under **Settings -> Functions -> ensure-profile -> Secrets**. These are separate from the Vercel environment variables.
+
+### Onboarding Flow for New Users
+
+1.  **Sign Up/Log In**: User signs up or logs in using Google OAuth.
+2.  **Profile Creation (Edge Function)**: The `ensure-profile` Edge Function triggers, creating a new row in the `profiles` table if one doesn't exist, with `onboarded` set to `false`.
+3.  **Session & Profile Fetch (`AuthProvider`)**: The client-side `AuthProvider` detects the new session, fetches the user data and the associated profile from the `profiles` table.
+4.  **Modal Trigger**: Since `profile.onboarded` is `false`, the `AuthProvider` sets the state to show the `WelcomeModal`.
+5.  **Welcome Modal Display**: The `src/components/WelcomeModal.tsx` component is rendered.
+6.  **User Interaction**: The user clicks one of the feature buttons (e.g., "Browse Models") or the "Skip for now" button.
+7.  **Mark Onboarded (Client)**: The `onClick` handler in `WelcomeModal` calls the `markUserOnboarded` function provided by `useAuth` (from `AuthProvider`).
+8.  **API Call**: The `markUserOnboarded` function makes a `POST` request to the `/api/user/mark-onboarded` API route handler.
+9.  **Database Update (API Route)**: The `/api/user/mark-onboarded` route (`src/app/api/user/mark-onboarded/route.ts`) uses `createServerClient` (with the user's cookies) to connect to Supabase and execute an `UPDATE` query on the `profiles` table, setting the `onboarded` column to `true` for the authenticated user.
+10. **State Update**: The `AuthProvider` likely updates its state (either by refetching the profile or optimistically setting `onboarded` to `true`), causing the `WelcomeModal` to hide.
+11. **Subsequent Logins**: On future logins, `AuthProvider` fetches the profile, finds `onboarded` is `true`, and does *not* show the `WelcomeModal`.
+
+### Environment Variables
+
+Ensure the following environment variables are configured:
+
+**For Vercel Deployment (Next.js App):**
+
+- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL.
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase project's anonymous key (safe for browser exposure).
+- `SUPABASE_SERVICE_ROLE_KEY` (Optional but common): Your Supabase project's service role key (keep secret, used for server-side operations requiring elevated privileges, if any). *Note: Many server-side operations within API routes using `@supabase/ssr` might operate under the user's authenticated context if set up correctly.*
+
+**For Supabase Edge Function (`ensure-profile`):**
+
+*Set these directly in the Supabase Dashboard under Settings -> Functions -> ensure-profile -> Secrets*
+
+- `SUPABASE_URL`: Your Supabase project URL.
+- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase project's service role key (often required for functions triggered by auth events to perform actions like inserting into `profiles`).
+- `SUPABASE_ANON_KEY`: Your Supabase project's anonymous key.
 
 ## Navigation Structure
 
@@ -838,3 +880,54 @@ The application now supports local image editing using ComfyUI, providing faster
 - Check the browser console and server logs for any errors
 - Verify that the models are correctly placed in the ComfyUI directories
 - Make sure you have enough GPU memory for processing
+
+## Supabase Storage Setup
+
+The application uses Supabase Storage for file uploads in the Gallery feature. To ensure proper functionality, you need to set up the required storage buckets and RLS (Row Level Security) policies.
+
+### Manual Setup in Supabase Dashboard
+
+1. Log in to your Supabase dashboard
+2. Go to "Storage" in the left sidebar
+3. Create a new bucket named `gallery-uploads` with public access enabled
+4. Set up the following RLS policies for the bucket:
+   - **INSERT**: Allow authenticated users to upload to their own directory
+     - `auth.uid() = (storage.foldername)[1]::uuid`
+   - **SELECT**: Allow anyone to view files (for public gallery)
+     - `true`
+   - **UPDATE**: Allow users to update their own files
+     - `auth.uid() = (storage.foldername)[1]::uuid`
+   - **DELETE**: Allow users to delete their own files
+     - `auth.uid() = (storage.foldername)[1]::uuid`
+
+### Automatic Setup with Script
+
+Alternatively, you can use the provided setup script to configure storage:
+
+```bash
+# Make sure you have the required environment variables in .env
+# NEXT_PUBLIC_SUPABASE_URL
+# SUPABASE_SERVICE_ROLE_KEY
+
+# Run the setup script
+node scripts/setup-supabase-storage.js
+```
+
+### Troubleshooting Uploads
+
+If you encounter "401 Unauthorized" errors when uploading:
+
+1. Ensure you have a valid, active session by signing in
+2. Check that the storage bucket exists in your Supabase project
+3. Verify that appropriate RLS policies are configured
+4. Check browser console and API logs for specific error messages
+
+### Storage Path Structure
+
+Files in the gallery are stored with the following pattern:
+
+```
+gallery-uploads/[user_id]/[timestamp]-[filename]
+```
+
+This structure works with the RLS policies to ensure users can only upload to their own directory.

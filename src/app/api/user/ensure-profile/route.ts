@@ -1,11 +1,41 @@
-import { createServerClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+import { API_CONFIG } from '@/lib/config';
 
-export async function POST(request: Request) {
-  const cookieStore = cookies();
-  // Use the custom server client helper, passing the cookie store
-  const supabase = createServerClient(cookieStore); 
+export async function POST() {
+  console.log('API Route /api/user/ensure-profile: POST request received.');
+  // Await the cookies() call
+  const cookieStore = await cookies();
+
+  // Standard client creation
+  const supabase = createServerClient(
+    API_CONFIG.supabaseUrl!,
+    API_CONFIG.supabaseAnonKey!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch (error) {
+            console.warn(`Failed to set cookie '${name}' from Route Handler: ${error}`);
+          }
+        },
+        remove(name: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value: '', ...options });
+          } catch (error) {
+            console.warn(`Failed to remove cookie '${name}' from Route Handler: ${error}`);
+          }
+        },
+      },
+    }
+  );
+
+  console.log('API Route: Attempting to get user...');
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 

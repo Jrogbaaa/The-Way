@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogClose
 } from "@/components/ui/dialog";
 import { useAuth } from '@/components/AuthProvider';
 import { ROUTES } from '@/lib/config';
@@ -35,25 +36,18 @@ export function WelcomeModal() {
       cta: 'Start Chatting',
       iconBg: 'bg-purple-100',
     },
-    {
-      title: 'Photo Editor',
-      description: 'Enhance and edit your photos using AI-powered tools.',
-      icon: <Wand2 className="h-6 w-6 text-green-600" />,
-      link: ROUTES.photoEditor,
-      cta: 'Edit Photos',
-      iconBg: 'bg-green-100',
-    },
   ];
 
   const handleClose = () => {
+    console.log('WelcomeModal: handleClose triggered');
     markUserOnboarded();
   };
 
   const displayName = user?.user_metadata?.full_name || user?.email || 'there';
 
   return (
-    <Dialog open={showWelcomeModal} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-3xl p-8 md:p-10" onInteractOutside={(e) => e.preventDefault()}> 
+    <Dialog open={showWelcomeModal} onOpenChange={(open) => !open && handleClose()}> 
+      <DialogContent className="sm:max-w-2xl p-8 md:p-10" onInteractOutside={(e) => e.preventDefault()}> 
         <DialogHeader className="text-center mb-6">
           <DialogTitle className="text-3xl font-bold">Welcome to Your Content AI Agent, {displayName}!</DialogTitle>
           <DialogDescription className="text-lg text-gray-500 mt-1">
@@ -61,7 +55,7 @@ export function WelcomeModal() {
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
           {features.map((feature, index) => (
             <div 
               key={index} 
@@ -76,7 +70,7 @@ export function WelcomeModal() {
                 asChild 
                 size="sm"
                 className="w-full mt-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white transition-all duration-300 shadow hover:shadow-md group-hover:opacity-95"
-                onClick={handleClose} 
+                onClick={handleClose}
               >
                 <Link href={feature.link} className="flex items-center justify-center whitespace-nowrap w-full">
                   {feature.cta} <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -89,7 +83,7 @@ export function WelcomeModal() {
         <DialogFooter className="mt-6 justify-center">
           <Button 
             variant="link" 
-            onClick={handleClose} 
+            onClick={handleClose}
             className="text-sm text-gray-500 hover:text-gray-700 hover:underline px-4 py-2"
           >
             Skip for now & Go to Dashboard
