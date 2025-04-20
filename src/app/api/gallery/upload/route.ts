@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { API_CONFIG } from '@/lib/config';
@@ -7,102 +8,172 @@ import { API_CONFIG } from '@/lib/config';
 const BUCKET_NAME = 'gallery-uploads'; 
 
 export async function POST(request: Request) {
-  console.log('API Route /api/gallery/upload: POST request received.');
-  // Await the cookies() call to resolve the Promise
-  const cookieStore = await cookies();
-
-  // Create Supabase client using the standard pattern for Route Handlers
-  const supabase = createServerClient(
-    API_CONFIG.supabaseUrl!,
-    API_CONFIG.supabaseAnonKey!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          // If the cookieStore has a `set` method, use it.
-          // Otherwise, ignore the cookie setting step.
-          try {
-             cookieStore.set({ name, value, ...options });
-          } catch (error) {
-             // The `set` method was called from a Server Component.
-             // This can be ignored if you have middleware refreshing
-             // user sessions.
-             console.warn(`Failed to set cookie '${name}' from Route Handler: ${error}`);
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          // If the cookieStore has a `delete` method, use it.
-          // Otherwise, ignore the cookie removal step.
-           try {
-             cookieStore.set({ name, value: '', ...options });
-           } catch (error) {
-             // The `delete` or `set` method was called from a Server Component.
-             // This can be ignored if you have middleware refreshing
-             // user sessions.
-             console.warn(`Failed to remove cookie '${name}' from Route Handler: ${error}`);
-           }
-        },
-      },
-    }
-  );
-
-  console.log('API Route: Attempting to get user...');
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  console.log('=== API Route /api/gallery/upload: POST request received ===');
   
-  if (sessionError) {
-    console.error('API Route: Session error:', sessionError.message);
-    return NextResponse.json({ error: 'Authentication session error' }, { status: 401 });
-  }
+  // Debug: Log request headers with more details
+  const headerEntries = Array.from(request.headers.entries());
+  console.log('API Route: Request headers:', JSON.stringify(headerEntries, null, 2));
   
-  if (!session) {
-    console.error('API Route: No active session found');
-    return NextResponse.json({ error: 'No active session' }, { status: 401 });
-  }
+  // Log method and URL for completeness
+  console.log(`API Route: ${request.method} ${request.url}`);
   
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    console.error('API Route: Auth error or no user found.', authError?.message);
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  console.log('API Route: User authenticated:', user.id);
-
-  // Check if the bucket exists, create if not
-  const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+  // Check for ContentType and ContentLength
+  console.log(`API Route: Content-Type: ${request.headers.get('Content-Type')}`);
+  console.log(`API Route: Content-Length: ${request.headers.get('Content-Length')}`);
   
-  if (bucketsError) {
-    console.error('API Route: Error checking buckets:', bucketsError.message);
-    return NextResponse.json({ error: 'Storage service error' }, { status: 500 });
-  }
+  // FIRST: Check for Authorization header as it may be more reliable
+  const authHeader = request.headers.get('Authorization');
+  let tokenAuth = null;
   
-  const bucketExists = buckets?.some(bucket => bucket.name === BUCKET_NAME);
-  
-  if (!bucketExists) {
-    console.log(`API Route: Bucket '${BUCKET_NAME}' not found, attempting to create...`);
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    console.log('API Route: Found Authorization header, will try this first');
+    const token = authHeader.substring(7);
+    
+    // Create a client with the token and try to get the user
+    // This bypasses cookie issues altogether
     try {
-      // Create bucket with public access
-      const { data, error } = await supabase.storage.createBucket(BUCKET_NAME, {
-        public: true,
-        fileSizeLimit: 10485760 // 10MB
-      });
+      const tempClient = createClient(
+        API_CONFIG.supabaseUrl!,
+        API_CONFIG.supabaseAnonKey!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+            detectSessionInUrl: false,
+          },
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        }
+      );
       
-      if (error) {
-        console.error('API Route: Error creating bucket:', error.message);
-        return NextResponse.json({ error: 'Failed to create storage bucket' }, { status: 500 });
+      // Attempt to get user with token
+      const { data: userData, error: userError } = await tempClient.auth.getUser();
+      
+      if (!userError && userData.user) {
+        console.log(`API Route: Successfully authenticated with token. User ID: ${userData.user.id}`);
+        tokenAuth = {
+          user: userData.user,
+          client: tempClient
+        };
+      } else {
+        console.log('API Route: Token authentication failed:', userError?.message);
       }
-      
-      console.log(`API Route: Successfully created bucket '${BUCKET_NAME}'`);
-      
-      // Set bucket policy for RLS
-      // This is optional as you likely want to set these via Supabase dashboard
-      // for permanent configuration
-    } catch (bucketError) {
-      console.error('API Route: Bucket creation failed:', bucketError);
-      return NextResponse.json({ error: 'Storage configuration error' }, { status: 500 });
+    } catch (err) {
+      console.error('API Route: Error using Authorization header:', err);
+    }
+  } else {
+    console.log('API Route: No Authorization header found, will try cookie auth');
+  }
+  
+  // If token auth failed or wasn't available, try cookie auth as usual
+  if (!tokenAuth) {
+    // Await the cookies() call to resolve the Promise
+    const cookieStore = await cookies();
+    
+    // Debug: Log all available cookies with more details
+    const allCookies = cookieStore.getAll();
+    console.log('API Route: Available cookies count:', allCookies.length);
+    
+    // More verbose cookie logging
+    if (allCookies.length > 0) {
+      console.log('API Route: Cookie names found:', allCookies.map(c => c.name).join(', '));
+      console.log('API Route: Cookie details:', JSON.stringify(allCookies.map(c => ({
+        name: c.name,
+        value: c.value ? `${c.value.substring(0, 8)}...` : 'empty'
+      })), null, 2));
+    } else {
+      console.log('API Route: ⚠️ NO COOKIES FOUND! This may indicate a problem with cookie forwarding.');
+    }
+    
+    // Debug: specifically check for various Supabase auth cookies
+    const supabaseAccessToken = cookieStore.get('sb-access-token');
+    const supabaseRefreshToken = cookieStore.get('sb-refresh-token');
+    const supabaseAuthToken = cookieStore.get('sb-auth-token');
+    const sbAuth = cookieStore.get('sb-auth');
+    
+    console.log('API Route: Supabase cookies check:', {
+      'sb-access-token': supabaseAccessToken ? `present (${supabaseAccessToken.value.substring(0, 8)}...)` : 'missing',
+      'sb-refresh-token': supabaseRefreshToken ? `present (${supabaseRefreshToken.value.substring(0, 8)}...)` : 'missing',
+      'sb-auth-token': supabaseAuthToken ? `present (${supabaseAuthToken.value.substring(0, 8)}...)` : 'missing',
+      'sb-auth': sbAuth ? `present (${sbAuth.value.substring(0, 8)}...)` : 'missing'
+    });
+  }
+
+  // Set up the user and client based on which auth method worked
+  let user = null;
+  let supabase = null;
+  
+  if (tokenAuth) {
+    // Use the already authenticated client and user from token
+    user = tokenAuth.user;
+    supabase = tokenAuth.client;
+    console.log('API Route: Using token-authenticated client');
+  } else {
+    // Create Supabase client using the standard pattern for Route Handlers with cookies
+    console.log('API Route: Creating Supabase client with cookie store...');
+    const cookieStore = await cookies();
+    
+    supabase = createServerClient(
+      API_CONFIG.supabaseUrl!,
+      API_CONFIG.supabaseAnonKey!,
+      {
+        cookies: {
+          get(name: string) {
+            const cookie = cookieStore.get(name);
+            console.log(`API Route: Cookie get('${name}') → ${cookie ? `Found: ${cookie.value.substring(0, 5)}...` : 'NOT FOUND'}`);
+            return cookie?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            try {
+               cookieStore.set({ name, value, ...options });
+               console.log(`API Route: Set cookie '${name}' (${value.substring(0, 5)}...)`);
+            } catch (error) {
+               console.warn(`Failed to set cookie '${name}' from Route Handler: ${error}`);
+            }
+          },
+          remove(name: string, options: CookieOptions) {
+             try {
+               cookieStore.set({ name, value: '', ...options });
+               console.log(`API Route: Removed cookie '${name}'`);
+             } catch (error) {
+               console.warn(`Failed to remove cookie '${name}' from Route Handler: ${error}`);
+             }
+          },
+        },
+      }
+    );
+    
+    // Try to get session from cookies
+    console.log('API Route: Attempting to get user session from cookies...');
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('API Route: Error getting session:', sessionError.message);
+      console.error('API Route: Session error details:', JSON.stringify(sessionError));
+    } else if (session) {
+      console.log('API Route: Successfully retrieved session. User ID:', session.user.id);
+      console.log('API Route: Session expires at:', new Date(session.expires_at! * 1000).toISOString());
+      console.log('API Route: Current time:', new Date().toISOString());
+      user = session.user;
+    } else {
+      console.log('API Route: No session found from cookie store.');
     }
   }
+
+  // At this point we should have a user from either cookies or token
+  if (!user) {
+    console.error('API Route: ❌ CRITICAL ERROR - No user could be retrieved via any method');
+    return NextResponse.json({ 
+      error: 'Authentication failed completely',
+      message: 'Please sign in again and ensure you have cookies enabled.',
+      hint: 'Try refreshing the page before uploading.' 
+    }, { status: 401 });
+  }
+  
+  console.log('API Route: User authenticated:', user.id);
 
   try {
     const formData = await request.formData();
@@ -125,6 +196,11 @@ export async function POST(request: Request) {
         console.error('API Route: File size exceeds limit.');
         return NextResponse.json({ error: 'File size exceeds 10MB limit.' }, { status: 400 });
     }
+
+    // We don't need to check if the bucket exists or try to create it
+    // We know the bucket exists (as shown in the screenshot)
+    // Let's directly try to upload to it
+    console.log(`API Route: Using existing bucket '${BUCKET_NAME}'`);
 
     // Create a unique path, e.g., using user ID and timestamp/filename
     // IMPORTANT: Using user ID in the path helps with setting up RLS policies
@@ -151,20 +227,24 @@ export async function POST(request: Request) {
         statusCode = 404;
         errorMessage = 'Storage bucket not found';
       } else if (uploadError.message.includes('not authorized')) {
-        statusCode = 401;
-        errorMessage = 'Not authorized to upload to this bucket';
+        statusCode = 403;
+        errorMessage = 'Not authorized to upload to this bucket. Check RLS policies.';
       } else if (uploadError.message.includes('mime type')) {
         statusCode = 400;
         errorMessage = 'Invalid file type';
       } else if (uploadError.message.includes('exceeds size limit')) {
         statusCode = 413;
         errorMessage = 'File size exceeds limit';
+      } else if (uploadError.message.includes('row-level security policy')) {
+        statusCode = 403;
+        errorMessage = 'You do not have permission to upload to this bucket. The Supabase RLS policy is blocking this upload.';
       }
       
       return NextResponse.json({ 
         error: errorMessage, 
         details: uploadError.message,
-        stack: uploadError.stack
+        stack: uploadError.stack,
+        user_id: user.id // Add user ID to help debugging
       }, { status: statusCode });
     }
 
@@ -178,37 +258,25 @@ export async function POST(request: Request) {
     const publicUrl = urlData?.publicUrl;
     console.log('API Route: Public URL retrieved:', publicUrl);
 
-    // --- Optional: Save metadata to database ---
-    // If you have a 'gallery_items' table, you would insert here:
-    /*
-    const { error: dbError } = await supabase
-      .from('gallery_items') // Replace with your actual table name
-      .insert({
-        user_id: user.id,
-        file_path: filePath, // Store the path for potential future operations
-        image_url: publicUrl, // Store the public URL for display
-        title: file.name, // Default title
-        // Add other relevant fields: description, tags, size, type etc.
-      });
-
-    if (dbError) {
-      console.error('API Route: Error saving metadata to database:', dbError);
-      // Decide if this should be a hard failure. Maybe just log it?
-      // Consider deleting the uploaded file if DB insert fails to avoid orphans?
-    }
-    */
-    // --- End Optional Database Save ---
-
     return NextResponse.json({ 
         success: true, 
-        message: 'File uploaded successfully.', 
-        path: filePath, 
-        publicUrl: publicUrl 
+        message: 'File uploaded successfully',
+        file: {
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            path: filePath,
+            url: publicUrl
+        }
     });
-
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('API Route: Upload Error (catch block):', errorMessage);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error('API Route: Unexpected error during upload:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    return NextResponse.json({ 
+        error: 'Upload failed', 
+        message: errorMessage,
+        user_id: user?.id
+    }, { status: 500 });
   }
 } 

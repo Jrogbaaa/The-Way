@@ -124,6 +124,7 @@ export default function GalleryPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoadingGallery, setIsLoadingGallery] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -151,6 +152,129 @@ export default function GalleryPage() {
       clearTimeout(tipTimer);
     };
   }, []);
+
+  // Load user's gallery items on page load
+  useEffect(() => {
+    if (user) {
+      fetchGalleryItems();
+    }
+  }, [user]);
+
+  // Function to fetch gallery items from Supabase storage
+  const fetchGalleryItems = async () => {
+    if (!user) {
+      console.log('GalleryPage: No user, skipping gallery fetch');
+      return;
+    }
+
+    try {
+      console.log('GalleryPage: Fetching user gallery items for user:', user.id);
+      
+      // Show loading spinner or message
+      setIsLoadingGallery(true);
+      
+      // Fetch items from Supabase storage
+      const { data: files, error } = await supabase
+        .storage
+        .from('gallery-uploads')
+        .list(`${user.id}`, {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+
+      if (error) {
+        console.error('GalleryPage: Error fetching gallery items:', error.message);
+        toast.error('Failed to load gallery items');
+        return;
+      }
+
+      if (!files || files.length === 0) {
+        console.log('GalleryPage: No gallery items found for user');
+        // Set empty user gallery items but keep example items
+        const updatedGalleryItems = galleryItems.filter(item => !item.tags.includes('user-uploads'));
+        setGalleryItems(updatedGalleryItems);
+        return;
+      }
+
+      console.log('GalleryPage: Gallery items retrieved:', files.length, files);
+
+      // Get public URLs for each file
+      const userGalleryItems: GalleryItem[] = await Promise.all(
+        files
+          .filter(file => file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) // Filter image files only
+          .map(async (file, index) => {
+            const { data: publicURL } = supabase
+              .storage
+              .from('gallery-uploads')
+              .getPublicUrl(`${user.id}/${file.name}`);
+
+            // Log each public URL to help with debugging
+            console.log('GalleryPage: Public URL:', publicURL.publicUrl, 'for file:', file.name);
+
+            // Get a timestamp to show relative time
+            const createdAt = file.created_at 
+              ? new Date(file.created_at) 
+              : new Date();
+            const timeAgo = getTimeAgo(createdAt);
+
+            return {
+              id: `user-${index}-${file.id || file.name}`,
+              title: file.name.split('.')[0].replace(/-|_/g, ' '),
+              description: `Uploaded ${timeAgo}`,
+              imageUrl: publicURL.publicUrl,
+              likes: Math.floor(Math.random() * 50),
+              comments: Math.floor(Math.random() * 10),
+              date: timeAgo,
+              tags: ['user-uploads', 'gallery'],
+              author: {
+                name: user.email?.split('@')[0] || 'User',
+                avatar: 'https://i.pravatar.cc/150?img=1',
+              },
+            };
+          })
+      );
+
+      if (userGalleryItems.length === 0) {
+        console.log('GalleryPage: No image files found among retrieved files');
+      } else {
+        console.log('GalleryPage: User gallery items processed:', userGalleryItems.length);
+      }
+
+      // Combine with example gallery items - user uploads at the beginning 
+      const updatedGalleryItems = [...userGalleryItems, ...galleryItems.filter(item => !item.tags.includes('user-uploads')).slice(0, 6 - userGalleryItems.length)];
+      setGalleryItems(updatedGalleryItems);
+      
+    } catch (fetchError) {
+      console.error('GalleryPage: Unexpected error fetching gallery items:', fetchError);
+      toast.error('Failed to load your gallery items');
+    } finally {
+      // Hide loading spinner
+      setIsLoadingGallery(false);
+    }
+  };
+
+  // Helper function to calculate time ago
+  const getTimeAgo = (date: Date): string => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    
+    let interval = seconds / 31536000; // Years
+    if (interval > 1) return Math.floor(interval) + ' years ago';
+    
+    interval = seconds / 2592000; // Months
+    if (interval > 1) return Math.floor(interval) + ' months ago';
+    
+    interval = seconds / 86400; // Days
+    if (interval > 1) return Math.floor(interval) + ' days ago';
+    
+    interval = seconds / 3600; // Hours
+    if (interval > 1) return Math.floor(interval) + ' hours ago';
+    
+    interval = seconds / 60; // Minutes
+    if (interval > 1) return Math.floor(interval) + ' minutes ago';
+    
+    return 'just now';
+  };
 
   // Handle file selection
   const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
@@ -212,36 +336,103 @@ export default function GalleryPage() {
     const uploadToastId = toast.loading('Uploading image...');
     console.log('GalleryPage: Starting upload for:', selectedFile.name);
     console.log('GalleryPage: User authenticated status:', !!user);
+    console.log('GalleryPage: User ID:', user?.id);
     
     const formData = new FormData();
     formData.append('file', selectedFile);
     
     try {
-      // Ensure we have a valid session first
-      const { data, error } = await supabase.auth.getSession();
+      // First, explicitly refresh the session to ensure cookies are current
+      console.log('GalleryPage: Explicitly refreshing session before upload');
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       
-      if (error || !data.session) {
-        console.error('GalleryPage: Session check failed:', error?.message || 'No active session');
+      if (refreshError) {
+        console.error('GalleryPage: Failed to refresh session:', refreshError.message);
+        throw new Error('Authentication error: Failed to refresh session');
+      }
+      
+      console.log('GalleryPage: Session refresh successful:', !!refreshData.session);
+      
+      // Get fresh session with token
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      console.log('GalleryPage: Session check result:', {
+        success: !!sessionData.session,
+        expires_at: sessionData.session?.expires_at ? new Date(sessionData.session.expires_at * 1000).toISOString() : 'none',
+        current_time: new Date().toISOString(),
+        error: sessionError?.message || 'none'
+      });
+      
+      if (sessionError || !sessionData.session) {
+        console.error('GalleryPage: Session check failed:', sessionError?.message || 'No active session');
         throw new Error('Authentication session error. Please sign in again.');
       }
       
+      // Extract the token to use as a backup for cookies
+      const accessToken = sessionData.session.access_token;
+      
+      // Check if token is still valid (not expired)
+      const tokenExpiration = sessionData.session.expires_at;
+      const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+      
+      console.log('GalleryPage: Token validation check:', {
+        token_prefix: accessToken ? `${accessToken.substring(0, 8)}...` : 'none',
+        expires_at: tokenExpiration ? new Date(tokenExpiration * 1000).toISOString() : 'unknown',
+        current_time: new Date(currentTime * 1000).toISOString(),
+        is_valid: tokenExpiration ? (tokenExpiration > currentTime) : false,
+        time_remaining: tokenExpiration ? `${tokenExpiration - currentTime} seconds` : 'unknown'
+      });
+      
+      if (tokenExpiration && tokenExpiration <= currentTime) {
+        console.error('GalleryPage: Token is expired!');
+        // Force another refresh attempt
+        const { error: forceRefreshError } = await supabase.auth.refreshSession();
+        if (forceRefreshError) {
+          throw new Error('Authentication token expired and refresh failed. Please sign in again.');
+        }
+      }
+      
+      // Prepare request headers with explicit authorization
+      const headers: HeadersInit = {
+        'Accept': 'application/json',
+      };
+      
+      // ALWAYS add Authorization header with the token
+      if (accessToken) {
+        console.log('GalleryPage: Adding Authorization header with token');
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      } else {
+        console.error('GalleryPage: ⚠️ No access token available for Authorization header!');
+      }
+      
+      // Log the full headers we're about to send (except sensitive values)
+      console.log('GalleryPage: Request headers being sent:', 
+        Object.entries(headers)
+          .map(([key, value]) => key === 'Authorization' 
+            ? `${key}: Bearer ${value.toString().substring(7, 15)}...` 
+            : `${key}: ${value}`)
+          .join(', ')
+      );
+      
+      // Explicitly add auth headers and full credentials
+      console.log('GalleryPage: Sending upload request to API with full auth credentials');
       const response = await fetch('/api/gallery/upload', {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        credentials: 'include', // Include cookies
+        headers,
       });
       
-      let result;
-      try {
-        result = await response.json();
-      } catch (parseError) {
-        console.error('GalleryPage: Error parsing response:', parseError);
-        throw new Error(`Server response error: ${response.status} ${response.statusText}`);
-      }
+      console.log('GalleryPage: Upload response status:', response.status);
+      console.log('GalleryPage: Response headers:', 
+        Array.from(response.headers.entries())
+          .map(([key, value]) => `${key}: ${value}`)
+          .join(', ')
+      );
       
       if (!response.ok) {
         console.error('GalleryPage: Upload failed with status:', response.status);
-        console.error('GalleryPage: Upload error details:', result);
+        console.error('GalleryPage: Upload error details:', await response.text());
         
         // More specific error messages based on status code
         let errorMessage;
@@ -259,19 +450,33 @@ export default function GalleryPage() {
             errorMessage = 'File is too large.';
             break;
           default:
-            errorMessage = result.error || `Upload failed with status ${response.status}`;
+            errorMessage = await response.text() || 'Upload failed with status ' + response.status;
         }
         
         throw new Error(errorMessage);
       }
       
-      console.log('GalleryPage: Upload successful:', result);
-      toast.success(`Successfully uploaded ${selectedFile.name}!`, { id: uploadToastId });
-      
+      const jsonResponse = await response.json();
+      toast.success('Image uploaded successfully!');
       setSelectedFile(null);
-      setImagePreview(null);
+      setImagePreview('');
+      setIsUploading(false);
+
+      // Improved gallery refresh with logging and delay
+      console.log('GalleryPage: Upload successful, refreshing gallery items...');
       
-      // Optionally: refresh gallery items list here
+      // Clear existing items first to show loading state
+      setGalleryItems(prevItems => {
+        // Keep example items but remove user items
+        return prevItems.filter(item => !item.tags.includes('user-uploads'));
+      });
+      
+      // Short delay to ensure storage backend has processed the upload
+      setTimeout(() => {
+        fetchGalleryItems();
+        // Scroll to the top to show the newly added image
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 1000); // 1 second delay
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed. Please try again.';
@@ -285,8 +490,6 @@ export default function GalleryPage() {
           router.push(ROUTES.signup);
         }, 2000);
       }
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -350,6 +553,23 @@ export default function GalleryPage() {
                 Confirm Upload
               </Button>
             )}
+            
+            <Tooltip content="Refresh gallery items">
+              <Button 
+                variant="outline" 
+                onClick={() => fetchGalleryItems()}
+                className="transition-all duration-300 hover:-translate-y-1"
+                disabled={isLoadingGallery}
+              >
+                {isLoadingGallery ? (
+                  <span className="animate-spin h-4 w-4 mr-2 border-t-2 border-b-2 border-blue-500 rounded-full"></span>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
+              </Button>
+            </Tooltip>
           </div>
         </div>
 
@@ -429,93 +649,128 @@ export default function GalleryPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item, index) => (
-            <div 
-              key={item.id} 
-              className="rounded-xl overflow-hidden border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-2 opacity-0 animate-fade-in"
-              style={{
-                animationDelay: `${0.3 + (index * 0.1)}s`,
-                animationFillMode: 'forwards'
-              }}
-            >
-              <div className="relative h-60 w-full group">
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title}
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  fill
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                  <div className="w-full">
-                    <div className="flex items-center justify-between text-white">
-                      <h3 className="text-lg font-bold truncate">{item.title}</h3>
-                      <div className="flex space-x-2">
-                        <Tooltip content="Analyze this image">
-                          <button className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
-                            <ImageIcon className="h-4 w-4" />
-                          </button>
-                        </Tooltip>
-                        <Tooltip content="View details">
-                          <button className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
-                            <Camera className="h-4 w-4" />
-                          </button>
-                        </Tooltip>
+        {filteredItems.length === 0 ? (
+          <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
+            <div className="mx-auto w-24 h-24 mb-4 text-gray-400 flex items-center justify-center rounded-full bg-gray-100">
+              <ImageIcon className="h-12 w-12" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">No images found</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {user ? 'Upload your first image to get started!' : 'Sign in to upload your own images.'}
+            </p>
+            <div className="mt-6">
+              <Button 
+                onClick={user ? handleUploadClick : () => router.push(ROUTES.signup)}
+                className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white"
+              >
+                {user ? (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload First Image
+                  </>
+                ) : (
+                  <>
+                    Sign in to Upload
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-0 animate-fade-in"
+            style={{
+              animationDelay: '0.2s',
+              animationFillMode: 'forwards'
+            }}
+          >
+            {filteredItems.map((item, index) => (
+              <div 
+                key={item.id} 
+                className="rounded-xl overflow-hidden border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-2 opacity-0 animate-fade-in"
+                style={{
+                  animationDelay: `${0.3 + (index * 0.1)}s`,
+                  animationFillMode: 'forwards'
+                }}
+              >
+                <div className="relative h-60 w-full group">
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.title}
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    fill
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                    <div className="w-full">
+                      <div className="flex items-center justify-between text-white">
+                        <h3 className="text-lg font-bold truncate">{item.title}</h3>
+                        <div className="flex space-x-2">
+                          <Tooltip content="Analyze this image">
+                            <button className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
+                              <ImageIcon className="h-4 w-4" />
+                            </button>
+                          </Tooltip>
+                          <Tooltip content="View details">
+                            <button className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
+                              <Camera className="h-4 w-4" />
+                            </button>
+                          </Tooltip>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="h-8 w-8 rounded-full overflow-hidden relative">
-                      <Image 
-                        src={item.author.avatar} 
-                        alt={item.author.name}
-                        className="object-cover"
-                        fill
-                      />
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="h-8 w-8 rounded-full overflow-hidden relative">
+                        <Image 
+                          src={item.author.avatar} 
+                          alt={item.author.name}
+                          className="object-cover"
+                          fill
+                        />
+                      </div>
+                      <span className="text-sm font-medium">{item.author.name}</span>
                     </div>
-                    <span className="text-sm font-medium">{item.author.name}</span>
-                  </div>
-                  <span className="text-xs text-gray-500 flex items-center">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {item.date}
-                  </span>
-                </div>
-                <h3 className="mt-2 text-xl font-semibold">{item.title}</h3>
-                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{item.description}</p>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {item.tags.map((tag) => (
-                    <span 
-                      key={tag} 
-                      className="px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs transition-colors duration-300 hover:bg-indigo-100 cursor-pointer"
-                      onClick={() => setSelectedFilter(tag)}
-                    >
-                      #{tag}
+                    <span className="text-xs text-gray-500 flex items-center">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {item.date}
                     </span>
-                  ))}
-                </div>
-                <div className="mt-4 flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-3">
-                  <div className="flex items-center space-x-4">
-                    <button className="flex items-center text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors duration-300">
-                      <Heart className="h-5 w-5 mr-1" />
-                      {item.likes}
-                    </button>
-                    <button className="flex items-center text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors duration-300">
-                      <MessageCircle className="h-5 w-5 mr-1" />
-                      {item.comments}
+                  </div>
+                  <h3 className="mt-2 text-xl font-semibold">{item.title}</h3>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{item.description}</p>
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {item.tags.map((tag) => (
+                      <span 
+                        key={tag} 
+                        className="px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs transition-colors duration-300 hover:bg-indigo-100 cursor-pointer"
+                        onClick={() => setSelectedFilter(tag)}
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-3">
+                    <div className="flex items-center space-x-4">
+                      <button className="flex items-center text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors duration-300">
+                        <Heart className="h-5 w-5 mr-1" />
+                        {item.likes}
+                      </button>
+                      <button className="flex items-center text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors duration-300">
+                        <MessageCircle className="h-5 w-5 mr-1" />
+                        {item.comments}
+                      </button>
+                    </div>
+                    <button className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-300">
+                      <Share2 className="h-5 w-5" />
                     </button>
                   </div>
-                  <button className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-300">
-                    <Share2 className="h-5 w-5" />
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         <div 
           className="flex justify-center mt-8 opacity-0 animate-fade-in"

@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // Log the request path for debugging
+  console.log(`Middleware: Processing ${request.method} request for ${request.nextUrl.pathname}`);
+  
   // Create response ONCE at the top
   let response = NextResponse.next({
     request: {
@@ -17,23 +20,38 @@ export async function middleware(request: NextRequest) {
       cookies: {
         get(name: string) {
           // Read from the incoming request
-          return request.cookies.get(name)?.value;
+          const cookie = request.cookies.get(name);
+          console.log(`Middleware: Cookie '${name}' ${cookie ? 'found' : 'not found'}`);
+          return cookie?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
           // Set cookie directly on the response object created above
           response.cookies.set({ name, value, ...options });
+          console.log(`Middleware: Set cookie '${name}'`);
         },
         remove(name: string, options: CookieOptions) {
           // Set empty cookie directly on the response object created above
           response.cookies.set({ name, value: '', ...options });
+          console.log(`Middleware: Removed cookie '${name}'`);
         },
       },
     }
   );
 
-  // Refresh session if expired - This will call `set` or `remove` above
-  // if the session cookie needs to be updated or deleted.
-  await supabase.auth.getSession();
+  try {
+    // Refresh session if expired - This will call `set` or `remove` above
+    // if the session cookie needs to be updated or deleted.
+    console.log(`Middleware: Refreshing auth session for ${request.nextUrl.pathname}`);
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      console.log(`Middleware: Valid session found for user ${session.user.id}`);
+    } else {
+      console.log(`Middleware: No valid session found`);
+    }
+  } catch (error) {
+    console.error(`Middleware: Error refreshing session:`, error);
+  }
 
   // Return the response object. It will have updated cookies if refresh occurred.
   return response;
@@ -45,18 +63,15 @@ export async function middleware(request: NextRequest) {
 // It will run for pages and API routes.
 export const config = {
   matcher: [
+    // Make api routes the first pattern to ensure they get prioritized
+    '/api/:path*',
+    
     /*
      * Match all request paths except for the ones starting with:
-     * - api (this includes /api routes - adjust if you have specific public api routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - / (the root path, usually public landing page)
-     * - /auth (authentication specific pages like login/signup)
      */
-    // '/((?!api|_next/static|_next/image|favicon.ico).*)',
-    // More common pattern: match all paths except static/image assets
-    // Let AuthProvider handle redirects for specific pages.
-     '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }; 

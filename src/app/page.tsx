@@ -164,10 +164,10 @@ export default function Home() {
                 </>
               ) : user ? (
                 <>
-                  <Link 
+              <Link 
                     href={ROUTES.dashboard}
                     className="flex items-center gap-2 text-sm font-medium hover:text-primary px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
-                    tabIndex={0}
+                tabIndex={0}
                     aria-label="Go to dashboard"
                   >
                     {user.user_metadata?.avatar_url ? (
@@ -185,7 +185,7 @@ export default function Home() {
                     <span className="truncate max-w-[150px]"> 
                       {user.user_metadata?.name || user.user_metadata?.full_name || user.email}
                     </span>
-                  </Link>
+              </Link>
                   <Button 
                     variant="outline"
                     onClick={signOut} 
@@ -198,23 +198,23 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <Link 
-                    href={ROUTES.login}
-                    className="text-sm font-medium hover:text-primary px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
-                    tabIndex={0}
-                    aria-label="Sign in to your account"
-                  >
-                    Sign In
-                  </Link>
+              <Link 
+                href={ROUTES.login}
+                className="text-sm font-medium hover:text-primary px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+                tabIndex={0}
+                aria-label="Sign in to your account"
+              >
+                Sign In
+              </Link>
                   <Button asChild>
-                    <Link 
-                      href={ROUTES.signup}
-                      tabIndex={0}
-                      aria-label="Create a new account"
-                    >
-                      Sign Up
-                    </Link>
-                  </Button>
+                <Link 
+                  href={ROUTES.signup}
+                  tabIndex={0}
+                  aria-label="Create a new account"
+                >
+                  Sign Up
+                </Link>
+              </Button>
                 </>
               )}
             </nav>
@@ -243,10 +243,10 @@ export default function Home() {
                     href={ROUTES.dashboard}
                     variant="ghost"
                     className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 justify-start"
-                    tabIndex={mobileMenuOpen ? 0 : -1}
+                tabIndex={mobileMenuOpen ? 0 : -1}
                     aria-label="Go to dashboard"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
+                onClick={() => setMobileMenuOpen(false)}
+              >
                     <UserIcon className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
                     <span className="truncate max-w-[150px]"> 
                       {user.user_metadata?.name || user.user_metadata?.full_name || user.email}
@@ -265,24 +265,24 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <Link 
-                    href={ROUTES.login}
-                    className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                    tabIndex={mobileMenuOpen ? 0 : -1}
-                    aria-label="Sign in to your account"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sign In
-                  </Link>
-                  <Link 
-                    href={ROUTES.signup}
+              <Link 
+                href={ROUTES.login}
+                className="text-sm font-medium hover:text-primary transition-all duration-200 px-3 py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                tabIndex={mobileMenuOpen ? 0 : -1}
+                aria-label="Sign in to your account"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign In
+              </Link>
+              <Link 
+                href={ROUTES.signup}
                     className="text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 px-3 py-2.5 rounded-md text-center"
-                    tabIndex={mobileMenuOpen ? 0 : -1}
-                    aria-label="Create a new account"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Sign Up
-                  </Link>
+                tabIndex={mobileMenuOpen ? 0 : -1}
+                aria-label="Create a new account"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign Up
+              </Link>
                 </>
               )}
             </nav>

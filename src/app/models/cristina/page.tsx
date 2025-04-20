@@ -354,7 +354,7 @@ export default function CristinaModelPage() {
                 )}
                 
                 <Button 
-                  type="submit"
+                  type="submit" 
                   disabled={loading || !prompt} 
                   className="w-full"
                 >

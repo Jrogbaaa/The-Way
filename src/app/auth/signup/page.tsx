@@ -58,7 +58,7 @@ export default function SignupPage() {
     }
     // Supabase handles the redirect, no explicit redirect here needed generally
   }, []);
-
+  
   return (
     <div className="flex min-h-screen flex-col">
       {signupComplete && <OnboardingWelcome userName={userName} onClose={handleOnboardingClosed} />}
