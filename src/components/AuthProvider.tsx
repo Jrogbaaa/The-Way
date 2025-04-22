@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, createContext, useContext, PropsWithChildren, useCallback } from 'react';
+import React, { useState, useEffect, createContext, useContext, PropsWithChildren, useCallback, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { ROUTES } from '@/lib/config';
@@ -14,6 +14,7 @@ interface AuthContextProps {
   showWelcomeModal: boolean;
   signOut: () => Promise<void>;
   markUserOnboarded: () => Promise<void>;
+  validateSession: () => Promise<boolean>;
 }
 
 // Create the context
@@ -36,6 +37,12 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  
+  // Add session refresh throttling
+  const lastRefreshAttempt = useRef<number>(0);
+  const isRefreshing = useRef<boolean>(false);
+  const refreshCooldownMs = 5000; // 5 seconds between refresh attempts
+  const sessionValidUntil = useRef<number | null>(null);
 
   // Sign out function
   const handleSignOut = useCallback(async () => {
@@ -48,15 +55,120 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
         setUser(null);
         setSession(null);
         setShowWelcomeModal(false);
+        sessionValidUntil.current = null;
         // Redirect to home or login page after sign out
         router.push(ROUTES.landing);
         router.refresh(); // Ensure layout reflects logged-out state
     }
   }, [router]);
 
-  // Mark User Onboarded function
+  // Add a session validation function with throttling
+  const validateSession = useCallback(async (): Promise<boolean> => {
+    // If we have a valid session time and it's in the future, return true without validation
+    if (sessionValidUntil.current && sessionValidUntil.current > Date.now()) {
+      console.log('AuthProvider: Using cached session validation');
+      return true;
+    }
+    
+    // Check if we're already refreshing to avoid multiple concurrent refreshes
+    if (isRefreshing.current) {
+      console.log('AuthProvider: Session refresh already in progress, waiting...');
+      // Wait for the existing refresh to complete
+      for (let i = 0; i < 10; i++) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        if (!isRefreshing.current) {
+          return sessionValidUntil.current !== null && sessionValidUntil.current > Date.now();
+        }
+      }
+      console.warn('AuthProvider: Timed out waiting for session refresh');
+      return false;
+    }
+    
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastRefreshAttempt.current;
+    
+    // If we recently attempted a refresh and failed, don't try again too soon
+    if (timeSinceLastRefresh < refreshCooldownMs) {
+      console.log(`AuthProvider: Refresh cooldown active. Wait ${(refreshCooldownMs - timeSinceLastRefresh)/1000}s`);
+      return false;
+    }
+    
+    console.log('AuthProvider: Validating session with server');
+    lastRefreshAttempt.current = now;
+    isRefreshing.current = true;
+    
+    try {
+      // First try the server endpoint which is more reliable
+      try {
+        const response = await fetch('/api/auth/validate-session', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache',
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('AuthProvider: Session successfully validated with server');
+          if (data.session?.expires_at) {
+            // Set session valid until 5 minutes before actual expiry as a safety margin
+            const expiresAt = data.session.expires_at * 1000; // Convert to milliseconds
+            sessionValidUntil.current = expiresAt - (5 * 60 * 1000); // 5 minutes before expiry
+            isRefreshing.current = false;
+            return true;
+          }
+        }
+      } catch (serverError) {
+        console.warn('AuthProvider: Server validation failed, falling back to client:', 
+          serverError instanceof Error ? serverError.message : String(serverError));
+      }
+      
+      // Fall back to client-side refresh if server validation fails
+      console.log('AuthProvider: Attempting client-side session refresh');
+      const { data, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        console.error('AuthProvider: Failed to refresh session client-side:', error.message);
+        if (error.message.includes('rate limit')) {
+          console.warn('AuthProvider: Hit rate limit, backing off');
+          // Extend cooldown if rate limited
+          lastRefreshAttempt.current = now + 10000; // Add 10 more seconds to cooldown
+        }
+        isRefreshing.current = false;
+        return false;
+      }
+      
+      if (data.session) {
+        console.log('AuthProvider: Successfully refreshed session client-side');
+        setSession(data.session);
+        setUser(data.session.user);
+        // Add null check for session before accessing expires_at
+        const expiresAt = data.session.expires_at ? data.session.expires_at * 1000 : null;
+        if (expiresAt) {
+          sessionValidUntil.current = expiresAt - (5 * 60 * 1000); // 5 minutes before expiry
+        } else {
+          sessionValidUntil.current = null; // Set to null if expires_at is missing
+          console.warn('AuthProvider: Session refreshed but expires_at is missing.');
+        }
+        isRefreshing.current = false;
+        return true;
+      }
+      
+      isRefreshing.current = false;
+      return false;
+
+    } catch (error) {
+      console.error('AuthProvider: Error during session validation:', 
+        error instanceof Error ? error.message : String(error));
+      isRefreshing.current = false;
+      return false;
+    }
+  }, []);
+
+  // Modify markUserOnboarded to validate session first
   const markUserOnboarded = useCallback(async () => {
-    console.log('AuthProvider: markUserOnboarded called'); // Log start
+    console.log('AuthProvider: markUserOnboarded called'); 
     if (!user) { 
       console.log('AuthProvider: No user found, exiting markUserOnboarded');
       return; 
@@ -66,17 +178,25 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     setShowWelcomeModal(false); 
     console.log('AuthProvider: Hiding welcome modal');
     
+    // Validate session first
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) {
+      console.error('AuthProvider: Session validation failed before marking user onboarded');
+      return;
+    }
+    
     try {
-      console.log('AuthProvider: Attempting fetch to /api/user/mark-onboarded'); // Log before fetch
-      // Add credentials: 'include' to this fetch call
+      console.log('AuthProvider: Attempting fetch to /api/user/mark-onboarded');
       const response = await fetch('/api/user/mark-onboarded', {
          method: 'POST',
-         credentials: 'include' // Explicitly include cookies
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache',
+        }
       });
       
-      console.log('AuthProvider: Fetch response status:', response.status); // Log fetch status
+      console.log('AuthProvider: Fetch response status:', response.status);
       if (!response.ok) {
-        // Use response.json() cautiously, might not be JSON on failure
         let errorData = { error: `Request failed with status ${response.status}` };
         try {
            errorData = await response.json(); 
@@ -85,14 +205,13 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
         }
         console.error('AuthProvider: Failed to mark user as onboarded:', errorData.error);
       } else {
-        console.log('AuthProvider: Successfully marked user as onboarded on server.'); // Log success
+        console.log('AuthProvider: Successfully marked user as onboarded on server.');
       }
-      // Successfully marked on server or handled error
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('AuthProvider: Error calling mark-onboarded API:', errorMessage);
     }
-  }, [user]);
+  }, [user, validateSession]);
 
   useEffect(() => {
     // Initial Session Check (No profile API call here)
@@ -104,6 +223,10 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
       } else {
         setSession(session);
         setUser(session?.user ?? null);
+        if (session?.expires_at) {
+          const expiresAt = session.expires_at * 1000; // Convert to milliseconds
+          sessionValidUntil.current = expiresAt - (5 * 60 * 1000); // 5 minutes before expiry
+        }
       }
       setLoading(false);
     };
@@ -115,6 +238,15 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
       console.log('AuthProvider Event:', event, '- Path:', pathname, '- Has Session:', !!session);
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Update session expiry cache when session changes
+      if (session?.expires_at) {
+        const expiresAt = session.expires_at * 1000; // Convert to milliseconds
+        sessionValidUntil.current = expiresAt - (5 * 60 * 1000); // 5 minutes before expiry
+      } else {
+        sessionValidUntil.current = null;
+      }
+      
       let shouldSetLoadingFalse = true; 
       const isAuthPage = pathname === ROUTES.login || pathname === ROUTES.signup;
 
@@ -178,6 +310,7 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
       } else if (event === 'SIGNED_OUT') {
         console.log('AuthProvider: SIGNED_OUT handling');
         setShowWelcomeModal(false); 
+        sessionValidUntil.current = null;
         console.log(`AuthProvider: SIGNED_OUT - Redirecting to landing from ${pathname}`);
         router.push(ROUTES.landing);
         // setLoading(false); // Set below
@@ -250,6 +383,7 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     showWelcomeModal,
     signOut: handleSignOut,
     markUserOnboarded,
+    validateSession,
   };
 
   return (

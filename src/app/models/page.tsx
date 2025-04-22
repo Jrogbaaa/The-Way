@@ -81,7 +81,7 @@ export default function ImageCreatorPage() {
       tags: ['Generation', 'Photos', 'AI Model'],
       stars: 4.8,
       lastUsed: '1 day ago',
-      image: '/images/models/cristina-model.jpg',
+      image: '/images/models/cristina-generator-preview.jpg',
       status: 'ready',
       isNew: false,
       isFeatured: true
@@ -94,7 +94,7 @@ export default function ImageCreatorPage() {
       tags: ['Generation', 'Photos', 'AI Model'],
       stars: 4.7,
       lastUsed: '3 days ago',
-      image: '/images/models/jaime-model.jpg',
+      image: '/images/models/jaime-generator-preview.jpg',
       status: 'ready',
       isNew: false,
       isFeatured: true
@@ -107,7 +107,7 @@ export default function ImageCreatorPage() {
       tags: ['Generation', 'Photos', 'AI Model'],
       stars: 4.9,
       lastUsed: 'New',
-      image: '/images/models/bea-model.jpg',
+      image: '/images/models/bea-generator-preview.jpg',
       status: 'ready',
       isNew: true,
       isFeatured: true
@@ -146,7 +146,7 @@ export default function ImageCreatorPage() {
           {/* Header with title and filters */}
           <div className="flex justify-between items-center mb-10 flex-col sm:flex-row gap-6 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Image Creator Gallery</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Creator Gallery</h1>
               <p className="text-gray-600">Create amazing content with our state-of-the-art AI models</p>
             </div>
             

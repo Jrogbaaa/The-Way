@@ -21,7 +21,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       <div className="flex flex-1">
         {showSidebar && <Sidebar />}
         <main
-          className={`flex-1 overflow-x-hidden p-4 transition-all duration-300 md:p-6 ${
+          className={`flex-1 overflow-x-hidden p-4 pt-16 transition-all duration-300 md:p-6 md:pt-16 ${
             showSidebar ? 'md:ml-64' : ''
           }`}
         >

@@ -1,812 +1,1126 @@
 'use client';
 
-import { useState, useEffect, useRef, ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback, FormEvent, SyntheticEvent } from 'react';
 import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import MainLayout from '@/components/layout/MainLayout';
-import { Tooltip } from '@/components/ui/tooltip';
-import { Heart, MessageCircle, Share2, Plus, Filter, Zap, Camera, Clock, ImageIcon, Upload } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose
+} from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
+} from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/config';
 import { supabase } from '@/lib/supabase';
+import {
+  Heart,
+  MessageCircle,
+  Share2,
+  Plus,
+  FolderPlus,
+  Move,
+  Trash2,
+  Filter,
+  Zap,
+  Camera,
+  Clock,
+  ImageIcon,
+  Upload,
+  Folder as FolderIcon,
+  Home,
+  RefreshCw,
+  ChevronRight,
+  Loader2,
+  Lightbulb,
+  FolderOpen,
+} from 'lucide-react';
+import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs';
+import { redirect } from 'next/navigation';
+import MainLayout from '@/components/layout/MainLayout';
+import GalleryUpload from '@/components/gallery/GalleryUpload';
 
-type GalleryItem = {
+type FolderItem = {
+  name: string;
+  type: 'folder';
+  path?: string;
+};
+
+type FileItem = {
+  name: string;
   id: string;
-  title: string;
-  description: string;
-  imageUrl: string;
-  likes: number;
-  comments: number;
-  date: string;
-  tags: string[];
-  author: {
+  updated_at?: string;
+  created_at?: string;
+  last_accessed_at?: string;
+  metadata?: Record<string, any>;
+  type: 'file';
+  path: string;
+  imageUrl?: string;
+  title?: string;
+  description?: string;
+  likes?: number;
+  comments?: number;
+  date?: string;
+  tags?: string[];
+  author?: {
     name: string;
     avatar: string;
   };
 };
 
+type CombinedItem = FolderItem | FileItem;
+
+type ListApiResponse = {
+  success: boolean;
+  items: CombinedItem[];
+  currentPrefix: string;
+  error?: string;
+};
+
+type Breadcrumb = {
+  name: string;
+  path: string;
+};
+
+type DestinationFolder = {
+    name: string;
+    path: string;
+}
+
+const getTimeAgo = (dateString?: string): string => {
+  if (!dateString) return 'unknown date';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'invalid date';
+
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+
+  let interval = seconds / 31536000; // Years
+  if (interval > 1) return Math.floor(interval) + ' years ago';
+
+  interval = seconds / 2592000; // Months
+  if (interval > 1) return Math.floor(interval) + ' months ago';
+
+  interval = seconds / 86400; // Days
+  if (interval > 1) return Math.floor(interval) + ' days ago';
+
+  interval = seconds / 3600; // Hours
+  if (interval > 1) return Math.floor(interval) + ' hours ago';
+
+  interval = seconds / 60; // Minutes
+  if (interval > 1) return Math.floor(interval) + ' minutes ago';
+
+  return 'just now';
+};
+
+const generateBreadcrumbs = (prefix: string): Breadcrumb[] => {
+  const parts = prefix.split('/').filter(Boolean);
+  const crumbs: Breadcrumb[] = [{ name: 'Gallery Home', path: '' }];
+  let currentPath = '';
+  parts.forEach((part) => {
+    currentPath += `${part}/`;
+    crumbs.push({ name: part, path: currentPath.replace(/\/$/, '') });
+  });
+  return crumbs;
+};
+
+const handleImageError = (event: SyntheticEvent<HTMLImageElement, Event>, name?: string) => {
+    console.warn(`GalleryPage: Failed to load image: ${name || 'Unknown'}`);
+    event.currentTarget.src = '/placeholder-image.png'; // Ensure you have a placeholder image at this path
+};
+
+const filters = [
+  { name: 'all', label: 'All Items' },
+  { name: 'images', label: 'Images' },
+  { name: 'folders', label: 'Folders' },
+  // Add more filters as needed (e.g., videos, documents)
+];
+
 export default function GalleryPage() {
+  const { user, loading, session } = useAuth();
   const router = useRouter();
-  const { user } = useAuth();
-  // Example gallery items for presentation
-  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([
-    {
-      id: '1',
-      title: 'Sunset at the Beach',
-      description: 'A beautiful sunset captured at Malibu Beach with vibrant orange and purple hues.',
-      imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
-      likes: 248,
-      comments: 42,
-      date: '2 days ago',
-      tags: ['nature', 'sunset', 'beach', 'photography'],
-      author: {
-        name: 'Alex Morgan',
-        avatar: 'https://i.pravatar.cc/150?img=11',
-      },
-    },
-    {
-      id: '2',
-      title: 'Urban Coffee Shop',
-      description: 'Minimalist coffee shop interior with modern design elements and warm lighting.',
-      imageUrl: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
-      likes: 176,
-      comments: 28,
-      date: '3 days ago',
-      tags: ['coffee', 'interior', 'design', 'urban'],
-      author: {
-        name: 'Jamie Chen',
-        avatar: 'https://i.pravatar.cc/150?img=29',
-      },
-    },
-    {
-      id: '3',
-      title: 'Mountain Adventure',
-      description: 'Hiking through the misty mountains at dawn, capturing the first light of day.',
-      imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
-      likes: 324,
-      comments: 56,
-      date: '1 week ago',
-      tags: ['mountains', 'hiking', 'adventure', 'nature'],
-      author: {
-        name: 'Chris Walker',
-        avatar: 'https://i.pravatar.cc/150?img=8',
-      },
-    },
-    {
-      id: '4',
-      title: 'City Skyline at Night',
-      description: 'Breathtaking view of the city skyline illuminated at night from a rooftop perspective.',
-      imageUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
-      likes: 412,
-      comments: 67,
-      date: '2 weeks ago',
-      tags: ['cityscape', 'night', 'urban', 'skyline'],
-      author: {
-        name: 'Taylor Kim',
-        avatar: 'https://i.pravatar.cc/150?img=23',
-      },
-    },
-    {
-      id: '5',
-      title: 'Minimalist Product Photography',
-      description: 'Clean product photography with minimalist aesthetics and careful attention to composition.',
-      imageUrl: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
-      likes: 198,
-      comments: 32,
-      date: '3 weeks ago',
-      tags: ['product', 'minimalist', 'photography', 'design'],
-      author: {
-        name: 'Jordan Reed',
-        avatar: 'https://i.pravatar.cc/150?img=15',
-      },
-    },
-    {
-      id: '6',
-      title: 'Spring Flowers in Bloom',
-      description: 'Vibrant spring flowers blooming in a meadow, showcasing the colors of the season.',
-      imageUrl: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80',
-      likes: 287,
-      comments: 45,
-      date: '1 month ago',
-      tags: ['flowers', 'spring', 'nature', 'colorful'],
-      author: {
-        name: 'Sam Johnson',
-        avatar: 'https://i.pravatar.cc/150?img=12',
-      },
-    },
-  ]);
 
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [animateIn, setAnimateIn] = useState(false);
-  const [showTip, setShowTip] = useState(true);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isLoadingGallery, setIsLoadingGallery] = useState(false);
+  const [items, setItems] = useState<CombinedItem[]>([]);
+  const [currentPathPrefix, setCurrentPathPrefix] = useState<string>('');
+  const [isLoadingItems, setIsLoadingItems] = useState<boolean>(true);
+  const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>(generateBreadcrumbs(''));
+  const [selectedFilter, setSelectedFilter] = useState<string>('all');
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState<boolean>(false);
+  const [newFolderName, setNewFolderName] = useState<string>('');
+  const [isCreatingFolder, setIsCreatingFolder] = useState<boolean>(false);
+  const [createFolderError, setCreateFolderError] = useState<string | null>(null);
 
-  const filters = [
-    { name: 'all', label: 'All' },
-    { name: 'nature', label: 'Nature' },
-    { name: 'urban', label: 'Urban' },
-    { name: 'design', label: 'Design' },
-    { name: 'photography', label: 'Photography' },
-  ];
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState<boolean>(false);
+  const [itemToMove, setItemToMove] = useState<CombinedItem | null>(null);
+  const [moveDestinationFolders, setMoveDestinationFolders] = useState<DestinationFolder[]>([]);
+  const [selectedMoveDestination, setSelectedMoveDestination] = useState<string | null>(null);
+  const [isLoadingMoveFolders, setIsLoadingMoveFolders] = useState<boolean>(false);
+  const [isMovingItem, setIsMovingItem] = useState<boolean>(false);
 
-  // Trigger animations after initial render
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setAnimateIn(true);
-    }, 100);
-    
-    // Auto-hide tip after 8 seconds
-    const tipTimer = setTimeout(() => {
-      setShowTip(false);
-    }, 8000);
-    
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(tipTimer);
-    };
-  }, []);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [itemToDelete, setItemToDelete] = useState<CombinedItem | null>(null);
+  const [isDeletingItem, setIsDeletingItem] = useState<boolean>(false);
 
-  // Load user's gallery items on page load
-  useEffect(() => {
-    if (user) {
-      fetchGalleryItems();
-    }
-  }, [user]);
+  const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
+  const [selectedImage, setSelectedImage] = useState<FileItem | null>(null);
 
-  // Function to fetch gallery items from Supabase storage
-  const fetchGalleryItems = async () => {
-    if (!user) {
-      console.log('GalleryPage: No user, skipping gallery fetch');
-      return;
+  const [showTip, setShowTip] = useState<boolean>(false);
+  const [animateIn, setAnimateIn] = useState<boolean>(false);
+
+  const fetchItems = useCallback(async (pathPrefix: string): Promise<ListApiResponse | null> => {
+    setIsLoadingItems(true);
+    setItems([]);
+
+    const MAX_RETRIES = 2;
+    let retryCount = 0;
+    let backoffTime = 1000;
+
+    console.log(`GalleryPage: Fetching item list for prefix: "${pathPrefix}"`);
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      console.error('GalleryPage: Error fetching client session or no session found:', sessionError?.message);
+      if (user) toast.error('Authentication session issue. Please sign in again.');
+      setIsLoadingItems(false);
+      return null;
     }
 
-    try {
-      console.log('GalleryPage: Fetching user gallery items for user:', user.id);
-      
-      // Show loading spinner or message
-      setIsLoadingGallery(true);
-      
-      // Fetch items from Supabase storage
-      const { data: files, error } = await supabase
-        .storage
-        .from('gallery-uploads')
-        .list(`${user.id}`, {
-          limit: 100,
-          offset: 0,
-          sortBy: { column: 'created_at', order: 'desc' }
+    let accessToken = sessionData.session.access_token;
+    console.log("GalleryPage: Fetched access token client-side for list request.");
+
+    let listData: ListApiResponse | null = null;
+
+    while (retryCount <= MAX_RETRIES && !listData) {
+      try {
+        const response = await fetch(`/api/gallery/list?pathPrefix=${encodeURIComponent(pathPrefix)}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          cache: 'no-store'
         });
 
-      if (error) {
-        console.error('GalleryPage: Error fetching gallery items:', error.message);
-        toast.error('Failed to load gallery items');
-        return;
+        console.log(`GalleryPage: Fetch item list response status for prefix "${pathPrefix}": ${response.status}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            listData = data;
+            if (listData && listData.items) {
+              console.log(`GalleryPage: Received ${listData.items.length} items from list API.`);
+            } else {
+              console.warn('GalleryPage: List API success true, but listData or listData.items is null/undefined.');
+            }
+          } else {
+            console.error('GalleryPage: List API indicated failure:', data.error);
+            toast.error(data.error || 'Failed to fetch gallery items list.');
+            setIsLoadingItems(false);
+            return null;
+          }
+        } else if (response.status === 401) {
+          console.warn(`GalleryPage: Unauthorized (401) fetching list (Retry ${retryCount + 1}/${MAX_RETRIES}).`);
+          retryCount++;
+          if (retryCount <= MAX_RETRIES) {
+            await new Promise(resolve => setTimeout(resolve, backoffTime));
+            backoffTime *= 2;
+            const { data: refreshed, error: refreshErr } = await supabase.auth.getSession();
+            if (refreshErr || !refreshed.session) {
+                console.error('GalleryPage: Failed to refresh session:', refreshErr?.message);
+                toast.error('Session expired or invalid. Please sign in again.');
+          router.push(ROUTES.login);
+        }
+            accessToken = refreshed.session!.access_token;
+          } else {
+             console.error(`GalleryPage: Unauthorized (401) fetching items after ${MAX_RETRIES} retries. Redirecting to login.`);
+             toast.error('Authentication failed. Please sign in again.');
+             router.push(ROUTES.login);
+             setIsLoadingItems(false);
+             return null;
+          }
+        } else if (response.status === 429) {
+          console.warn(`GalleryPage: Rate limited (429) fetching list (Retry ${retryCount + 1}/${MAX_RETRIES}).`);
+          retryCount++;
+          if (retryCount <= MAX_RETRIES) {
+             await new Promise(resolve => setTimeout(resolve, backoffTime));
+             backoffTime *= 2;
+          } else {
+             console.error(`GalleryPage: Rate limited (429) after ${MAX_RETRIES} retries. Aborting.`);
+             toast.error('Too many requests. Please wait a moment and try again.');
+             setIsLoadingItems(false);
+             return null;
+          }
+        } else {
+           const errorText = await response.text().catch(() => 'Could not read error body');
+           throw new Error(`Failed to fetch list: ${response.status} ${errorText}`);
+        }
+      } catch (error: any) {
+        console.error(`GalleryPage: Network or other error fetching list:`, error.message);
+        toast.error('A network error occurred while fetching gallery list.');
+        setIsLoadingItems(false);
+        return null;
       }
-
-      if (!files || files.length === 0) {
-        console.log('GalleryPage: No gallery items found for user');
-        // Set empty user gallery items but keep example items
-        const updatedGalleryItems = galleryItems.filter(item => !item.tags.includes('user-uploads'));
-        setGalleryItems(updatedGalleryItems);
-        return;
-      }
-
-      console.log('GalleryPage: Gallery items retrieved:', files.length, files);
-
-      // Get public URLs for each file
-      const userGalleryItems: GalleryItem[] = await Promise.all(
-        files
-          .filter(file => file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) // Filter image files only
-          .map(async (file, index) => {
-            const { data: publicURL } = supabase
-              .storage
-              .from('gallery-uploads')
-              .getPublicUrl(`${user.id}/${file.name}`);
-
-            // Log each public URL to help with debugging
-            console.log('GalleryPage: Public URL:', publicURL.publicUrl, 'for file:', file.name);
-
-            // Get a timestamp to show relative time
-            const createdAt = file.created_at 
-              ? new Date(file.created_at) 
-              : new Date();
-            const timeAgo = getTimeAgo(createdAt);
-
-            return {
-              id: `user-${index}-${file.id || file.name}`,
-              title: file.name.split('.')[0].replace(/-|_/g, ' '),
-              description: `Uploaded ${timeAgo}`,
-              imageUrl: publicURL.publicUrl,
-              likes: Math.floor(Math.random() * 50),
-              comments: Math.floor(Math.random() * 10),
-              date: timeAgo,
-              tags: ['user-uploads', 'gallery'],
-              author: {
-                name: user.email?.split('@')[0] || 'User',
-                avatar: 'https://i.pravatar.cc/150?img=1',
-              },
-            };
-          })
-      );
-
-      if (userGalleryItems.length === 0) {
-        console.log('GalleryPage: No image files found among retrieved files');
-      } else {
-        console.log('GalleryPage: User gallery items processed:', userGalleryItems.length);
-      }
-
-      // Combine with example gallery items - user uploads at the beginning 
-      const updatedGalleryItems = [...userGalleryItems, ...galleryItems.filter(item => !item.tags.includes('user-uploads')).slice(0, 6 - userGalleryItems.length)];
-      setGalleryItems(updatedGalleryItems);
-      
-    } catch (fetchError) {
-      console.error('GalleryPage: Unexpected error fetching gallery items:', fetchError);
-      toast.error('Failed to load your gallery items');
-    } finally {
-      // Hide loading spinner
-      setIsLoadingGallery(false);
     }
-  };
 
-  // Helper function to calculate time ago
-  const getTimeAgo = (date: Date): string => {
-    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-    
-    let interval = seconds / 31536000; // Years
-    if (interval > 1) return Math.floor(interval) + ' years ago';
-    
-    interval = seconds / 2592000; // Months
-    if (interval > 1) return Math.floor(interval) + ' months ago';
-    
-    interval = seconds / 86400; // Days
-    if (interval > 1) return Math.floor(interval) + ' days ago';
-    
-    interval = seconds / 3600; // Hours
-    if (interval > 1) return Math.floor(interval) + ' hours ago';
-    
-    interval = seconds / 60; // Minutes
-    if (interval > 1) return Math.floor(interval) + ' minutes ago';
-    
-    return 'just now';
-  };
+    if (!listData) {
+        console.error("GalleryPage: Failed to fetch item list after retries.");
+      setIsLoadingItems(false);
+        return null;
+    }
 
-  // Handle file selection
-  const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Basic validation (optional)
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file.');
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) { // Example: 10MB limit
-        toast.error('Image file size should not exceed 10MB.');
-        return;
-      }
-      
-      setSelectedFile(file);
-      // Create a preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      }
-      reader.readAsDataURL(file);
-      console.log('Selected file:', file.name);
-      toast.success(`${file.name} selected. Ready to upload.`);
-      // Clear the input value so the same file can be selected again if needed
-      if (fileInputRef.current) {
-          fileInputRef.current.value = ""; 
+    const processedItems: CombinedItem[] = [];
+    let urlFetchErrors = 0;
+
+    for (const item of listData!.items) {
+      if (item.name === '.keep') continue;
+
+      if (item.type === 'file') {
+        const fileItem = { ...item, imageUrl: undefined } as FileItem;
+        processedItems.push(fileItem);
+        
+        if (!fileItem.path) {
+          console.warn("GalleryPage: File item without path:", fileItem);
+          continue; 
+        }
+
+        try {
+          const urlResponse = await fetch(`/api/gallery/fetch?path=${encodeURIComponent(fileItem.path)}`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+            cache: 'no-store'
+          });
+
+          if (urlResponse.ok) {
+            const urlData = await urlResponse.json();
+            if (urlData.success && urlData.url) { 
+              const index = processedItems.findIndex(f => f.type === 'file' && f.path === fileItem.path);
+              if (index !== -1) {
+                (processedItems[index] as FileItem).imageUrl = urlData.url;
+              }
+            } else {
+              urlFetchErrors++;
+              console.warn(`GalleryPage: Failed to get URL for ${fileItem.path}: ${urlData.error || 'Unknown error'}`);
       }
     } else {
-      setSelectedFile(null);
-      setImagePreview(null);
-    }
-  };
-
-  // Trigger hidden file input click
-  const handleUploadClick = () => {
-    if (!user) {
-      router.push(ROUTES.signup);
-      return;
-    }
-    
-    fileInputRef.current?.click();
-  };
-  
-  // Updated function to call the new API route
-  const handleUpload = async () => {
-    if (!user) {
-      toast.error('Please sign in to upload images.');
-      router.push(ROUTES.signup);
-      return;
-    }
-    
-    if (!selectedFile) {
-      toast.error('No file selected for upload.');
-      return;
-    }
-    
-    setIsUploading(true);
-    const uploadToastId = toast.loading('Uploading image...');
-    console.log('GalleryPage: Starting upload for:', selectedFile.name);
-    console.log('GalleryPage: User authenticated status:', !!user);
-    console.log('GalleryPage: User ID:', user?.id);
-    
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    
-    try {
-      // First, explicitly refresh the session to ensure cookies are current
-      console.log('GalleryPage: Explicitly refreshing session before upload');
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        console.error('GalleryPage: Failed to refresh session:', refreshError.message);
-        throw new Error('Authentication error: Failed to refresh session');
-      }
-      
-      console.log('GalleryPage: Session refresh successful:', !!refreshData.session);
-      
-      // Get fresh session with token
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
-      console.log('GalleryPage: Session check result:', {
-        success: !!sessionData.session,
-        expires_at: sessionData.session?.expires_at ? new Date(sessionData.session.expires_at * 1000).toISOString() : 'none',
-        current_time: new Date().toISOString(),
-        error: sessionError?.message || 'none'
-      });
-      
-      if (sessionError || !sessionData.session) {
-        console.error('GalleryPage: Session check failed:', sessionError?.message || 'No active session');
-        throw new Error('Authentication session error. Please sign in again.');
-      }
-      
-      // Extract the token to use as a backup for cookies
-      const accessToken = sessionData.session.access_token;
-      
-      // Check if token is still valid (not expired)
-      const tokenExpiration = sessionData.session.expires_at;
-      const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
-      
-      console.log('GalleryPage: Token validation check:', {
-        token_prefix: accessToken ? `${accessToken.substring(0, 8)}...` : 'none',
-        expires_at: tokenExpiration ? new Date(tokenExpiration * 1000).toISOString() : 'unknown',
-        current_time: new Date(currentTime * 1000).toISOString(),
-        is_valid: tokenExpiration ? (tokenExpiration > currentTime) : false,
-        time_remaining: tokenExpiration ? `${tokenExpiration - currentTime} seconds` : 'unknown'
-      });
-      
-      if (tokenExpiration && tokenExpiration <= currentTime) {
-        console.error('GalleryPage: Token is expired!');
-        // Force another refresh attempt
-        const { error: forceRefreshError } = await supabase.auth.refreshSession();
-        if (forceRefreshError) {
-          throw new Error('Authentication token expired and refresh failed. Please sign in again.');
+            urlFetchErrors++;
+            console.warn(`GalleryPage: Fetch URL request failed for ${fileItem.path} with status ${urlResponse.status}`);
+            if (urlResponse.status === 401) toast.error("Auth error fetching image URL");
+            if (urlResponse.status === 429) toast.warning("Rate limit hit fetching image URLs");
+          }
+        } catch (fetchError: any) {
+          urlFetchErrors++;
+          console.error(`GalleryPage: Error fetching URL for ${fileItem.path}:`, fetchError.message);
         }
-      }
-      
-      // Prepare request headers with explicit authorization
-      const headers: HeadersInit = {
-        'Accept': 'application/json',
-      };
-      
-      // ALWAYS add Authorization header with the token
-      if (accessToken) {
-        console.log('GalleryPage: Adding Authorization header with token');
-        headers['Authorization'] = `Bearer ${accessToken}`;
+      } else if (item.type === 'folder') {
+        processedItems.push({ ...item, path: item.path ?? `${pathPrefix}${item.name}/` });
       } else {
-        console.error('GalleryPage: ⚠️ No access token available for Authorization header!');
+        console.warn("GalleryPage: Unknown item type:", item);
       }
-      
-      // Log the full headers we're about to send (except sensitive values)
-      console.log('GalleryPage: Request headers being sent:', 
-        Object.entries(headers)
-          .map(([key, value]) => key === 'Authorization' 
-            ? `${key}: Bearer ${value.toString().substring(7, 15)}...` 
-            : `${key}: ${value}`)
-          .join(', ')
-      );
-      
-      // Explicitly add auth headers and full credentials
-      console.log('GalleryPage: Sending upload request to API with full auth credentials');
-      const response = await fetch('/api/gallery/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include', // Include cookies
-        headers,
-      });
-      
-      console.log('GalleryPage: Upload response status:', response.status);
-      console.log('GalleryPage: Response headers:', 
-        Array.from(response.headers.entries())
-          .map(([key, value]) => `${key}: ${value}`)
-          .join(', ')
-      );
-      
-      if (!response.ok) {
-        console.error('GalleryPage: Upload failed with status:', response.status);
-        console.error('GalleryPage: Upload error details:', await response.text());
-        
-        // More specific error messages based on status code
-        let errorMessage;
-        switch (response.status) {
-          case 401:
-            errorMessage = 'Authentication error. Please sign in again.';
-            break;
-          case 403:
-            errorMessage = 'You do not have permission to upload to this gallery.';
-            break;
-          case 404:
-            errorMessage = 'Upload destination not found. Please contact support.';
-            break;
-          case 413:
-            errorMessage = 'File is too large.';
-            break;
-          default:
-            errorMessage = await response.text() || 'Upload failed with status ' + response.status;
+    }
+
+    if (urlFetchErrors > 0) {
+        toast.warning(`Could not load ${urlFetchErrors} image(s). Check console for details.`);
+    }
+
+    setItems(processedItems);
+    setCurrentPathPrefix(listData.currentPrefix);
+    setBreadcrumbs(generateBreadcrumbs(listData.currentPrefix));
+    setIsLoadingItems(false);
+    return listData;
+  }, [user, router]);
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user || !session) {
+        console.log("No user/session found after auth check, redirecting to login.");
+        router.push(ROUTES.login);
+      } else {
+        console.log("User authenticated, fetching initial items for prefix:", currentPathPrefix);
+        fetchItems(currentPathPrefix);
+      }
+    }
+  }, [user, loading, session, router, fetchItems, currentPathPrefix]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowTip(true);
+      setTimeout(() => setAnimateIn(true), 50);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleFolderClick = (folderName: string) => {
+    const newPrefix = `${currentPathPrefix}${folderName}/`;
+    console.log(`GalleryPage: Navigating to folder: "${newPrefix}"`);
+    setCurrentPathPrefix(newPrefix);
+  };
+
+  const handleBreadcrumbClick = (path: string) => {
+    console.log(`GalleryPage: Navigating via breadcrumb to: "${path}"`);
+    const newPrefix = path ? `${path}/` : '';
+    setCurrentPathPrefix(newPrefix);
+  };
+
+  const handleOpenCreateFolderModal = () => {
+    setNewFolderName('');
+    setIsCreateFolderModalOpen(true);
+  };
+
+  const handleCreateFolder = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!newFolderName.trim()) {
+      toast.error('Folder name cannot be empty.');
+      return;
+    }
+
+    setIsCreatingFolder(true);
+    setCreateFolderError(null);
+
+    console.log(`GalleryPage: Attempting to create folder "${newFolderName}" in prefix "${currentPathPrefix}"`);
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) {
+        console.error('GalleryPage: Error fetching client session for create folder:', sessionError?.message);
+        toast.error('Authentication session issue. Please sign in again.');
+        setIsCreatingFolder(false);
+        setCreateFolderError('Failed to get authentication token.');
+      return;
+    }
+
+    const accessToken = sessionData.session.access_token;
+    console.log("GalleryPage: Fetched access token client-side for create folder request.");
+
+    const requestHeaders: HeadersInit = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    };
+    console.log('GalleryPage: Sending create-folder request with headers:', requestHeaders);
+
+    try {
+        const response = await fetch('/api/gallery/create-folder', {
+            method: 'POST',
+        headers: requestHeaders,
+            body: JSON.stringify({ 
+          folderName: newFolderName.trim(),
+          parentPathPrefix: currentPathPrefix,
+            }),
+        });
+
+      console.log(`GalleryPage: Create folder response status: ${response.status}`);
+
+      if (response.ok) {
+        let data;
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          console.error("GalleryPage: Failed to parse JSON response from create folder API", jsonError);
+          toast.error('Received an invalid response from the server.');
+          setCreateFolderError('Invalid server response.');
+          return; // Exit early
         }
         
-        throw new Error(errorMessage);
+        if (data && data.success) {
+            toast.success(`Folder "${newFolderName.trim()}" created successfully.`);
+            setIsCreateFolderModalOpen(false);
+            setNewFolderName('');
+            await fetchItems(currentPathPrefix);
+        } else {
+            const errorMessage = data?.error || 'Failed to create folder (unknown API error).';
+            console.error('GalleryPage: API failed to create folder:', errorMessage);
+            setCreateFolderError(errorMessage);
+            toast.error(errorMessage);
+        }
+        } else {
+        const errorText = await response.text().catch(() => 'Could not read error response body');
+        let apiError = `Failed to create folder. Status: ${response.status}`; 
+        try {
+           const errorJson = JSON.parse(errorText);
+           apiError = errorJson.error || apiError;
+        } catch (_) {
+           apiError = response.statusText || apiError; // Fallback to status text
+        }
+        
+        console.error(`GalleryPage: Failed to create folder. Status: ${response.status}, Body: ${errorText}`);
+        setCreateFolderError(apiError);
+        toast.error(apiError);
       }
-      
-      const jsonResponse = await response.json();
-      toast.success('Image uploaded successfully!');
-      setSelectedFile(null);
-      setImagePreview('');
-      setIsUploading(false);
-
-      // Improved gallery refresh with logging and delay
-      console.log('GalleryPage: Upload successful, refreshing gallery items...');
-      
-      // Clear existing items first to show loading state
-      setGalleryItems(prevItems => {
-        // Keep example items but remove user items
-        return prevItems.filter(item => !item.tags.includes('user-uploads'));
-      });
-      
-      // Short delay to ensure storage backend has processed the upload
-      setTimeout(() => {
-        fetchGalleryItems();
-        // Scroll to the top to show the newly added image
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 1000); // 1 second delay
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed. Please try again.';
-      console.error('GalleryPage: Upload error:', errorMessage);
-      toast.error(`Upload failed: ${errorMessage}`, { id: uploadToastId });
-      
-      // If authentication error, redirect to login
-      if (errorMessage.includes('Authentication') || errorMessage.includes('sign in')) {
-        toast.error('Please sign in to upload images');
-        setTimeout(() => {
-          router.push(ROUTES.signup);
-        }, 2000);
-      }
+    } catch (error: any) {
+      console.error('GalleryPage: Network or other error creating folder:', error);
+      setCreateFolderError('An unexpected error occurred. Please try again.');
+      toast.error('A network error occurred while creating the folder.');
+    } finally {
+        setIsCreatingFolder(false);
     }
   };
 
-  const filteredItems = selectedFilter === 'all'
-    ? galleryItems
-    : galleryItems.filter(item => item.tags.includes(selectedFilter));
+  const handleOpenMoveModal = (item: CombinedItem) => {
+    console.log("GalleryPage: Opening move modal for item:", item.name, "Type:", item.type);
+    setItemToMove(item);
+    setSelectedMoveDestination(null);
+    fetchMoveDestinationFolders();
+    setIsMoveModalOpen(true);
+  };
+
+  const handleOpenDeleteModal = (item: CombinedItem) => {
+    console.log("GalleryPage: Opening delete modal for item:", item.name, "Type:", item.type);
+    setItemToDelete(item);
+    setIsDeleteModalOpen(true);
+  };
+
+  const findFoldersRecursive = (
+      allItems: CombinedItem[],
+      currentPrefix: string,
+      excludePrefix?: string | null
+  ): DestinationFolder[] => {
+      const folders: DestinationFolder[] = [];
+      for (const item of allItems) {
+          if (item.type === 'folder' && item.name !== '.keep') {
+              const folderPath = item.path ? item.path.replace(/\/?$/, '/') : `${currentPrefix}${item.name}/`;
+
+              let shouldExclude = false;
+              if (excludePrefix) {
+                 if (folderPath === excludePrefix || folderPath.startsWith(excludePrefix)) {
+                     shouldExclude = true;
+                 }
+              }
+
+              if (!shouldExclude) {
+                  folders.push({ name: item.name, path: folderPath });
+              }
+          }
+      }
+      return folders;
+  };
+
+  const fetchMoveDestinationFolders = async () => {
+      if (!itemToMove) return;
+
+      setIsLoadingMoveFolders(true);
+      setMoveDestinationFolders([]);
+
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) {
+          console.error('GalleryPage/FetchMoveDest: Error fetching client session:', sessionError?.message);
+          toast.error('Authentication error fetching folders. Please sign in again.');
+          router.push(ROUTES.login);
+          setIsLoadingMoveFolders(false);
+          return;
+      }
+      const accessToken = sessionData.session.access_token;
+      console.log("GalleryPage/FetchMoveDest: Fetched access token.");
+
+      try {
+          const response = await fetch(`/api/gallery/list?pathPrefix=`, {
+               method: 'GET',
+               headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+               },
+               cache: 'no-store'
+          });
+
+          console.log(`GalleryPage/FetchMoveDest: API response status: ${response.status}`);
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+              const sourceFolderPrefix = itemToMove.type === 'folder'
+                  ? (itemToMove.path ?? `${currentPathPrefix}${itemToMove.name}/`)
+                  : null;
+
+              const potentialFolders = findFoldersRecursive(result.items, '', sourceFolderPrefix);
+
+              const isSourceInRoot = itemToMove.type === 'folder' && !itemToMove.path?.includes('/');
+
+              const destinations: DestinationFolder[] = [];
+              if (!isSourceInRoot) {
+                  destinations.push({ name: 'Root (Gallery Home)', path: '' });
+              }
+              destinations.push(...potentialFolders);
+
+              const itemParentPath = itemToMove.path?.substring(0, itemToMove.path.lastIndexOf('/') + 1) ?? currentPathPrefix;
+
+              const finalDestinations = destinations.filter(dest => {
+                  if (itemToMove.type === 'folder') {
+                      const sourcePath = itemToMove.path ?? `${currentPathPrefix}${itemToMove.name}/`;
+                      if (dest.path === sourcePath) return false;
+                  }
+                  if (dest.path === itemParentPath) return false;
+                  return true;
+              });
+
+               setMoveDestinationFolders(finalDestinations);
+          } else {
+               const errorMessage = result.error || `Failed to fetch folders (${response.status})`;
+               console.error('GalleryPage/FetchMoveDest: API reported failure:', errorMessage, result);
+               if (response.status === 401) {
+                  toast.error('Authentication failed fetching folders. Please sign in again.');
+                  router.push(ROUTES.login);
+               } else {
+                  toast.error(errorMessage);
+               }
+          }
+      } catch (error: any) {
+          console.error('GalleryPage/FetchMoveDest: Network or other error:', error.message);
+          toast.error('A network error occurred while fetching destination folders.');
+      } finally {
+          setIsLoadingMoveFolders(false);
+      }
+  };
+
+  const handleConfirmMove = async () => {
+    if (!itemToMove || selectedMoveDestination === null) {
+      toast.error('Please select a destination folder.');
+      return;
+    }
+    const itemParentPath = itemToMove.path?.substring(0, itemToMove.path.lastIndexOf('/') + 1) ?? currentPathPrefix;
+     if (selectedMoveDestination === itemParentPath) {
+         toast('Item is already in the selected destination folder.');
+         return;
+     }
+
+    setIsMovingItem(true);
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) {
+        console.error('GalleryPage/MoveItem: Error fetching client session:', sessionError?.message);
+        toast.error('Authentication error. Please sign in again.');
+        router.push(ROUTES.login);
+        setIsMovingItem(false);
+        return;
+    }
+    const accessToken = sessionData.session.access_token;
+    console.log("GalleryPage/MoveItem: Fetched access token.");
+
+    const sourcePath = itemToMove.path;
+     if (!sourcePath) {
+         console.error("GalleryPage/MoveItem: Source path missing for item:", itemToMove);
+         toast.error("Cannot move item: source path information missing.");
+         setIsMovingItem(false);
+         return;
+     }
+
+    const itemType = itemToMove.type;
+
+    try {
+      const response = await fetch('/api/gallery/move', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ 
+                sourcePath: sourcePath,
+                destinationPathPrefix: selectedMoveDestination,
+                itemType: itemType,
+        }),
+      });
+
+        console.log(`GalleryPage/MoveItem: API response status: ${response.status}`);
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            const destinationName = moveDestinationFolders.find(f => f.path === selectedMoveDestination)?.name || selectedMoveDestination || 'Root';
+            toast.success(`"${itemToMove.name}" moved successfully to ${destinationName}!`);
+      setIsMoveModalOpen(false);
+            setItemToMove(null);
+            await fetchItems(currentPathPrefix);
+        } else {
+            const errorMessage = result.error || `Failed to move item (${response.status})`;
+            console.error('GalleryPage/MoveItem: API reported failure:', errorMessage, result);
+             if (response.status === 401) {
+                 toast.error('Authentication failed. Please sign in again.');
+                 router.push(ROUTES.login);
+             } else if (response.status === 404) {
+                  toast.error(result.error || 'Source item not found. It might have been moved or deleted.');
+                  await fetchItems(currentPathPrefix);
+             } else if (response.status === 409) {
+                  toast.error(result.error || 'An item with the same name already exists in the destination.');
+             } else {
+                 toast.error(errorMessage);
+             }
+        }
+    } catch (error: any) {
+        console.error('GalleryPage/MoveItem: Network or other error:', error.message);
+        toast.error('A network error occurred while moving the item.');
+    } finally {
+        setIsMovingItem(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    setIsDeletingItem(true);
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) {
+        console.error('GalleryPage/DeleteItem: Error fetching client session:', sessionError?.message);
+        toast.error('Authentication error. Please sign in again.');
+        router.push(ROUTES.login);
+        setIsDeletingItem(false);
+      return;
+    }
+    const accessToken = sessionData.session.access_token;
+    console.log("GalleryPage/DeleteItem: Fetched access token.");
+
+    const itemPath = itemToDelete.path;
+    const itemType = itemToDelete.type;
+
+     if (!itemPath) {
+         console.error("GalleryPage/DeleteItem: Path missing for item:", itemToDelete);
+         toast.error("Cannot delete item: path information missing.");
+         setIsDeletingItem(false);
+        return;
+    }
+
+    console.log(`GalleryPage/DeleteItem: Attempting to delete ${itemType} at path: "${itemPath}"`);
+
+    try {
+        const response = await fetch('/api/gallery/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ 
+                path: itemPath,
+                itemType: itemType,
+            }),
+        });
+
+        console.log(`GalleryPage/DeleteItem: API response status: ${response.status}`);
+        let result;
+        try {
+            result = await response.json();
+        } catch (jsonError) {
+            console.error("GalleryPage/DeleteItem: Failed to parse JSON response:", jsonError);
+            toast.error("Received an invalid response from the server.");
+            setIsDeletingItem(false);
+            return;
+        }
+
+        if (response.ok && result.success) {
+             toast.success(`"${itemToDelete.name}" deleted successfully!`);
+             setIsDeleteModalOpen(false);
+             setItemToDelete(null);
+             await fetchItems(currentPathPrefix);
+        } else {
+             const errorMessage = result.error || `Failed to delete item (${response.status})`;
+             console.error('GalleryPage/DeleteItem: API reported failure:', errorMessage, result);
+             if (response.status === 401) {
+                 toast.error('Authentication failed. Please sign in again.');
+                 router.push(ROUTES.login);
+             } else if (response.status === 404) {
+                 toast.error(result.error || 'Item not found. It might have already been deleted.');
+                  await fetchItems(currentPathPrefix);
+             } else {
+                 toast.error(`Failed to delete: ${errorMessage}. ${result.details || ''}`);
+             }
+        }
+    } catch (error: any) {
+        console.error('GalleryPage/DeleteItem: Network or other error:', error.message);
+        toast.error('A network error occurred while deleting the item.');
+    } finally {
+        setIsDeletingItem(false);
+    }
+  };
+
+  const handleImageClick = (item: FileItem) => {
+    console.log("GalleryPage: Image clicked:", item.name);
+    setSelectedImage(item);
+    setIsPreviewOpen(true);
+  };
+
+  const handleClosePreview = () => {
+    setIsPreviewOpen(false);
+    setSelectedImage(null);
+  };
+
+  const filteredItems = items.filter(item => {
+    if (selectedFilter === 'all') return true;
+    if (selectedFilter === 'images') return item.type === 'file';
+    if (selectedFilter === 'folders') return item.type === 'folder';
+    return true;
+  });
+
+  const foldersToRender = filteredItems.filter(item => item.type === 'folder') as FolderItem[];
+  const filesToRender = filteredItems.filter(item => item.type === 'file') as FileItem[];
+
+  if (loading) {
+      return (
+           <MainLayout>
+              <div className="flex justify-center items-center h-screen">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Loading authentication...</span>
+              </div>
+          </MainLayout>
+      );
+  }
+
+  if (!user) {
+  return (
+    <MainLayout>
+              <div className="flex justify-center items-center h-screen">
+                  <p className="text-muted-foreground">Redirecting to login...</p>
+          </div>
+          </MainLayout>
+       );
+  }
 
   return (
     <MainLayout>
-      <div className={`space-y-6 transition-opacity duration-500 ${animateIn ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div
-            className="opacity-0 animate-slide-in"
-            style={{
-              animationDelay: '0.1s',
-              animationFillMode: 'forwards'
-            }}
-          >
-            <h1 className="text-3xl font-bold">My Gallery</h1>
-            <p className="text-gray-600 mt-1">Upload and manage your visual content</p>
-          </div>
-          
-          <input 
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileSelect}
-            accept="image/*"
-            style={{ display: 'none' }}
-          />
-
-          <div
-            className="flex space-x-2 opacity-0 animate-slide-in"
-            style={{
-              animationDelay: '0.3s',
-              animationFillMode: 'forwards'
-            }}
-          >
-            <Tooltip content="Sort by most recent">
-              <Button 
-                variant="outline" 
-                className="transition-all duration-300 hover:-translate-y-1"
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                Most Recent
-              </Button>
-            </Tooltip>
-            
-            <Button 
-              onClick={handleUploadClick}
-              className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Photo
-            </Button>
-            
-            {selectedFile && (
-              <Button 
-                onClick={handleUpload}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                Confirm Upload
-              </Button>
-            )}
-            
-            <Tooltip content="Refresh gallery items">
-              <Button 
-                variant="outline" 
-                onClick={() => fetchGalleryItems()}
-                className="transition-all duration-300 hover:-translate-y-1"
-                disabled={isLoadingGallery}
-              >
-                {isLoadingGallery ? (
-                  <span className="animate-spin h-4 w-4 mr-2 border-t-2 border-b-2 border-blue-500 rounded-full"></span>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                )}
-              </Button>
-            </Tooltip>
-          </div>
-        </div>
-
-        {selectedFile && imagePreview && (
-          <div className="p-4 border border-blue-200 bg-blue-50 rounded-lg flex flex-col md:flex-row items-center gap-4 opacity-0 animate-fade-in" style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}>
-            <img src={imagePreview} alt="Selected preview" className="w-20 h-20 object-cover rounded-md border" />
-            <div className="flex-grow text-sm">
-              <p className="font-medium text-gray-800">Ready to upload:</p>
-              <p className="text-gray-600">{selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)</p>
-            </div>
-            <Button 
-              onClick={handleUpload}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              Confirm Upload
-            </Button>
-             <Button 
-              onClick={() => { setSelectedFile(null); setImagePreview(null); }} 
-              variant="ghost"
-              size="sm"
-              className="text-gray-500 hover:text-gray-700"
-            >
-              Cancel
-            </Button>
-          </div>
-        )}
-
-        {showTip && (
-          <div
-            className="p-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white flex items-center justify-between transition-all duration-500 ease-in-out opacity-0 animate-fade-in"
-            style={{
-              animationDelay: '0.4s',
-              animationFillMode: 'forwards'
-            }}
-          >
-            <div className="flex items-center">
-              <Zap className="h-5 w-5 mr-3" />
-              <p className="font-medium">Pro Tip: Apply AI analysis to your images to get engagement predictions and optimization suggestions.</p>
-            </div>
-            <button 
-              className="px-3 py-1 rounded-full bg-white/20 text-sm hover:bg-white/30 transition-colors"
-              onClick={() => setShowTip(false)}
-            >
-              Got it
-            </button>
-          </div>
-        )}
-
-        <div 
-          className="flex flex-wrap gap-2 bg-gray-50 p-4 rounded-lg dark:bg-gray-800/50 mb-6 opacity-0 animate-fade-in"
-          style={{
-            animationDelay: '0.2s',
-            animationFillMode: 'forwards'
-          }}
-        >
-          <div className="flex items-center mr-2 text-gray-500">
-            <Filter className="h-4 w-4 mr-2" />
-            <span className="text-sm font-medium">Filter by:</span>
-          </div>
-          {filters.map((filter, index) => (
-            <button
+      <div className="flex h-full w-full bg-background">
+        <aside className="w-64 border-r border-border p-4 flex flex-col space-y-4 bg-card text-card-foreground fixed top-16 bottom-0 left-0 pt-4">
+          <div className="text-lg font-semibold px-2">Filters</div>
+          {filters.map((filter) => (
+            <Button
               key={filter.name}
+              variant={selectedFilter === filter.name ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
               onClick={() => setSelectedFilter(filter.name)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                selectedFilter === filter.name
-                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
-              }`}
-              style={{
-                animationDelay: `${0.2 + (index * 0.05)}s`,
-                animationFillMode: 'forwards'
-              }}
+              aria-pressed={selectedFilter === filter.name}
             >
               {filter.label}
-            </button>
+            </Button>
           ))}
+          <div className="flex-grow"></div>
+        {showTip && (
+              <div className={`transition-all duration-500 ease-in-out ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} bg-muted p-3 rounded-md text-sm text-muted-foreground mx-2`}>
+                  <Lightbulb className="h-4 w-4 inline-block mr-1 mb-1 text-yellow-400"/>
+                  <span className="font-semibold">Tip:</span> Drag & drop images onto the gallery to upload!
+          </div>
+        )}
+           <div className="flex-shrink-0 mt-auto border-4 border-red-500">
+             <GalleryUpload pathPrefix={currentPathPrefix} onUploadSuccess={() => fetchItems(currentPathPrefix)} />
+           </div>
+        </aside>
+
+        <main className="flex-1 p-6 overflow-y-auto min-h-0 rounded-t-2xl bg-white shadow-sm">
+           <div className="mb-6">
+             <h1 className="text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Gallery Home</h1>
+           </div>
+           <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+              <div className="flex items-center space-x-1 text-sm text-muted-foreground flex-wrap">
+          {breadcrumbs.map((crumb, index) => (
+                  <React.Fragment key={crumb.path || 'root'}>
+                    {index > 0 && <ChevronRight className="h-4 w-4 mx-1 flex-shrink-0" />}
+                <button
+                  onClick={() => handleBreadcrumbClick(crumb.path)}
+                      className={`hover:text-foreground px-1 py-0.5 rounded ${index === breadcrumbs.length - 1 ? 'font-semibold text-foreground bg-muted' : 'hover:bg-muted'} ${index === 0 ? 'hidden' : ''}`}
+                      aria-current={index === breadcrumbs.length - 1 ? 'page' : undefined}
+                >
+                  {crumb.name}
+                </button>
+                  </React.Fragment>
+          ))}
+          </div>
+              <div className="flex gap-2">
+                <Button onClick={handleOpenCreateFolderModal} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  <FolderPlus className="mr-2 h-4 w-4" /> Create Folder
+              </Button>
+                <Button onClick={() => document.getElementById('gallery-upload-input')?.click()} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  <Upload className="mr-2 h-4 w-4" /> Upload Photos
+                </Button>
+          </div>
         </div>
 
-        {filteredItems.length === 0 ? (
-          <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
-            <div className="mx-auto w-24 h-24 mb-4 text-gray-400 flex items-center justify-center rounded-full bg-gray-100">
-              <ImageIcon className="h-12 w-12" />
+          {isLoadingItems ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-muted-foreground">Loading gallery items...</span>
             </div>
-            <h3 className="text-lg font-medium text-gray-900">No images found</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              {user ? 'Upload your first image to get started!' : 'Sign in to upload your own images.'}
-            </p>
-            <div className="mt-6">
-              <Button 
-                onClick={user ? handleUploadClick : () => router.push(ROUTES.signup)}
-                className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white"
-              >
-                {user ? (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload First Image
-                  </>
-                ) : (
-                  <>
-                    Sign in to Upload
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
         ) : (
-          <div 
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-0 animate-fade-in"
-            style={{
-              animationDelay: '0.2s',
-              animationFillMode: 'forwards'
-            }}
-          >
-            {filteredItems.map((item, index) => (
-              <div 
-                key={item.id} 
-                className="rounded-xl overflow-hidden border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-2 opacity-0 animate-fade-in"
-                style={{
-                  animationDelay: `${0.3 + (index * 0.1)}s`,
-                  animationFillMode: 'forwards'
-                }}
-              >
-                <div className="relative h-60 w-full group">
-                  <Image
-                    src={item.imageUrl}
-                    alt={item.title}
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    fill
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                    <div className="w-full">
-                      <div className="flex items-center justify-between text-white">
-                        <h3 className="text-lg font-bold truncate">{item.title}</h3>
-                        <div className="flex space-x-2">
-                          <Tooltip content="Analyze this image">
-                            <button className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
-                              <ImageIcon className="h-4 w-4" />
-                            </button>
-                          </Tooltip>
-                          <Tooltip content="View details">
-                            <button className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
-                              <Camera className="h-4 w-4" />
-                            </button>
-                          </Tooltip>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="h-8 w-8 rounded-full overflow-hidden relative">
-                        <Image 
-                          src={item.author.avatar} 
-                          alt={item.author.name}
-                          className="object-cover"
-                          fill
-                        />
-                      </div>
-                      <span className="text-sm font-medium">{item.author.name}</span>
-                    </div>
-                    <span className="text-xs text-gray-500 flex items-center">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {item.date}
-                    </span>
-                  </div>
-                  <h3 className="mt-2 text-xl font-semibold">{item.title}</h3>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{item.description}</p>
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {item.tags.map((tag) => (
-                      <span 
-                        key={tag} 
-                        className="px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs transition-colors duration-300 hover:bg-indigo-100 cursor-pointer"
-                        onClick={() => setSelectedFilter(tag)}
+            <>
+              {(selectedFilter === 'all' || selectedFilter === 'folders') && foldersToRender.length > 0 && (
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold mb-3 text-foreground">Folders</h2>
+                  <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    {foldersToRender.map((folder) => (
+                      <div
+                        key={folder.name}
+                        className="group min-w-0 relative cursor-pointer rounded-lg border border-border p-3 bg-card hover:shadow-md transition-shadow flex flex-col items-center text-center aspect-square justify-center"
+                        onClick={() => handleFolderClick(folder.name)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleFolderClick(folder.name)}
+                        tabIndex={0}
+                        aria-label={`Open folder ${folder.name}`}
                       >
-                        #{tag}
-                      </span>
+                        <FolderIcon size={48} className="mb-2 text-purple-500" />
+                        <span className="text-sm font-medium text-card-foreground truncate w-full">{folder.name}</span>
+                        <div className="absolute top-1 right-1 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-sm rounded p-1">
+                            <Button 
+                                variant="ghost" size="icon"
+                                className="h-7 w-7 text-white hover:bg-white/20 hover:text-white"
+                                onClick={(e) => { e.stopPropagation(); handleOpenMoveModal(folder); }}
+                                aria-label={`Move folder ${folder.name}`}
+                            >
+                                <Move size={16} />
+                            </Button>
+                            <Button 
+                                variant="ghost" size="icon"
+                                className="h-7 w-7 text-red-400 hover:bg-red-400/20 hover:text-red-400"
+                                onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(folder); }}
+                                aria-label={`Delete folder ${folder.name}`}
+                            >
+                                <Trash2 size={16} />
+                            </Button>
+                        </div>
+            </div>
                     ))}
                   </div>
-                  <div className="mt-4 flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-3">
-                    <div className="flex items-center space-x-4">
-                      <button className="flex items-center text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors duration-300">
-                        <Heart className="h-5 w-5 mr-1" />
-                        {item.likes}
-                      </button>
-                      <button className="flex items-center text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors duration-300">
-                        <MessageCircle className="h-5 w-5 mr-1" />
-                        {item.comments}
-                      </button>
-                    </div>
-                    <button className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-300">
-                      <Share2 className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         )}
 
-        <div 
-          className="flex justify-center mt-8 opacity-0 animate-fade-in"
-          style={{
-            animationDelay: '0.8s',
-            animationFillMode: 'forwards'
-          }}
-        >
-          <Button 
-            variant="outline" 
-            className="w-full max-w-xs transition-all duration-300 hover:-translate-y-1"
-          >
-            Load More
-          </Button>
-        </div>
+              {foldersToRender.length > 0 && filesToRender.length > 0 && (selectedFilter === 'all') && (
+                  <hr className="my-6 border-border" />
+              )}
+
+              {(selectedFilter === 'all' || selectedFilter === 'images') && filesToRender.length > 0 && (
+                   <h2 className="text-xl font-semibold mb-3 text-foreground">Files</h2>
+              )}
+
+              {(selectedFilter === 'all' || selectedFilter === 'images') && filesToRender.length > 0 ? (
+                <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {filesToRender.map((file) => (
+                    <Card
+                      key={file.id}
+                      className="overflow-hidden group relative cursor-pointer transition-all hover:shadow-lg min-w-0"
+                      onClick={() => handleImageClick(file)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleImageClick(file)}
+                      tabIndex={0}
+                      aria-label={`View image ${file.name}`}
+                    >
+                      <CardContent className="p-0">
+                        <div className="aspect-square w-full bg-muted flex items-center justify-center overflow-hidden">
+                          {file.imageUrl ? (
+                      <Image
+                               src={file.imageUrl}
+                               alt={file.name || 'Gallery image'}
+                               width={300}
+                               height={300}
+                               className="object-cover w-full h-full transition-transform group-hover:scale-105"
+                               onError={(e) => handleImageError(e, file.name)}
+                               unoptimized={true}
+                             />
+                           ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
+                            )}
+            </div>
+                        <div className="p-3 bg-card">
+                          <p className="text-sm font-medium truncate text-card-foreground" title={file.name}>{file.name}</p>
+                          <p className="text-xs text-muted-foreground">{getTimeAgo(file.updated_at)}</p>
+                        </div>
+                        <div className="absolute top-1 right-1 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-sm rounded p-1">
+                            <Button 
+                                variant="ghost" size="icon"
+                                className="h-7 w-7 text-white hover:bg-white/20 hover:text-white"
+                                onClick={(e) => { e.stopPropagation(); handleOpenMoveModal(file); }}
+                                aria-label={`Move image ${file.name}`}
+                            >
+                                <Move size={16} />
+                            </Button>
+                            <Button 
+                                variant="ghost" size="icon"
+                                className="h-7 w-7 text-red-400 hover:bg-red-400/20 hover:text-red-400"
+                                onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(file); }}
+                                aria-label={`Delete image ${file.name}`}
+                            >
+                                <Trash2 size={16} />
+                            </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : null}
+
+              {!isLoadingItems && foldersToRender.length === 0 && filesToRender.length === 0 && (
+                   <div className="text-center text-muted-foreground py-16">
+                      <FolderOpen size={48} className="mx-auto mb-4 opacity-50" />
+                      <p className="font-semibold text-lg">This folder is empty.</p>
+                      <p className="text-sm">Upload some images or create a new folder to get started.</p>
+                      </div>
+              )}
+                  </>
+                )}
+        </main>
       </div>
       
-      <style jsx global>{`
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        @keyframes slide-in {
-          from { opacity: 0; transform: translateX(-20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 0.5s ease-in-out;
-        }
-        
-        .animate-slide-in {
-          animation: slide-in 0.5s ease-in-out;
-        }
-      `}</style>
+      <Dialog open={isCreateFolderModalOpen} onOpenChange={setIsCreateFolderModalOpen}>
+        <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Folder</DialogTitle>
+              <DialogDescription>
+              Enter a name for your new folder within the current location:{" "}
+              <code className="bg-muted px-1 py-0.5 rounded">
+                {currentPathPrefix || 'Root'}
+              </code>.
+              </DialogDescription>
+            </DialogHeader>
+          <form onSubmit={handleCreateFolder}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="folder-name" className="text-right">
+                  Name
+                </Label>
+                <Input 
+                  id="folder-name"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  className="col-span-3"
+                  placeholder="e.g., Summer Vacation"
+                  required
+                  disabled={isCreatingFolder}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                 <Button type="button" variant="outline" disabled={isCreatingFolder}>Cancel</Button>
+              </DialogClose>
+              <Button type="submit" disabled={isCreatingFolder || !newFolderName.trim()}>
+                {isCreatingFolder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FolderPlus className="mr-2 h-4 w-4" />}
+                {isCreatingFolder ? 'Creating...' : 'Create Folder'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
+         <DialogContent>
+           <DialogHeader>
+              <DialogTitle>Move "{itemToMove?.name}"</DialogTitle>
+              <DialogDescription>
+                     Select the destination folder to move this {itemToMove?.type}.
+              </DialogDescription>
+           </DialogHeader>
+             <div className="py-4">
+                 <Label htmlFor="destination-folder">Destination</Label>
+             {isLoadingMoveFolders ? (
+                      <div className="flex items-center justify-center h-20">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                          <span className="ml-2 text-muted-foreground">Loading folders...</span>
+               </div>
+             ) : moveDestinationFolders.length > 0 ? (
+                     <Select
+                         onValueChange={(value: string) => setSelectedMoveDestination(value)}
+                         value={selectedMoveDestination ?? undefined}
+                         disabled={isMovingItem}
+                     >
+                         <SelectTrigger id="destination-folder">
+                             <SelectValue placeholder="Select a folder..." />
+                         </SelectTrigger>
+                         <SelectContent>
+                             {moveDestinationFolders.map((folder) => (
+                                 <SelectItem key={folder.path} value={folder.path}>
+                                     <FolderIcon size={16} className="inline-block mr-2 mb-0.5" />
+                         {folder.name}
+                                     {folder.path !== '' && <span className="text-xs text-muted-foreground ml-1">({folder.path})</span>}
+                                 </SelectItem>
+                             ))}
+                         </SelectContent>
+                     </Select>
+                  ) : (
+                     <p className="text-sm text-muted-foreground mt-2">No other folders found to move to.</p>
+                  )}
+
+           </div>
+           <DialogFooter>
+              <DialogClose asChild>
+                     <Button type="button" variant="outline" disabled={isMovingItem}>Cancel</Button>
+              </DialogClose>
+              <Button 
+                onClick={handleConfirmMove} 
+                    disabled={isMovingItem || selectedMoveDestination === null || isLoadingMoveFolders}
+                 >
+                     {isMovingItem ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Move className="mr-2 h-4 w-4" />}
+                     {isMovingItem ? 'Moving...' : 'Confirm Move'}
+              </Button>
+           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                       This action cannot be undone. This will permanently delete the
+                       {' '}<span className="font-semibold">{itemToDelete?.type}</span>{' '}
+                       <span className="font-semibold">"{itemToDelete?.name}"</span>
+                       {itemToDelete?.type === 'folder' ? ' and all its contents.' : '.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingItem}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              disabled={isDeletingItem}
+                       className={buttonVariants({ variant: "destructive" })}
+                   >
+                       {isDeletingItem ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                       {isDeletingItem ? 'Deleting...' : 'Yes, Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+       <Dialog open={isPreviewOpen} onOpenChange={handleClosePreview}>
+         <DialogContent className="max-w-3xl">
+             <DialogHeader>
+                 <DialogTitle>{selectedImage?.name}</DialogTitle>
+                 <DialogDescription>
+                    Uploaded: {getTimeAgo(selectedImage?.created_at)} | Last Modified: {getTimeAgo(selectedImage?.updated_at)}
+                 </DialogDescription>
+             </DialogHeader>
+             {selectedImage?.imageUrl ? (
+                 <Image
+                   src={selectedImage.imageUrl}
+                   alt={selectedImage.name || 'Preview image'}
+                   width={800}
+                   height={600}
+                   className="object-contain w-full h-auto max-h-[70vh] rounded-md"
+                   onError={(e) => handleImageError(e, selectedImage.name)}
+                   unoptimized={true}
+                 />
+             ) : (
+                 <div className="flex items-center justify-center h-64 bg-muted rounded-md">
+                     {selectedImage ? <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" /> : <ImageIcon className="h-24 w-24 text-muted-foreground" />}
+                 </div>
+             )}
+             <DialogFooter className="mt-4">
+                 <DialogClose asChild>
+                     <Button variant="outline">Close</Button>
+                 </DialogClose>
+                 <Button
+                     variant="destructive"
+                     onClick={(e) => {
+                         e.stopPropagation();
+                         handleClosePreview();
+                         setTimeout(() => {
+                             if (selectedImage) handleOpenDeleteModal(selectedImage);
+                         }, 100);
+                     }}
+                     disabled={!selectedImage}
+                 >
+                     <Trash2 className="mr-2 h-4 w-4" /> Delete
+                 </Button>
+             </DialogFooter>
+         </DialogContent>
+       </Dialog>
     </MainLayout>
   );
 } 
