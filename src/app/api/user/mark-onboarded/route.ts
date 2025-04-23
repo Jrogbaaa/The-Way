@@ -1,6 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 
 // Track recent requests to implement basic rate limiting
 const recentRequests = new Map<string, number>();
@@ -39,19 +38,20 @@ export async function POST(request: NextRequest) {
     // Record this request
     recentRequests.set(`${requesterId}-${now}`, now);
     
-    // Get supabase client with custom context for better logging
-    const supabase = await createClient('MarkOnboardedAPI');
+    // Create standard client ONLY to get user ID from token
+    const supabaseUserClient = await createClient('MarkOnboardedUserCheck');
     
     // --- Get user via Authorization header --- 
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        console.error('mark-onboarded: Missing or invalid Authorization header');
-        return NextResponse.json({ error: 'Unauthorized', message: 'Missing authorization token' }, { status: 401 });
+      console.error('mark-onboarded: Missing or invalid Authorization header');
+      return NextResponse.json({ error: 'Unauthorized', message: 'Missing authorization token' }, { status: 401 });
     }
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    const token = authHeader.substring(7);
     
     console.log('mark-onboarded: Getting current user via provided token');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token); // Pass token to getUser
+    // Use the STANDARD client to validate the token and get user
+    const { data: { user }, error: userError } = await supabaseUserClient.auth.getUser(token); 
     // --- End token-based user retrieval ---
     
     console.log(`mark-onboarded: getUser result - User: ${user ? user.id : 'null'}, Error: ${userError ? userError.message : 'null'}`);
@@ -85,28 +85,23 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = user.id;
-    console.log(`mark-onboarded: Updating onboarded status for user ${userId}`);
+    console.log(`mark-onboarded: Updating onboarded status for user ${userId} using ADMIN client`);
     
-    // Update the user's onboarded status in the profiles table
-    const { error: updateError } = await supabase
+    // --- Use ADMIN client for the update --- 
+    const supabaseAdmin = createAdminClient(); // Create the admin client instance
+    const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({ onboarded: true })
       .eq('id', userId);
+    // --- End admin client update --- 
 
     if (updateError) {
-      console.error('mark-onboarded: Database update error:', updateError.message);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        message: updateError.message,
-      }, { status: 500 });
+      console.error('mark-onboarded: Database update error (using ADMIN client):', updateError.message);
+      return NextResponse.json({ success: false, error: 'Database error', message: updateError.message }, { status: 500 });
     }
 
-    console.log(`mark-onboarded: Successfully marked user ${userId} as onboarded`);
-    return NextResponse.json({
-      success: true,
-      message: 'User marked as onboarded',
-    });
+    console.log(`mark-onboarded: Successfully marked user ${userId} as onboarded (using ADMIN client)`);
+    return NextResponse.json({ success: true, message: 'User marked as onboarded' });
 
   } catch (error) {
     console.error('mark-onboarded: Unexpected error:', error);
