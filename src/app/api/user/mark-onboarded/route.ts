@@ -79,7 +79,7 @@ export async function POST() {
     // Update the user's onboarded status in the profiles table
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ onboarded: true, onboarded_at: new Date().toISOString() })
+      .update({ onboarded: true })
       .eq('id', userId);
 
     if (updateError) {
