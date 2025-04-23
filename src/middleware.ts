@@ -3,108 +3,47 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // Create a response object to modify
+  // Create a response object to pass through
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
 
-  // It's generally safe to remove this explicit forwarding.
-  // The createServerClient handles reading from request cookies.
-  // const requestCookies = request.cookies.getAll();
-  // for (const cookie of requestCookies) {
-  //   response.cookies.set(cookie.name, cookie.value);
-  // }
+  // TEMPORARILY SIMPLIFIED: 
+  // Just pass the request through. The API route's createServerClient 
+  // should handle reading the cookies.
+  console.log('Middleware: Running simplified version (no getSession call).');
 
+  // We still need to create the client with cookie handlers so that 
+  // if other server components *rely* on middleware setting cookies, 
+  // it *could* potentially happen (though getSession is the usual trigger).
+  // This is mainly to preserve the cookie handling mechanism.
   try {
-    // Create a Supabase client configured to use request/response cookies
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-            return request.cookies.get(name)?.value;
+    createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+              return request.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+              request.cookies.set({ name, value, ...options });
+              response.cookies.set({ name, value, ...options });
+          },
+          remove(name: string, options: CookieOptions) {
+              request.cookies.set({ name, value: '', ...options });
+              response.cookies.set({ name, value: '', ...options });
+          },
         },
-        set(name: string, value: string, options: CookieOptions) {
-            // The library will set cookies on the response object for us
-            // Ensure request object is also updated for subsequent server actions/reads
-            request.cookies.set({
-              name,
-              value,
-              ...options,
-            });
-            response.cookies.set({
-              name,
-              value,
-              ...options,
-            });
-        },
-        remove(name: string, options: CookieOptions) {
-            // Ensure request object is also updated
-            request.cookies.set({
-              name,
-              value: '',
-              ...options,
-            });
-            response.cookies.set({
-              name,
-              value: '',
-              ...options,
-            });
-        },
-      },
-    }
-  );
-
-    // Refresh the session if needed. This will automatically update cookies
-    // on the response object via the `set` and `remove` handlers passed to createServerClient.
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      console.error("Middleware session error:", error.message);
-      // Don't block request flow on session error, just log it.
-    }
-    
-    if (session) {
-       console.log("Middleware: Valid session found and potentially refreshed.");
-    } else {
-       console.log("Middleware: No active session found.");
-    }
-
-    // Remove the explicit cookie re-setting logic.
-    // The createServerClient + getSession pattern handles cookie updates.
-    // if (session) {
-    //   const authCookies = response.cookies.getAll().filter(cookie => 
-    //     cookie.name.includes('supabase') || 
-    //     cookie.name.includes('sb-') ||
-    //     cookie.name.startsWith('access-token') || 
-    //     cookie.name.startsWith('refresh-token')
-    //   );
-    //   console.log('Middleware: Found auth cookies:', authCookies.map(c => c.name).join(', '));
-    //   for (const cookie of authCookies) {
-    //     const cookieValue = response.cookies.get(cookie.name)?.value;
-    //     if (cookieValue) {
-    //       response.cookies.set({
-    //         name: cookie.name,
-    //         value: cookieValue,
-    //         path: '/',
-    //         maxAge: 60 * 60 * 24 * 7, // 1 week
-    //         sameSite: 'lax',
-    //         secure: process.env.NODE_ENV === 'production',
-    //       });
-    //     }
-    //   }
-    // }
-
-    // Return the response object, potentially modified by supabase.auth.getSession()
-    return response;
+      }
+    );
   } catch (error) {
-    console.error('Middleware error:', error);
-    // Return the original response even if middleware has an error
-    return response; 
+      console.error('Middleware simplified error during client creation:', error);
   }
+
+  return response;
 }
 
 // Ensure the middleware is triggered for relevant paths.
