@@ -478,31 +478,6 @@ export default function GalleryPage() {
     setIsDeleteModalOpen(true);
   };
 
-  const findFoldersRecursive = (
-      allItems: CombinedItem[],
-      currentPrefix: string,
-      excludePrefix?: string | null
-  ): DestinationFolder[] => {
-      const folders: DestinationFolder[] = [];
-      for (const item of allItems) {
-          if (item.type === 'folder' && item.name !== '.keep') {
-              const folderPath = item.path ? item.path.replace(/\/?$/, '/') : `${currentPrefix}${item.name}/`;
-
-              let shouldExclude = false;
-              if (excludePrefix) {
-                 if (folderPath === excludePrefix || folderPath.startsWith(excludePrefix)) {
-                     shouldExclude = true;
-                 }
-              }
-
-              if (!shouldExclude) {
-                  folders.push({ name: item.name, path: folderPath });
-              }
-          }
-      }
-      return folders;
-  };
-
   const fetchMoveDestinationFolders = async () => {
       if (!itemToMove) return;
 
@@ -521,7 +496,8 @@ export default function GalleryPage() {
       console.log("GalleryPage/FetchMoveDest: Fetched access token.");
 
       try {
-          const response = await fetch(`/api/gallery/list?pathPrefix=`, {
+          // Request recursive list of folders from the API
+          const response = await fetch(`/api/gallery/list?recursive=true`, {
                method: 'GET',
                headers: {
                   'Content-Type': 'application/json',
@@ -530,36 +506,73 @@ export default function GalleryPage() {
                cache: 'no-store'
           });
 
-          console.log(`GalleryPage/FetchMoveDest: API response status: ${response.status}`);
+          console.log(`GalleryPage/FetchMoveDest (Recursive): API response status: ${response.status}`);
 
           const result = await response.json();
 
           if (response.ok && result.success) {
-              const sourceFolderPrefix = itemToMove.type === 'folder'
-                  ? (itemToMove.path ?? `${currentPathPrefix}${itemToMove.name}/`)
-                  : null;
+              // API now returns only folders when recursive=true
+              let potentialFolders: DestinationFolder[] = result.items || [];
+              console.log(`GalleryPage/FetchMoveDest: Received ${potentialFolders.length} folders recursively.`);
 
-              const potentialFolders = findFoldersRecursive(result.items, '', sourceFolderPrefix);
+              // Determine the item's parent path for filtering
+              let itemParentPath = ''; // Default to root
+              if (itemToMove.path) {
+                  const lastSlashIndex = itemToMove.path.lastIndexOf('/');
+                  // Handle paths like 'file.jpg' (root) vs 'folder/file.jpg'
+                  if (lastSlashIndex > 0 && lastSlashIndex < itemToMove.path.length - 1) {
+                       // Path like 'folder/sub/file.jpg' -> parent 'folder/sub/'
+                       itemParentPath = itemToMove.path.substring(0, lastSlashIndex + 1);
+                  } else if (lastSlashIndex === -1 && itemToMove.path.includes('/')) {
+                       // Path like 'folder/' -> parent '' (root)
+                       itemParentPath = ''; // Already root
+                  } else if (lastSlashIndex === -1) {
+                     // Path like 'file.jpg' -> parent '' (root)
+                     itemParentPath = '';
+                  }
+                  // Ensure consistent trailing slash for comparison
+                  if (itemParentPath && !itemParentPath.endsWith('/')) {
+                      itemParentPath += '/';
+                  }
+              } else {
+                  // If item has no path, assume it's in the currently viewed prefix
+                  itemParentPath = currentPathPrefix;
+              }
+              console.log(`GalleryPage/FetchMoveDest: Determined item parent path: "${itemParentPath}"`);
 
-              const isSourceInRoot = itemToMove.type === 'folder' && !itemToMove.path?.includes('/');
-
+              // Add "Root" as a potential destination if the item isn't already there
               const destinations: DestinationFolder[] = [];
-              if (!isSourceInRoot) {
+              if (itemParentPath !== '') {
                   destinations.push({ name: 'Root (Gallery Home)', path: '' });
               }
+              
+              // Add the fetched folders
               destinations.push(...potentialFolders);
 
-              const itemParentPath = itemToMove.path?.substring(0, itemToMove.path.lastIndexOf('/') + 1) ?? currentPathPrefix;
-
+              // Filter destinations
               const finalDestinations = destinations.filter(dest => {
-                  if (itemToMove.type === 'folder') {
-                      const sourcePath = itemToMove.path ?? `${currentPathPrefix}${itemToMove.name}/`;
-                      if (dest.path === sourcePath) return false;
+                  // 1. Cannot move to its current parent folder
+                  if (dest.path === itemParentPath) {
+                      console.log(`Filtering out current parent: ${dest.path}`);
+                      return false; 
                   }
-                  if (dest.path === itemParentPath) return false;
-                  return true;
+
+                  // 2. If moving a FOLDER, cannot move into itself or a subfolder of itself
+                  if (itemToMove.type === 'folder') {
+                      const sourceFolderPath = itemToMove.path ?? `${currentPathPrefix}${itemToMove.name}/`; // Ensure trailing slash
+                      if (dest.path === sourceFolderPath) {
+                          console.log(`Filtering out source folder itself: ${dest.path}`);
+                          return false; // Cannot move into itself
+                      }
+                      if (dest.path.startsWith(sourceFolderPath)) {
+                          console.log(`Filtering out subfolder of source: ${dest.path}`);
+                          return false; // Cannot move into a subfolder of itself
+                      }
+                  }
+                  return true; // Keep the destination
               });
 
+               console.log(`GalleryPage/FetchMoveDest: Final destinations count: ${finalDestinations.length}`);
                setMoveDestinationFolders(finalDestinations);
           } else {
                const errorMessage = result.error || `Failed to fetch folders (${response.status})`;

@@ -41,15 +41,15 @@ export async function POST() {
     // Get supabase client with custom context for better logging
     const supabase = await createClient('MarkOnboardedAPI');
     
-    // Get current session data first
-    console.log('mark-onboarded: Getting current session');
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    // Get current user data using getUser (preferred for server-side validation)
+    console.log('mark-onboarded: Getting current user');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    if (sessionError) {
-      console.error('mark-onboarded: Session error:', sessionError.message);
+    if (userError) {
+      console.error('mark-onboarded: Get user error:', userError.message);
       
-      // Check for rate limit errors
-      if (sessionError.message.includes('rate limit')) {
+      // Check for rate limit errors (might be reported here too)
+      if (userError.message.includes('rate limit')) {
         return NextResponse.json({
           success: false,
           error: 'Rate limit reached',
@@ -59,45 +59,22 @@ export async function POST() {
       
       return NextResponse.json({
         success: false,
-        error: 'Session error',
-        message: sessionError.message,
+        error: 'Get user error',
+        message: userError.message,
       }, { status: 401 });
-  }
+    }
     
-    if (!sessionData.session) {
-      console.error('mark-onboarded: No active session found');
+    if (!user) {
+      console.error('mark-onboarded: No authenticated user found');
       return NextResponse.json({
         success: false,
-        error: 'Auth session missing',
-        message: 'No active session found. Please log in again.',
+        error: 'Auth session missing', // Keep error consistent with client expectation
+        message: 'No authenticated user found. Please log in again.',
       }, { status: 401 });
-  }
-
-    const userId = sessionData.session.user.id;
-    console.log(`mark-onboarded: Updating onboarded status for user ${userId}`);
-    
-    // Only refresh the session if it's close to expiry (5 minutes)
-    const sessionExpiry = new Date(sessionData.session.expires_at || 0).getTime();
-    const currentTime = Date.now();
-    const timeUntilExpiry = sessionExpiry - currentTime;
-    const isAboutToExpire = timeUntilExpiry < 5 * 60 * 1000; // 5 minutes
-    
-    if (isAboutToExpire) {
-      console.log('mark-onboarded: Session expiring soon, attempting refresh');
-      try {
-        const { error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshError) {
-          console.warn('mark-onboarded: Session refresh failed:', refreshError.message);
-          // Continue with the current session - don't fail the whole request
-        } else {
-          console.log('mark-onboarded: Session refreshed successfully');
-        }
-      } catch (refreshErr) {
-        console.error('mark-onboarded: Error during refresh:', refreshErr);
-        // Continue with the current session
-      }
     }
+
+    const userId = user.id;
+    console.log(`mark-onboarded: Updating onboarded status for user ${userId}`);
     
     // Update the user's onboarded status in the profiles table
     const { error: updateError } = await supabase

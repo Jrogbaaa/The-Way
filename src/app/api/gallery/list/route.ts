@@ -161,6 +161,8 @@ export const GET = async (request: NextRequest) => {
     console.log(`GalleryAPI/list: Proceeding with user ${user.id}`);
 
   const searchParams = request.nextUrl.searchParams;
+  const recursive = searchParams.get('recursive') === 'true';
+
   // Get pathPrefix, decode it (as it might contain spaces or special chars), and remove leading/trailing slashes
   const rawPathPrefix = searchParams.get('pathPrefix') || '';
   const decodedPathPrefix = decodeURIComponent(rawPathPrefix).replace(/^\/+|\/+$/g, '');
@@ -170,80 +172,148 @@ export const GET = async (request: NextRequest) => {
   const supabasePrefix = decodedPathPrefix ? `${decodedPathPrefix}/` : '';
   const fullPrefix = `${user.id}/${supabasePrefix}`;
 
-    console.log(`GalleryAPI/list: Listing items for prefix: ${fullPrefix}`);
+    console.log(`GalleryAPI/list: Listing items for prefix: ${fullPrefix}` + (recursive ? ' (Recursive)' : ''));
 
-    // Check if the storage bucket exists first
-    const { data: listData, error: listError } = await supabase.storage
-      .from('gallery-uploads')
-      .list(fullPrefix, {
-        limit: 500, // Adjust limit as needed
-        offset: 0,
-        sortBy: { column: 'name', order: 'asc' },
-        // @ts-ignore - The delimiter option exists in the Supabase API but might be missing in types
-        delimiter: '/', // Key change: use delimiter to get folders
-      });
+    if (recursive) {
+        // --- Recursive Folder Listing Logic --- 
+        let allObjects: StorageListItem[] = [];
+        let marker: string | undefined = undefined;
+        const userRootPrefix = `${user.id}/`;
 
-    if (listError) {
-      console.error(`GalleryAPI/list: Error listing Supabase storage for prefix ${fullPrefix}:`, listError);
-      
-      // Handle common storage errors with specific responses
-      if (listError.message.includes('Bucket not found')) {
-        return NextResponse.json(
-          { error: 'Storage not initialized', message: 'Storage bucket not found' },
-          { status: 404 }
-        );
-      } else if (listError.message.includes('not authorized')) {
-        console.error('GalleryAPI/list: User not authorized to access storage. Check RLS policies.');
-        return NextResponse.json(
-          { error: 'Access denied', message: 'Storage permissions denied. Please check storage bucket policies.' },
-          { status: 403 }
-        );
-      }
-      
-      return NextResponse.json(
-        { error: 'Failed to list storage contents', message: listError.message },
-        { status: 500 }
-      );
+        console.log(`GalleryAPI/list: Starting recursive fetch for user root: ${userRootPrefix}`);
+
+        try {
+            // Loop to handle potential pagination if there are many objects
+            // Note: Supabase list has a default limit (often 100), adjust if needed
+            // For simplicity here, assuming limit is high enough or pagination isn't critical for *just* folder paths.
+            // In production, proper pagination might be required.
+            const { data: storageObjects, error: listError } = await supabase.storage
+                .from('gallery-uploads')
+                .list(userRootPrefix, { 
+                    limit: 1000, // Fetch a larger batch for potentially fewer calls
+                    // NO delimiter for recursive!
+                });
+
+            if (listError) {
+                 throw listError; // Throw to be caught by the outer try/catch
+            }
+            
+            if (storageObjects) {
+                allObjects = storageObjects as StorageListItem[];
+            } else {
+                allObjects = [];
+            }
+
+            console.log(`GalleryAPI/list: Fetched ${allObjects.length} total objects recursively.`);
+
+            const folderPaths = new Set<string>();
+            for (const obj of allObjects) {
+                if (obj.id !== null) { // It's a file
+                    const filePath = obj.name; // Path relative to userRootPrefix
+                    const lastSlashIndex = filePath.lastIndexOf('/');
+                    if (lastSlashIndex > 0) { // Check > 0 to avoid root files
+                        const folderPath = filePath.substring(0, lastSlashIndex);
+                        if (folderPath) { // Ensure it's not an empty string
+                            folderPaths.add(folderPath);
+                        }
+                    }
+                }
+                // We could also check for obj.id === null and obj.name ending with '.keep'
+                // if folders are explicitly created with a .keep file, but path extraction is more general.
+            }
+
+            const folders = Array.from(folderPaths).map(fullPath => {
+                const parts = fullPath.split('/');
+                const name = parts[parts.length - 1];
+                return { name: name, path: fullPath + '/', type: 'folder' }; // Add trailing slash for consistency
+            }).sort((a, b) => a.path.localeCompare(b.path)); // Sort alphabetically by path
+
+            console.log(`GalleryAPI/list: Found ${folders.length} unique folders recursively.`);
+
+            return NextResponse.json({ 
+                success: true,
+                items: folders, // Only return folders for recursive requests
+                currentPrefix: '' // Prefix isn't relevant in recursive mode
+            });
+
+        } catch (listError: any) {
+            // Handle errors similarly to non-recursive path
+            console.error(`GalleryAPI/list: Error during recursive listing for user ${user.id}:`, listError);
+            if (listError instanceof StorageError) {
+                if (listError.message.includes('Bucket not found')) {
+                  return NextResponse.json({ error: 'Storage not initialized', message: 'Storage bucket not found' }, { status: 404 });
+                } else if (listError.message.includes('not authorized')) {
+                  console.error('GalleryAPI/list: User not authorized for recursive list. Check RLS.');
+                  return NextResponse.json({ error: 'Access denied', message: 'Storage permissions denied.' }, { status: 403 });
+                }
+                return NextResponse.json({ error: 'Failed to list storage contents', message: listError.message }, { status: 500 });
+            } else {
+                 return NextResponse.json({ error: 'Internal Server Error', message: 'Failed during recursive folder listing.' }, { status: 500 });
+            }
+        }
+        // --- End Recursive Logic --- 
+
+    } else {
+        // --- Non-Recursive (Original) Logic --- 
+        const { data: listData, error: listError } = await supabase.storage
+            .from('gallery-uploads')
+            .list(fullPrefix, {
+                limit: 500, 
+                offset: 0,
+                sortBy: { column: 'name', order: 'asc' },
+                // @ts-ignore - Keep delimiter for non-recursive
+                delimiter: '/', 
+            });
+
+        if (listError) {
+            console.error(`GalleryAPI/list: Error listing Supabase storage for prefix ${fullPrefix}:`, listError);
+            
+            if (listError instanceof StorageError) {
+                if (listError.message.includes('Bucket not found')) {
+                    return NextResponse.json({ error: 'Storage not initialized', message: 'Storage bucket not found' }, { status: 404 });
+                } else if (listError.message.includes('not authorized')) {
+                    console.error('GalleryAPI/list: User not authorized. Check RLS policies.');
+                    return NextResponse.json({ error: 'Access denied', message: 'Storage permissions denied.' }, { status: 403 });
+                }
+            }
+            return NextResponse.json({ error: 'Failed to list storage contents', message: listError.message }, { status: 500 });
+        }
+
+        const typedListData = listData as StorageListItem[] | null;
+
+        const folders = typedListData
+            ?.filter((item: StorageListItem) => item.id === null)
+            .map((item: StorageListItem) => ({ 
+                name: item.name.replace(/\/$/, ''), // Remove trailing slash from folder name if present
+                path: `${supabasePrefix}${item.name}`, // Construct full path
+                type: 'folder' 
+            })) || [];
+
+        const files = typedListData
+            ?.filter((item: StorageListItem) => item.id !== null && item.name !== '.keep')
+            .map((item: StorageListItem) => ({
+                name: item.name,
+                id: item.id!,
+                updated_at: item.updated_at,
+                created_at: item.created_at,
+                last_accessed_at: item.last_accessed_at,
+                metadata: item.metadata,
+                type: 'file',
+                path: `${fullPrefix}${item.name}`,
+            })) || [];
+
+        const items = [...folders, ...files];
+
+        return NextResponse.json({ 
+            success: true,
+            items, 
+            currentPrefix: supabasePrefix.replace(/\/$/, '') // Return prefix without trailing slash
+        });
+        // --- End Non-Recursive Logic ---
     }
 
-    // Ensure listData is treated as the correct type array or null
-    const typedListData = listData as StorageListItem[] | null;
-
-    // Folders are items returned by Supabase *without an id* when using a delimiter.
-    // Their name represents the folder name (prefix relative to the current path).
-    const folders = typedListData
-      ?.filter((item: StorageListItem) => item.id === null)
-      .map((item: StorageListItem) => ({ name: item.name, type: 'folder' })) || [];
-
-    // Files are items returned *with an id* and are not the placeholder.
-    const files = typedListData
-      ?.filter((item: StorageListItem) => item.id !== null && item.name !== '.keep')
-      .map((item: StorageListItem) => ({
-        name: item.name,
-        id: item.id, // id is guaranteed non-null here due to filter
-        updated_at: item.updated_at,
-        created_at: item.created_at,
-        last_accessed_at: item.last_accessed_at,
-        metadata: item.metadata,
-        type: 'file',
-        // This path is the full path within the bucket (user_id/folder/file.jpg)
-        path: `${fullPrefix}${item.name}`,
-      })) || [];
-
-    // Combine and sort folders before files
-    const items = [...folders, ...files];
-
-    // Create response with the data
-    const response = NextResponse.json({ 
-      success: true,
-      items, 
-      currentPrefix: supabasePrefix 
-    });
-
-    return response;
-
   } catch (error) {
-    console.error('GalleryAPI/list: Unexpected error:', error);
+    console.error('GalleryAPI/list: Unexpected top-level error:', error);
     return NextResponse.json(
       { 
         success: false,

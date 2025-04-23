@@ -4,6 +4,7 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Recent Updates (July/August 2024)
 
+- **UI Consistency & Model Images**: Unified the header styling (title font, color gradient, container rounding) between the Gallery and Creator Gallery pages for a more consistent look and feel. Updated the preview images for the Bea, Cristina, and Jaime models on the Creator Gallery page with new provided photos.
 - **Gallery Upload and Display Enhancements**: Improved the gallery functionality with several key updates:
   - Added robust image upload to Supabase storage with proper authentication
   - Implemented automatic gallery refresh after successful uploads
@@ -23,15 +24,17 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 - **Stability AI Inpainting API Tuning**: Adjusted API parameters (`strength`, `cfg_scale`, `model`) and fixed parameter names (`mask`) in the `/api/stability/inpaint` route handler to improve inpainting results.
 - **Replicate API Fixes**: Ensured the `/api/replicate/predictions/[id]` route handler correctly handles asynchronous operations for polling prediction status.
 - **API Key Security**: Verified that the Stability AI API key (`STABILITY_AI_API_KEY`) is correctly handled server-side and not exposed to the client.
+- **Code Quality**: Fixed various TypeScript type errors identified by the validation script, improving overall code stability.
 
 ## Features
 
-- 🖌️ **Image Creator** (formerly Models):
+- 🖌️ **Creator Gallery** (formerly Image Creator):
   - Cristina Model (via Replicate)
   - Jaime Model (via Replicate)
   - Bea Generator Model (via Replicate)
   - Standard Generations Model (via Replicate SDXL)
   - Google Vertex AI Imagen (fully implemented)
+  - *Uses updated preview images for Bea, Cristina, and Jaime models.*
   
 - 📷 **Photo Editor**:
   - Integrated with Stability AI for Generative Fill / Inpainting
@@ -88,6 +91,10 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 ## Authentication & Access
 
 This application uses Supabase for user authentication and management, primarily leveraging Google OAuth for sign-in and sign-up.
+
+**OAuth Callback Route**
+
+When using OAuth providers like Google, the authentication flow involves redirecting the user to the provider's site and then back to the application. This application now uses a dedicated callback route at `/auth/callback` to handle the redirect from the OAuth provider. This route is responsible for exchanging the received authentication code for a user session using Supabase's `exchangeCodeForSession` method and then redirecting the user to their dashboard (`/dashboard`). Ensure that your OAuth provider (e.g., Google Cloud Console) is configured with the correct Redirect URI: `YOUR_APP_URL/auth/callback`.
 
 ### Core Technologies & Concepts
 
