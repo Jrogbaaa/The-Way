@@ -1,12 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
 
 // Track recent requests to implement basic rate limiting
 const recentRequests = new Map<string, number>();
 const RATE_LIMIT_WINDOW = 30 * 1000; // 30 seconds
 const MAX_REQUESTS_PER_WINDOW = 3;
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   console.log('API Route /api/user/mark-onboarded: POST request received');
   
   try {
@@ -41,12 +42,22 @@ export async function POST() {
     // Get supabase client with custom context for better logging
     const supabase = await createClient('MarkOnboardedAPI');
     
-    // Get current user data using getUser (preferred for server-side validation)
-    console.log('mark-onboarded: Getting current user');
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // --- Get user via Authorization header --- 
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.error('mark-onboarded: Missing or invalid Authorization header');
+        return NextResponse.json({ error: 'Unauthorized', message: 'Missing authorization token' }, { status: 401 });
+    }
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    
+    console.log('mark-onboarded: Getting current user via provided token');
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token); // Pass token to getUser
+    // --- End token-based user retrieval ---
+    
+    console.log(`mark-onboarded: getUser result - User: ${user ? user.id : 'null'}, Error: ${userError ? userError.message : 'null'}`);
 
     if (userError) {
-      console.error('mark-onboarded: Get user error:', userError.message);
+      console.error('mark-onboarded: Get user error details:', userError);
       
       // Check for rate limit errors (might be reported here too)
       if (userError.message.includes('rate limit')) {
@@ -65,11 +76,11 @@ export async function POST() {
     }
     
     if (!user) {
-      console.error('mark-onboarded: No authenticated user found');
+      console.error('mark-onboarded: No authenticated user found (using token)');
       return NextResponse.json({
         success: false,
-        error: 'Auth session missing', // Keep error consistent with client expectation
-        message: 'No authenticated user found. Please log in again.',
+        error: 'Auth session missing', // Keep error consistent
+        message: 'Invalid or expired token provided.',
       }, { status: 401 });
     }
 

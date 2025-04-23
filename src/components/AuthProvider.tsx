@@ -146,7 +146,7 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
         // Add null check for session before accessing expires_at
         const expiresAt = data.session.expires_at ? data.session.expires_at * 1000 : null;
         if (expiresAt) {
-          sessionValidUntil.current = expiresAt - (5 * 60 * 1000); // 5 minutes before expiry
+        sessionValidUntil.current = expiresAt - (5 * 60 * 1000); // 5 minutes before expiry
         } else {
           sessionValidUntil.current = null; // Set to null if expires_at is missing
           console.warn('AuthProvider: Session refreshed but expires_at is missing.');
@@ -169,29 +169,38 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
   // Modify markUserOnboarded to validate session first
   const markUserOnboarded = useCallback(async () => {
     console.log('AuthProvider: markUserOnboarded called'); 
-    if (!user) { 
-      console.log('AuthProvider: No user found, exiting markUserOnboarded');
+    
+    // Get current session for access token
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    
+    if (!user || !currentSession?.access_token) { 
+      console.error('AuthProvider: No user or access token found, exiting markUserOnboarded');
       return; 
     }
+    
+    const accessToken = currentSession.access_token;
     
     // Immediately hide modal for better UX
     setShowWelcomeModal(false); 
     console.log('AuthProvider: Hiding welcome modal');
     
-    // Validate session first
-    const isSessionValid = await validateSession();
+    // Validate session first (still good practice)
+    const isSessionValid = await validateSession(); // Consider if this validation is still needed or if getSession is sufficient
     if (!isSessionValid) {
       console.error('AuthProvider: Session validation failed before marking user onboarded');
+      // Potentially handle this case - maybe try to refresh or redirect?
       return;
     }
     
     try {
-      console.log('AuthProvider: Attempting fetch to /api/user/mark-onboarded');
+      console.log('AuthProvider: Attempting fetch to /api/user/mark-onboarded with token');
       const response = await fetch('/api/user/mark-onboarded', {
          method: 'POST',
-        credentials: 'include',
+        // credentials: 'include', // No longer strictly needed if using Bearer token
         headers: {
           'Cache-Control': 'no-cache',
+          'Authorization': `Bearer ${accessToken}`, // Add Authorization header
+          'Content-Type': 'application/json' // Good practice to set Content-Type
         }
       });
       
@@ -211,7 +220,7 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('AuthProvider: Error calling mark-onboarded API:', errorMessage);
     }
-  }, [user, validateSession]);
+  }, [user, validateSession]); // Dependency array might need adjustment if validateSession logic changes
 
   useEffect(() => {
     // Initial Session Check (No profile API call here)
