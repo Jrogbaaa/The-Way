@@ -87,8 +87,51 @@ export async function POST(request: NextRequest) {
     const userId = user.id;
     console.log(`mark-onboarded: Updating onboarded status for user ${userId} using ADMIN client`);
     
+    // Check if service role key is set
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('mark-onboarded: SUPABASE_SERVICE_ROLE_KEY environment variable is not set!');
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Configuration error', 
+        message: 'Service role key is not configured'
+      }, { status: 500 });
+    }
+    
+    console.log('mark-onboarded: Service role key is set, creating admin client');
+    
     // --- Use ADMIN client for the update --- 
     const supabaseAdmin = createAdminClient(); // Create the admin client instance
+    
+    // Debugging: First check if profile exists
+    console.log(`mark-onboarded: Checking if profile exists for user ${userId}`);
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+      
+    if (profileError) {
+      console.error('mark-onboarded: Failed to retrieve profile:', JSON.stringify(profileError));
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database query error', 
+        message: profileError.message,
+        details: JSON.stringify(profileError)
+      }, { status: 500 });
+    }
+    
+    if (!profile) {
+      console.error(`mark-onboarded: No profile found for user ${userId}`);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Profile not found', 
+        message: 'User profile does not exist'
+      }, { status: 404 });
+    }
+    
+    console.log(`mark-onboarded: Found profile for user ${userId}:`, JSON.stringify(profile));
+    
+    // Now attempt the update
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({ onboarded: true })
@@ -96,8 +139,42 @@ export async function POST(request: NextRequest) {
     // --- End admin client update --- 
 
     if (updateError) {
-      console.error('mark-onboarded: Database update error (using ADMIN client):', updateError.message);
-      return NextResponse.json({ success: false, error: 'Database error', message: updateError.message }, { status: 500 });
+      console.error('mark-onboarded: Database update error (using ADMIN client):', JSON.stringify(updateError));
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error', 
+        message: updateError.message,
+        details: JSON.stringify(updateError)
+      }, { status: 500 });
+    }
+
+    // Verify the update was successful
+    const { data: verifyProfile, error: verifyError } = await supabaseAdmin
+      .from('profiles')
+      .select('onboarded')
+      .eq('id', userId)
+      .single();
+      
+    if (verifyError) {
+      console.error('mark-onboarded: Verification query error:', JSON.stringify(verifyError));
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Verification error', 
+        message: 'Update appeared successful but verification failed',
+        details: JSON.stringify(verifyError)
+      }, { status: 500 });
+    }
+    
+    console.log(`mark-onboarded: Verification result:`, JSON.stringify(verifyProfile));
+    
+    if (!verifyProfile || verifyProfile.onboarded !== true) {
+      console.error('mark-onboarded: Update did not take effect!');
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Update ineffective', 
+        message: 'Database update did not change the onboarded status',
+        currentValue: verifyProfile?.onboarded
+      }, { status: 500 });
     }
 
     console.log(`mark-onboarded: Successfully marked user ${userId} as onboarded (using ADMIN client)`);
@@ -109,6 +186,7 @@ export async function POST(request: NextRequest) {
       success: false,
       error: 'Server error',
       message: error instanceof Error ? error.message : 'Unknown error occurred',
+      stack: error instanceof Error ? error.stack : undefined
     }, { status: 500 });
   }
 } 
