@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import MainLayout from '@/components/layout/MainLayout';
-import { MessageCircle, Clock, Send, Plus, ArrowRight, User2, Bot, X, Zap } from 'lucide-react';
+import { MessageCircle, Clock, Send, Plus, ArrowRight, User2, Bot, X, Zap, Menu } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
@@ -165,6 +165,7 @@ export default function ChatPage() {
   const [isClient, setIsClient] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
   const [showTip, setShowTip] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Mark component as hydrated
   useEffect(() => {
@@ -283,35 +284,53 @@ export default function ChatPage() {
 
   return (
     <MainLayout>
-      <div className={`h-[calc(100vh-120px)] flex flex-col md:flex-row gap-4 transition-opacity duration-500 ${animateIn ? 'opacity-100' : 'opacity-0'}`}>
-        {/* Sidebar */}
-        <div className="w-full md:w-64 lg:w-80 bg-white rounded-xl border shadow-sm overflow-hidden opacity-0 animate-slide-in" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>
-          <div className="p-4 border-b bg-gradient-to-r from-indigo-50 to-purple-50">
+      <div className={`flex h-[calc(100vh-var(--header-height,60px))] transition-opacity duration-500 ${animateIn ? 'opacity-100' : 'opacity-0'}`}>
+        
+        <aside className={`
+            fixed inset-y-0 left-0 z-30 
+            w-64 
+            border-r border-border p-0 pt-[var(--header-height,60px)] 
+            flex flex-col 
+            bg-card text-card-foreground 
+            transition-transform duration-300 ease-in-out 
+            ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+            md:translate-x-0 md:sticky md:pt-0 md:top-0 md:h-full 
+            md:w-64 
+            opacity-0 animate-slide-in
+          `} 
+          style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}
+        >
+           <div className="flex justify-end p-2 md:hidden">
+               <Button variant="ghost" size="icon" onClick={() => setIsMobileSidebarOpen(false)}>
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Close conversations</span>
+               </Button>
+           </div>
+           <div className="p-4 border-b bg-gradient-to-r from-indigo-50 to-purple-50 hidden md:block rounded-t-lg">
             <h2 className="text-lg font-semibold flex items-center">
               <MessageCircle className="h-5 w-5 mr-2 text-indigo-600" />
               Chat Assistant
             </h2>
           </div>
-          
-          {/* New Chat Button */}
           <div className="p-3">
             <Button 
-              onClick={handleStartNewChat}
+              onClick={() => { handleStartNewChat(); setIsMobileSidebarOpen(false); }}
               className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white transition-all duration-300 hover:-translate-y-1"
             >
               <Plus className="h-4 w-4 mr-2" />
               New Conversation
             </Button>
           </div>
-          
-          {/* Chat History */}
-          <div className="p-3">
+          <div className="flex-1 overflow-y-auto p-3">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Recent Conversations</h3>
             <div className="space-y-2">
               {Object.values(sampleChats).map((chat, index) => (
                 <button
                   key={chat.id}
-                  onClick={() => handleSelectChat(chat.id)}
+                  onClick={() => {
+                     handleSelectChat(chat.id);
+                     setIsMobileSidebarOpen(false);
+                  }}
                   className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 transform hover:-translate-x-1 ${
                     activeChat === chat.id 
                       ? 'bg-gradient-to-r from-indigo-100 to-indigo-50 text-indigo-800 font-medium shadow-sm' 
@@ -338,30 +357,31 @@ export default function ChatPage() {
               ))}
             </div>
           </div>
-        </div>
-        
-        {/* Main Chat Area */}
+        </aside>
+
         <div className="flex-1 flex flex-col bg-white rounded-xl border shadow-sm overflow-hidden opacity-0 animate-fade-in" style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}>
-          {/* Chat Header */}
           <div className="p-4 border-b flex justify-between items-center bg-gradient-to-r from-gray-50 to-gray-100">
-            <div>
-              <h2 className="font-semibold">{sampleChats[activeChat].name}</h2>
-              <p className="text-xs text-gray-500">{sampleChats[activeChat].description}</p>
+             <Button variant="ghost" size="icon" className="md:hidden mr-2" onClick={() => setIsMobileSidebarOpen(true)}>
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Open conversations</span>
+             </Button>
+            <div className="flex-1">
+              <h2 className="font-semibold truncate">{sampleChats[activeChat].name}</h2>
+              <p className="text-xs text-gray-500 truncate">{sampleChats[activeChat].description}</p>
             </div>
             <Tooltip content="Start a new conversation">
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleStartNewChat}
-                className="transition-all duration-300 hover:-translate-y-1"
+                className="transition-all duration-300 hover:-translate-y-1 ml-2"
               >
                 <Plus className="h-4 w-4 mr-1" />
-                New Chat
+                <span className="hidden sm:inline">New Chat</span>
               </Button>
             </Tooltip>
           </div>
           
-          {/* AI Tip */}
           {showTip && (
             <div
               className="p-3 m-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex items-center justify-between transition-all duration-500 ease-in-out animate-fade-in"
@@ -379,7 +399,6 @@ export default function ChatPage() {
             </div>
           )}
           
-          {/* Messages Container */}
           <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-gray-50 to-white">
             <div className="space-y-4">
               {messages.map((message, index) => (
@@ -435,7 +454,6 @@ export default function ChatPage() {
             </div>
           </div>
           
-          {/* Input Area */}
           <div className="p-4 border-t bg-white">
             <div className="flex space-x-2">
               <div className="flex-1 relative">
@@ -480,6 +498,9 @@ export default function ChatPage() {
       </div>
       
       <style jsx global>{`
+        :root {
+            --header-height: 60px; 
+        }
         @keyframes fade-in {
           from { opacity: 0; }
           to { opacity: 1; }

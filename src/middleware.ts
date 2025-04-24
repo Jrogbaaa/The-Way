@@ -3,24 +3,16 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // Create a response object to pass through
+  // Create a response object to modify cookies on
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
 
-  // TEMPORARILY SIMPLIFIED: 
-  // Just pass the request through. The API route's createServerClient 
-  // should handle reading the cookies.
-  console.log('Middleware: Running simplified version (no getSession call).');
-
-  // We still need to create the client with cookie handlers so that 
-  // if other server components *rely* on middleware setting cookies, 
-  // it *could* potentially happen (though getSession is the usual trigger).
-  // This is mainly to preserve the cookie handling mechanism.
   try {
-    createServerClient(
+    // Create a Supabase client configured to use cookies
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -29,18 +21,33 @@ export async function middleware(request: NextRequest) {
               return request.cookies.get(name)?.value;
           },
           set(name: string, value: string, options: CookieOptions) {
+              // If the cookie is set, update the request and response cookies
               request.cookies.set({ name, value, ...options });
               response.cookies.set({ name, value, ...options });
           },
           remove(name: string, options: CookieOptions) {
+              // If the cookie is removed, update the request and response cookies
               request.cookies.set({ name, value: '', ...options });
               response.cookies.set({ name, value: '', ...options });
           },
         },
       }
     );
+   
+    // Refresh session if expired - required for Server Components
+    // This will automatically handle reading session from cookies and refreshing tokens
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('Middleware: Error getting session:', error.message);
+    } else if (session) {
+        console.log('Middleware: Session found and refreshed.');
+    } else {
+        console.log('Middleware: No active session found.');
+    }
+    
   } catch (error) {
-      console.error('Middleware simplified error during client creation:', error);
+      console.error('Middleware error:', error);
   }
 
   return response;

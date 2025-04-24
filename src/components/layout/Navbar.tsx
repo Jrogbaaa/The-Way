@@ -110,7 +110,7 @@ const Navbar = () => {
             <span style={{ border: 'none', outline: 'none' }}>Content AI Agent</span>
           </Link>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 md:gap-6">
           {/* Notifications button */}
           {user && !loading && (
             <div className="relative">
@@ -167,7 +167,7 @@ const Navbar = () => {
               <ButtonLink 
                 href={ROUTES.signup}
                 variant="primary"
-                className="px-5 py-2.5 whitespace-nowrap text-sm font-medium rounded-full"
+                className="px-3 py-1 whitespace-nowrap text-xs font-medium rounded-full"
                 aria-label="Create a new account"
               >
                 Sign Up

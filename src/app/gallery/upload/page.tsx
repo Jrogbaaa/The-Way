@@ -13,33 +13,28 @@ import { toast } from 'react-hot-toast';
 export default function GalleryUploadPage() {
   const [uploadPathPrefix, setUploadPathPrefix] = useState('');
   const router = useRouter();
-  const { user, validateSession } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkSession = async () => {
-      setIsLoading(true);
-      const isValid = await validateSession();
-      
-      if (!isValid) {
-        toast.error('Please sign in to access the gallery.');
-        router.push(ROUTES.login);
-        return;
-      }
-      
-      // Get the path prefix from the URL query if it exists
-      const params = new URLSearchParams(window.location.search);
-      const prefix = params.get('prefix') || '';
-      setUploadPathPrefix(prefix);
-      
-      setIsLoading(false);
-    };
+    if (authLoading) {
+      return;
+    }
+
+    if (!session) {
+      toast.error('Please sign in to access the gallery.');
+      router.push(ROUTES.login);
+      return;
+    }
     
-    checkSession();
-  }, [validateSession, router]);
+    const params = new URLSearchParams(window.location.search);
+    const prefix = params.get('prefix') || '';
+    setUploadPathPrefix(prefix);
+    
+    setIsLoading(false);
+  }, [session, authLoading, router]);
 
   const handleUploadSuccess = () => {
-    // Navigate back to the gallery with the current path prefix
     const returnPath = uploadPathPrefix 
       ? `/gallery?prefix=${encodeURIComponent(uploadPathPrefix)}` 
       : '/gallery';

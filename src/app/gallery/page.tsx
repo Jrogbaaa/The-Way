@@ -45,6 +45,9 @@ import {
   Loader2,
   Lightbulb,
   FolderOpen,
+  XCircle,
+  Menu,
+  X
 } from 'lucide-react';
 import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs';
 import { redirect } from 'next/navigation';
@@ -177,6 +180,8 @@ export default function GalleryPage() {
 
   const [showTip, setShowTip] = useState<boolean>(false);
   const [animateIn, setAnimateIn] = useState<boolean>(false);
+
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const fetchItems = useCallback(async (pathPrefix: string): Promise<ListApiResponse | null> => {
     setIsLoadingItems(true);
@@ -764,7 +769,7 @@ export default function GalleryPage() {
     if (selectedFilter === 'all') return true;
     if (selectedFilter === 'images') return item.type === 'file';
     if (selectedFilter === 'folders') return item.type === 'folder';
-    return true;
+    return false;
   });
 
   const foldersToRender = filteredItems.filter(item => item.type === 'folder') as FolderItem[];
@@ -793,74 +798,88 @@ export default function GalleryPage() {
 
   return (
     <MainLayout>
-      <div className="flex h-full w-full bg-background">
-        <aside className="w-64 border-r border-border p-4 flex flex-col space-y-4 bg-card text-card-foreground fixed top-16 bottom-0 left-0 pt-4">
-          <div className="text-lg font-semibold px-2">Filters</div>
+      <div className="flex h-screen">
+        
+        <aside className={`
+          fixed inset-y-0 left-0 z-30 
+          w-64 border-r border-border p-4 pt-20 
+          flex flex-col space-y-4 
+          bg-card text-card-foreground 
+          transition-transform duration-300 ease-in-out 
+          ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          md:translate-x-0 md:sticky md:pt-4 
+        `}>
+          <div className="flex justify-between items-center md:hidden">
+             <h3 className="text-lg font-semibold px-2">Filters</h3>
+             <Button variant="ghost" size="icon" onClick={() => setIsMobileSidebarOpen(false)}>
+                <X className="h-5 w-5" />
+                <span className="sr-only">Close filters</span>
+             </Button>
+          </div>
+           <h3 className="text-lg font-semibold px-2 hidden md:block">Filters</h3>
           {filters.map((filter) => (
             <Button
               key={filter.name}
               variant={selectedFilter === filter.name ? 'secondary' : 'ghost'}
               className="w-full justify-start"
-              onClick={() => setSelectedFilter(filter.name)}
+              onClick={() => {
+                setSelectedFilter(filter.name);
+                setIsMobileSidebarOpen(false);
+              }}
               aria-pressed={selectedFilter === filter.name}
             >
               {filter.label}
             </Button>
           ))}
-          <div className="flex-grow"></div>
-        {showTip && (
-              <div className={`transition-all duration-500 ease-in-out ${animateIn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} bg-muted p-3 rounded-md text-sm text-muted-foreground mx-2`}>
-                  <Lightbulb className="h-4 w-4 inline-block mr-1 mb-1 text-yellow-400"/>
-                  <span className="font-semibold">Tip:</span> Drag & drop images onto the gallery to upload!
-          </div>
-        )}
-           <div className="flex-shrink-0 mt-auto border-4 border-red-500">
-             <GalleryUpload pathPrefix={currentPathPrefix} onUploadSuccess={() => fetchItems(currentPathPrefix)} />
-           </div>
         </aside>
 
-        <main className="flex-1 p-6 overflow-y-auto min-h-0 rounded-t-2xl bg-white shadow-sm">
-           <div className="mb-8 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-             <div>
-               <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">My Gallery</h1>
-               <p className="text-gray-600">Browse, manage, and upload your content.</p>
-             </div>
-             <div className="flex items-center gap-2 flex-wrap justify-start md:justify-end">
-                 <Select value={selectedFilter} onValueChange={setSelectedFilter}>
-                     <SelectTrigger className="w-auto min-w-[120px] bg-white/70 hover:bg-white shadow-sm">
-                         <Filter className="h-4 w-4 mr-2 text-gray-500" />
-                         <SelectValue placeholder="Filter items" />
-                     </SelectTrigger>
-                     <SelectContent>
-                         {filters.map(filter => (
-                             <SelectItem key={filter.name} value={filter.name}>{filter.label}</SelectItem>
-                         ))}
-                     </SelectContent>
-                 </Select>
-                 
-                 <Button 
-                    onClick={handleOpenCreateFolderModal} 
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-                 >
-                    <FolderPlus className="mr-2 h-4 w-4" /> Create Folder
+        <main className="flex-1 overflow-y-auto p-4 pt-20 md:pt-6 md:ml-64 lg:ml-72">
+          <div className="md:hidden flex justify-between items-center mb-4">
+              <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                 My Gallery
+              </h1>
+              <Button variant="ghost" size="icon" onClick={() => setIsMobileSidebarOpen(true)}>
+                 <Menu className="h-6 w-6" />
+                 <span className="sr-only">Open filters</span>
+              </Button>
+           </div>
+
+           <div className="hidden md:block mb-8 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100 shadow-sm">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">My Gallery</h1>
+              <p className="text-gray-600">Browse, manage, and upload your content.</p>
+           </div>
+
+           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+             <nav aria-label="Breadcrumb" className="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
+                {breadcrumbs.map((crumb, index) => (
+                    <React.Fragment key={crumb.path}>
+                    {index > 0 && <ChevronRight className="h-4 w-4 flex-shrink-0" />}
+                    {index === breadcrumbs.length - 1 ? (
+                        <span className="font-medium text-gray-700 dark:text-gray-200" aria-current="page">
+                            {index === 0 ? <Home className="h-4 w-4 inline-block align-middle" /> : crumb.name}
+                        </span>
+                    ) : (
+                        <button 
+                            onClick={() => handleBreadcrumbClick(crumb.path)}
+                            className="hover:underline hover:text-gray-700 dark:hover:text-gray-200 p-1 rounded focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                        >
+                            {index === 0 ? <Home className="h-4 w-4 inline-block align-middle" /> : crumb.name}
+                        </button>
+                    )}
+                    </React.Fragment>
+                ))}
+             </nav>
+             <div className="flex gap-2 flex-wrap">
+                 <Button onClick={() => fetchItems(currentPathPrefix)} variant="outline" size="sm" disabled={isLoadingItems}>
+                     <RefreshCw className={`h-4 w-4 ${isLoadingItems ? 'animate-spin' : ''}`} />
+                     <span className="ml-2 hidden sm:inline">Refresh</span>
+                 </Button>
+                  <Button onClick={handleOpenCreateFolderModal} variant="outline" size="sm">
+                     <FolderPlus className="h-4 w-4" />
+                     <span className="ml-2 hidden sm:inline">New Folder</span>
                  </Button>
              </div>
            </div>
-
-           <nav aria-label="Breadcrumb" className="mb-6 flex items-center space-x-2 text-sm font-medium text-gray-500">
-               {breadcrumbs.map((crumb, index) => (
-                   <React.Fragment key={crumb.path}>
-                       {index > 0 && <ChevronRight className="h-4 w-4 text-gray-400" />}
-                       <button
-                           onClick={() => handleBreadcrumbClick(crumb.path)}
-                           className={`rounded p-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 ${index === breadcrumbs.length - 1 ? 'text-gray-700 font-semibold' : 'hover:text-indigo-600 hover:bg-gray-100'}`}
-                           aria-current={index === breadcrumbs.length - 1 ? 'page' : undefined}
-                       >
-                           {index === 0 ? <Home className="h-4 w-4" /> : crumb.name}
-                       </button>
-                   </React.Fragment>
-               ))}
-           </nav>
 
            <div className="mb-8">
              <GalleryUpload 
@@ -868,261 +887,257 @@ export default function GalleryPage() {
                  onUploadSuccess={() => fetchItems(currentPathPrefix)} 
              />
            </div>
-
-           {isLoadingItems && (
-               <div className="text-center py-20">
-                   <Loader2 className="mx-auto h-12 w-12 text-gray-400 animate-spin" />
-                   <p className="mt-4 text-gray-500">Loading gallery items...</p>
-               </div>
-           )}
-
-           {!isLoadingItems && filteredItems.length === 0 && (
-               <div className="text-center py-20 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-                   <FolderOpen className="mx-auto h-12 w-12 text-gray-400" />
-                   <h3 className="mt-2 text-lg font-semibold text-gray-900">
-                       {selectedFilter === 'all' ? 'This folder is empty' : `No ${selectedFilter} found`}
-                   </h3>
-                   <p className="mt-1 text-sm text-gray-500">
-                       {selectedFilter === 'all' ? 'Upload a photo above or create a new folder to get started.' : `There are no ${selectedFilter} in this folder.`}
-                   </p>
-                   <div className="mt-6 flex justify-center gap-3">
-                        <Button 
-                          onClick={handleOpenCreateFolderModal}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-                        >
-                            <FolderPlus className="mr-2 h-4 w-4" /> Create Folder
+           
+            {isLoadingItems ? (
+              <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                <span className="ml-2 text-gray-500">Loading gallery...</span>
+              </div>
+            ) : filteredItems.length === 0 ? (
+                <div className="text-center py-16 px-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+                    <ImageIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                    <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No items in this folder</h3>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by creating a new folder or uploading an image.</p>
+                    <div className="mt-6 flex justify-center gap-2">
+                        <Button onClick={handleOpenCreateFolderModal} variant="outline" size="sm">
+                            <FolderPlus className="h-4 w-4 mr-2" /> New Folder
                         </Button>
-                   </div>
-               </div>
-           )}
-
-           {!isLoadingItems && filteredItems.length > 0 && (
-               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                   {filteredItems.map((item) => (
-                       item.type === 'folder' ? (
-                           <Card 
-                               key={item.name}
-                               className="cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all duration-200 overflow-hidden group"
-                               onClick={() => handleFolderClick(item.name)}
-                           >
-                               <CardContent className="p-4 flex flex-col items-center justify-center text-center aspect-square">
-                                   <FolderIcon className="w-12 h-12 text-indigo-600 mb-2 transition-colors" />
-                                   <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-700 break-words w-full line-clamp-2">{item.name}</span>
-                               </CardContent>
-                           </Card>
-                       ) : (
-                           <Card 
-                               key={item.id} 
-                               className="overflow-hidden group relative hover:shadow-lg transition-shadow duration-200 cursor-pointer"
-                               onClick={() => handleImageClick(item)}
-                           >
-                               <CardContent className="p-0 aspect-square">
-                                   <Image
-                                       src={item.imageUrl || '/placeholder-image.png'}
-                                       alt={item.name || 'Gallery image'}
-                                       fill
-                                       style={{ objectFit: 'cover' }}
-                                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                                       className="transition-transform duration-300 group-hover:scale-105"
-                                       onError={(e) => handleImageError(e, item.name)}
-                                       priority={items.indexOf(item) < 12}
-                                   />
-                                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
-                                       <p className="text-xs font-medium text-white line-clamp-2 mb-1">{item.name}</p>
-                                       <p className="text-[10px] text-gray-200">{getTimeAgo(item.updated_at)}</p>
-                                   </div>
-                               </CardContent>
-                               <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                   <Button 
-                                        size="icon" 
-                                        variant="ghost" 
-                                        className="h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full"
-                                        onClick={(e) => { e.stopPropagation(); handleOpenMoveModal(item); }}
-                                        aria-label="Move item"
-                                    >
-                                        <Move className="h-3.5 w-3.5" />
-                                    </Button>
-                                   <Button 
-                                        size="icon" 
-                                        variant="ghost" 
-                                        className="h-7 w-7 bg-black/50 hover:bg-red-600/80 text-white rounded-full"
-                                        onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(item); }}
-                                        aria-label="Delete item"
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
-                               </div>
-                           </Card>
-                       )
-                   ))}
-               </div>
-           )}
+                        <label htmlFor="direct-upload-empty" className={buttonVariants({ variant: "default", size: "sm" }) + " cursor-pointer"}>
+                            <Upload className="h-4 w-4 mr-2" /> Upload Image
+                        </label>
+                        <input 
+                          id="direct-upload-empty"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="sr-only"
+                          onChange={(e) => {
+                              const uploader = document.querySelector('#gallery-uploader input[type="file"]');
+                              if (uploader instanceof HTMLInputElement && e.target.files) {
+                                  uploader.files = e.target.files;
+                                  uploader.dispatchEvent(new Event('change', { bubbles: true }));
+                              }
+                           }}
+                        /> 
+                    </div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    {filteredItems
+                       .sort((a, b) => {
+                            if (a.type === 'folder' && b.type !== 'folder') return -1;
+                            if (a.type !== 'folder' && b.type === 'folder') return 1;
+                            return a.name.localeCompare(b.name);
+                        })
+                       .map((item) => (
+                           item.type === 'folder' ? (
+                              <Card 
+                                key={item.name} 
+                                className="group relative cursor-pointer overflow-hidden hover:shadow-md transition-shadow bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg"
+                                onClick={() => handleFolderClick(item.name)}
+                                onKeyDown={(e) => e.key === 'Enter' || e.key === ' ' ? handleFolderClick(item.name) : null}
+                                tabIndex={0}
+                                role="button"
+                                aria-label={`Open folder ${item.name}`}
+                              >
+                                  <CardContent className="p-4 flex flex-col items-center justify-center aspect-square">
+                                      <FolderIcon className="h-16 w-16 text-blue-500 dark:text-blue-400 mb-2 group-hover:scale-110 transition-transform" />
+                                      <span className="text-sm font-medium text-center break-words w-full line-clamp-2 text-gray-700 dark:text-gray-200">{item.name}</span>
+                                  </CardContent>
+                                  <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                       <Button onClick={(e) => { e.stopPropagation(); handleOpenMoveModal(item); }} variant="ghost" size="icon" className="h-6 w-6 bg-white/80 hover:bg-white dark:bg-gray-700/80 dark:hover:bg-gray-600 rounded-full">
+                                            <Move className="h-3 w-3" />
+                                            <span className="sr-only">Move folder {item.name}</span>
+                                        </Button>
+                                        <Button onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(item); }} variant="ghost" size="icon" className="h-6 w-6 bg-white/80 hover:bg-white dark:bg-gray-700/80 dark:hover:bg-gray-600 rounded-full text-red-500 hover:text-red-600">
+                                            <Trash2 className="h-3 w-3" />
+                                            <span className="sr-only">Delete folder {item.name}</span>
+                                        </Button>
+                                  </div>
+                              </Card>
+                          ) : (
+                              <Card 
+                                key={item.id} 
+                                className="group relative overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800"
+                                onClick={() => handleImageClick(item)}
+                                onKeyDown={(e) => e.key === 'Enter' || e.key === ' ' ? handleImageClick(item) : null}
+                                tabIndex={0}
+                                role="button"
+                                aria-label={`View image ${item.title || item.name}`}
+                              >
+                                  <CardContent className="p-0 aspect-square flex items-center justify-center">
+                                      <Image 
+                                          src={item.imageUrl || ''} 
+                                          alt={item.title || item.name} 
+                                          width={200} 
+                                          height={200} 
+                                          className="object-cover w-full h-full transition-transform group-hover:scale-105"
+                                          loading="lazy"
+                                          onError={(e) => handleImageError(e, item.name)}
+                                      />
+                                  </CardContent>
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
+                                    <span className="text-white text-xs font-medium line-clamp-2 mb-1">{item.title || item.name}</span>
+                                    <div className="flex gap-1 justify-end">
+                                         <Button onClick={(e) => { e.stopPropagation(); handleOpenMoveModal(item); }} variant="ghost" size="icon" className="h-6 w-6 bg-white/80 hover:bg-white text-gray-700 rounded-full">
+                                            <Move className="h-3 w-3" />
+                                            <span className="sr-only">Move image {item.name}</span>
+                                         </Button>
+                                         <Button onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(item); }} variant="ghost" size="icon" className="h-6 w-6 bg-white/80 hover:bg-white text-red-500 hover:text-red-600 rounded-full">
+                                            <Trash2 className="h-3 w-3" />
+                                            <span className="sr-only">Delete image {item.name}</span>
+                                        </Button>
+                                    </div>
+                                  </div>
+                              </Card>
+                          )
+                      ))
+                  }
+            </div>
+        )}
         </main>
       </div>
       
-      <Dialog open={isCreateFolderModalOpen} onOpenChange={setIsCreateFolderModalOpen}>
-        <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Folder</DialogTitle>
-              <DialogDescription>
-              Enter a name for your new folder within the current location:{" "}
-              <code className="bg-muted px-1 py-0.5 rounded">
-                {currentPathPrefix || 'Root'}
-              </code>.
-              </DialogDescription>
-            </DialogHeader>
-          <form onSubmit={handleCreateFolder}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="folder-name" className="text-right">
-                  Name
-                </Label>
-                <Input 
-                  id="folder-name"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  className="col-span-3"
-                  placeholder="e.g., Summer Vacation"
-                  required
-                  disabled={isCreatingFolder}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                 <Button type="button" variant="outline" disabled={isCreatingFolder}>Cancel</Button>
-              </DialogClose>
-              <Button type="submit" disabled={isCreatingFolder || !newFolderName.trim()}>
-                {isCreatingFolder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FolderPlus className="mr-2 h-4 w-4" />}
-                {isCreatingFolder ? 'Creating...' : 'Create Folder'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {isCreateFolderModalOpen && (
+        <Dialog open={isCreateFolderModalOpen} onOpenChange={setIsCreateFolderModalOpen}>
+             <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Create New Folder</DialogTitle>
+                    <DialogDescription>
+Enter a name for your new folder within the current directory: <span className="font-medium">{currentPathPrefix || 'Gallery Home'}</span>.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCreateFolder}>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="folder-name" className="text-right">
+                        Name
+                      </Label>
+                      <Input
+                        id="folder-name"
+                        value={newFolderName}
+                        onChange={(e) => {
+                          setNewFolderName(e.target.value);
+                          if (createFolderError) setCreateFolderError(null);
+                        }}
+                        className="col-span-3"
+                        placeholder="e.g., Project Assets"
+                        required
+                        pattern="^[a-zA-Z0-9-_ ]+$"
+                        title="Folder name can only contain letters, numbers, spaces, hyphens, and underscores."
+                      />
+                    </div>
+                    {createFolderError && (
+                        <p className="col-span-4 text-red-600 text-sm text-center">{createFolderError}</p>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                       <Button type="button" variant="outline" onClick={() => setCreateFolderError(null)}>
+                         Cancel
+                       </Button>
+                    </DialogClose>
+                    <Button type="submit" disabled={isCreatingFolder || !newFolderName.trim()}>
+                      {isCreatingFolder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      {isCreatingFolder ? 'Creating...' : 'Create Folder'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+      )}
 
-      <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
-         <DialogContent>
-           <DialogHeader>
-              <DialogTitle>Move "{itemToMove?.name}"</DialogTitle>
-              <DialogDescription>
-                     Select the destination folder to move this {itemToMove?.type}.
-              </DialogDescription>
-           </DialogHeader>
-             <div className="py-4">
-                 <Label htmlFor="destination-folder">Destination</Label>
-             {isLoadingMoveFolders ? (
-                      <div className="flex items-center justify-center h-20">
-                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                          <span className="ml-2 text-muted-foreground">Loading folders...</span>
-               </div>
-             ) : moveDestinationFolders.length > 0 ? (
-                     <Select
-                         onValueChange={(value: string) => setSelectedMoveDestination(value)}
-                         value={selectedMoveDestination ?? undefined}
-                         disabled={isMovingItem}
+      {isMoveModalOpen && itemToMove && (
+         <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Move Item</DialogTitle>
+                    <DialogDescription>
+                        Move "{itemToMove.name}" ({itemToMove.type}) to a different folder.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    {isLoadingMoveFolders ? (
+                        <div className="flex items-center justify-center h-20">
+                            <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+                        </div>
+                    ) : moveDestinationFolders.length === 0 ? (
+                         <p className="text-center text-gray-500">No other folders available to move to.</p>
+                    ) : (
+                         <Select 
+                            onValueChange={setSelectedMoveDestination} 
+                            defaultValue={selectedMoveDestination || undefined}
+                         >
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select destination folder..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {moveDestinationFolders.map(folder => (
+                                     <SelectItem key={folder.path} value={folder.path}>
+                                        {folder.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+                </div>
+                <DialogFooter>
+                     <DialogClose asChild>
+                       <Button type="button" variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button 
+                        onClick={handleConfirmMove} 
+                        disabled={isMovingItem || isLoadingMoveFolders || !selectedMoveDestination || moveDestinationFolders.length === 0}
                      >
-                         <SelectTrigger id="destination-folder">
-                             <SelectValue placeholder="Select a folder..." />
-                         </SelectTrigger>
-                         <SelectContent>
-                             {moveDestinationFolders.map((folder) => (
-                                 <SelectItem key={folder.path} value={folder.path}>
-                                     <FolderIcon size={16} className="inline-block mr-2 mb-0.5" />
-                         {folder.name}
-                                     {folder.path !== '' && <span className="text-xs text-muted-foreground ml-1">({folder.path})</span>}
-                                 </SelectItem>
-                             ))}
-                         </SelectContent>
-                     </Select>
-                  ) : (
-                     <p className="text-sm text-muted-foreground mt-2">No other folders found to move to.</p>
-                  )}
+                        {isMovingItem ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {isMovingItem ? 'Moving...' : 'Confirm Move'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      )}
 
-           </div>
-           <DialogFooter>
-              <DialogClose asChild>
-                     <Button type="button" variant="outline" disabled={isMovingItem}>Cancel</Button>
-              </DialogClose>
-              <Button 
-                onClick={handleConfirmMove} 
-                    disabled={isMovingItem || selectedMoveDestination === null || isLoadingMoveFolders}
-                 >
-                     {isMovingItem ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Move className="mr-2 h-4 w-4" />}
-                     {isMovingItem ? 'Moving...' : 'Confirm Move'}
-              </Button>
-           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+       {isDeleteModalOpen && itemToDelete && (
+         <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete 
+                        <span className="font-semibold"> "{itemToDelete.name}"</span> 
+                        ({itemToDelete.type}){itemToDelete.type === 'folder' ? ' and all its contents' : ''}.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeletingItem}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                        onClick={handleConfirmDelete} 
+                        disabled={isDeletingItem}
+                        className={buttonVariants({ variant: "destructive" })}
+                    >
+                         {isDeletingItem ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                         {isDeletingItem ? 'Deleting...' : 'Yes, delete it'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+       )}
 
-      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-                       This action cannot be undone. This will permanently delete the
-                       {' '}<span className="font-semibold">{itemToDelete?.type}</span>{' '}
-                       <span className="font-semibold">"{itemToDelete?.name}"</span>
-                       {itemToDelete?.type === 'folder' ? ' and all its contents.' : '.'}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeletingItem}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDelete}
-              disabled={isDeletingItem}
-                       className={buttonVariants({ variant: "destructive" })}
-                   >
-                       {isDeletingItem ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                       {isDeletingItem ? 'Deleting...' : 'Yes, Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-       <Dialog open={isPreviewOpen} onOpenChange={handleClosePreview}>
-         <DialogContent className="max-w-3xl">
-             <DialogHeader>
-                 <DialogTitle>{selectedImage?.name}</DialogTitle>
-                 <DialogDescription>
-                    Uploaded: {getTimeAgo(selectedImage?.created_at)} | Last Modified: {getTimeAgo(selectedImage?.updated_at)}
-                 </DialogDescription>
-             </DialogHeader>
-             {selectedImage?.imageUrl ? (
-                 <Image
-                   src={selectedImage.imageUrl}
-                   alt={selectedImage.name || 'Preview image'}
-                   width={800}
-                   height={600}
-                   className="object-contain w-full h-auto max-h-[70vh] rounded-md"
-                   onError={(e) => handleImageError(e, selectedImage.name)}
-                   unoptimized={true}
+      {isPreviewOpen && selectedImage && (
+           <Dialog open={isPreviewOpen} onOpenChange={handleClosePreview}>
+            <DialogContent className="max-w-4xl p-0 border-0">
+                 <Image 
+                    src={selectedImage.imageUrl || ''} 
+                    alt={selectedImage.title || selectedImage.name} 
+                    width={1024} 
+                    height={1024} 
+                    className="object-contain max-h-[80vh] w-auto rounded-md"
+                    onError={(e) => handleImageError(e, selectedImage.name)}
                  />
-             ) : (
-                 <div className="flex items-center justify-center h-64 bg-muted rounded-md">
-                     {selectedImage ? <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" /> : <ImageIcon className="h-24 w-24 text-muted-foreground" />}
-                 </div>
-             )}
-             <DialogFooter className="mt-4">
-                 <DialogClose asChild>
-                     <Button variant="outline">Close</Button>
-                 </DialogClose>
-                 <Button
-                     variant="destructive"
-                     onClick={(e) => {
-                         e.stopPropagation();
-                         handleClosePreview();
-                         setTimeout(() => {
-                             if (selectedImage) handleOpenDeleteModal(selectedImage);
-                         }, 100);
-                     }}
-                     disabled={!selectedImage}
-                 >
-                     <Trash2 className="mr-2 h-4 w-4" /> Delete
-                 </Button>
-             </DialogFooter>
-         </DialogContent>
-       </Dialog>
+            </DialogContent>
+        </Dialog>
+      )}
+      
     </MainLayout>
   );
 } 

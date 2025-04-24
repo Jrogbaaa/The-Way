@@ -4,6 +4,7 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Recent Updates (July/August 2024)
 
+- **Image Optimization Feature**: Added an image optimization step to the Social Media Post Analyzer. Users can now automatically crop/resize uploaded images to recommended aspect ratios (e.g., 9:16 for TikTok/Reels/Stories) directly after analysis.
 - **Text-to-Image Generator & Models Page Restructure**: Added a standard Text-to-Image generator (using SDXL) on its own dedicated page (`/generate/image`). Restructured the main Models page (`/models`) to separate models into "Standard Models" (Text-to-Image, Image-to-Video) and "Custom Trained Models" (Cristina, Jaime, Bea) sections for clarity, and updated the model link.
 - **UI Consistency & Model Images**: Unified the header styling (title font, color gradient, container rounding) between the Gallery and Creator Gallery pages for a more consistent look and feel. Updated the preview images for the Bea, Cristina, and Jaime models on the Creator Gallery page with new provided photos.
 - **Gallery Upload and Display Enhancements**: Improved the gallery functionality with several key updates:
@@ -85,6 +86,7 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
     - **Technical Analysis:** Evaluates resolution, aspect ratio, and file size.
     - **Platform Fit:** Provides recommendations for Instagram (Post, Story/Reels) and TikTok based on aspect ratio.
     - **Actionable Insights:** Generates specific pros, cons, and suggestions for improvement based on technical and content analysis.
+  - **NEW: Image Optimization**: After analysis, offers options to automatically crop/resize the image to recommended aspect ratios (e.g., 9:16 for TikTok/Reels/Stories, 1:1 or 4:5 for Instagram Posts) using server-side processing.
   - *Note: Vertex AI analysis (`/api/analyze-image`) backend exists but is not currently wired to the main UI.*
   - Get pros and cons of your content before posting
   

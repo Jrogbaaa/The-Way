@@ -13,7 +13,9 @@ import {
     Settings, // Added for Technical
     MessageSquare, // Added for Caption
     CheckCircle, // Added for Recommendation (and fixing linter error)
-    X // Added for potential dismiss buttons in future
+    X, // Added for potential dismiss buttons in future
+    Crop, // Added for Optimize button
+    Download // Added for Download button
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -21,6 +23,7 @@ import { Textarea } from "./ui/textarea"; // Keep if needed elsewhere, otherwise
 import { ScrollArea } from "@/components/ui/scroll-area"; // Reverted import path back to alias
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "./ui/skeleton"; 
+import { createBrowserClient } from '@supabase/ssr'; // <-- Import Supabase browser client helper
 
 // Define example images for different content categories
 const getSimilarExampleImages = (caption: string) => {
@@ -221,12 +224,20 @@ interface AnalysisResult {
 
 const SocialMediaAnalyzer: React.FC = () => {
     // ... state variables (unchanged) ...
+    const [supabase] = useState(() => createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    ));
     const [imageSrc, setImageSrc] = useState<string | null>(null);
     const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [fileName, setFileName] = useState<string>("");
     const [technicalData, setTechnicalData] = useState<{ width: number, height: number, fileSizeMB: number } | null>(null);
+    const [isOptimizing, setIsOptimizing] = useState<boolean>(false);
+    const [optimizationError, setOptimizationError] = useState<string | null>(null);
+    const [optimizedImageUrl, setOptimizedImageUrl] = useState<string | null>(null);
+    const [optimizedDimensions, setOptimizedDimensions] = useState<{ width: number, height: number } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const resultsRef = useRef<HTMLDivElement>(null); // Ref for the results container
 
@@ -277,6 +288,15 @@ const SocialMediaAnalyzer: React.FC = () => {
         }
     };
 
+    // Reset optimization state when a new image is uploaded
+    useEffect(() => {
+        if (imageSrc) {
+            setOptimizedImageUrl(null);
+            setOptimizedDimensions(null);
+            setOptimizationError(null);
+        }
+    }, [imageSrc]);
+
     const handleAnalyzeClick = async () => {
         if (!imageSrc || !technicalData || !fileInputRef.current?.files?.[0]) {
             setError("Please upload an image first.");
@@ -302,9 +322,10 @@ const SocialMediaAnalyzer: React.FC = () => {
                 fileSizeMB: technicalData.fileSizeMB
             });
 
+            // NOTE: Using standard fetch here because analyze-social-post doesn't require auth
             const response = await fetch('/api/analyze-social-post', {
                 method: 'POST',
-                body: formData,
+                body: formData, // Send as FormData
             });
 
             console.log("API Response Status:", response.status);
@@ -335,6 +356,58 @@ const SocialMediaAnalyzer: React.FC = () => {
             setAnalysisResult(null); 
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    // Handler for Optimize Button Click
+    const handleOptimizeClick = async (targetAspectRatio: '9:16' | '1:1' | '4:5') => {
+        if (!imageSrc) {
+            setOptimizationError("Cannot optimize without an original image source.");
+            return;
+        }
+
+        setIsOptimizing(true);
+        setOptimizationError(null);
+        setOptimizedImageUrl(null); // Clear previous optimized image
+        setOptimizedDimensions(null);
+
+        try {
+            console.log(`Optimizing to ${targetAspectRatio}...`);
+            
+            // *** Revert back to using the standard global fetch ***
+            // The createBrowserClient setup handles auth cookies automatically for this.
+            const response = await fetch('/api/image/optimize', { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    imageUrl: imageSrc, // Send the base64 data URL
+                    targetAspectRatio: targetAspectRatio,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || `Optimization failed with status: ${response.status}`);
+            }
+
+            if (result.success && result.optimizedImageUrl) {
+                console.log("Optimization successful:", result);
+                setOptimizedImageUrl(result.optimizedImageUrl);
+                setOptimizedDimensions({ width: result.width, height: result.height });
+            } else {
+                throw new Error(result.error || "Optimization API call succeeded but returned no URL or indicated failure.");
+            }
+
+        } catch (err: any) {
+            console.error("Optimization failed:", err);
+            setOptimizationError(err.message || "An unexpected error occurred during optimization.");
+            setOptimizedImageUrl(null);
+            setOptimizedDimensions(null);
+        } finally {
+            setIsOptimizing(false);
         }
     };
 
@@ -563,7 +636,7 @@ const SocialMediaAnalyzer: React.FC = () => {
                                         <div>
                                             <h4 className="font-semibold text-base mb-2 flex items-center">
                                                 <ThumbsDown className="h-4 w-4 mr-2 text-red-600" />
-                                                Improvements
+                                                Weaknesses
                                             </h4>
                                             <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
                                                 {analysisResult.cons.map((con, index) => <li key={`con-${index}`}>{con}</li>)}
@@ -572,54 +645,103 @@ const SocialMediaAnalyzer: React.FC = () => {
                                     </div>
                                 </CardContent>
                             </Card>
-                            
-                            {/* Perfect Score Strategy Section */}
-                            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-indigo-100 shadow-sm">
+
+                            {/* Suggestions */}
+                            <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center text-indigo-800">
-                                        <Target className="h-5 w-5 mr-2" />
-                                        Perfect Score Strategy ({analysisResult.category})
-                                    </CardTitle>
-                                     <CardDescription className="text-indigo-600">
-                                        Tips for maximizing impact based on the detected content category and general suggestions.
-                                    </CardDescription>
+                                    <CardTitle className="text-lg">Improvement Suggestions</CardTitle>
+                                    <CardDescription>Specific actions to take based on the analysis.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="mb-4">
-                                        <h4 className="font-semibold text-sm mb-2 text-indigo-700">Category-Specific Tips ({analysisResult.category}):</h4>
-                                        <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                                             {analysisResult.categoryTips.map((tip, index) => (
-                                                <li key={`cat-tip-${index}`}>{tip}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                    <div className="pt-4 border-t border-indigo-100">
-                                        <h4 className="font-semibold text-sm mb-2 text-indigo-700">General Suggestions:</h4>
-                                        {analysisResult.suggestions && analysisResult.suggestions.length > 0 ? (
-                                            <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                                                {analysisResult.suggestions.map((suggestion, index) => (
-                                                    <li key={`suggestion-${index}`}>{suggestion}</li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <p className="text-sm text-gray-500 italic">No specific improvement suggestions generated. Focus on the category tips!</p>
-                                        )}
-                                    </div>
+                                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                                        {analysisResult.suggestions.map((suggestion, index) => <li key={`suggestion-${index}`}>{suggestion}</li>)}
+                                    </ul>
                                 </CardContent>
                             </Card>
-                            
+
+                            {/* Strategy */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Strategy for Improvement</CardTitle>
+                                    <CardDescription>Recommended approach to implement the suggested improvements.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-gray-700">{analysisResult.recommendation}</p>
+                                </CardContent>
+                            </Card>
                         </div>
-                    </div>
-                    
-                    {/* Optional Raw JSON Output */}
-                    {/* 
-                    <details className="mt-6">
-                        <summary className="text-sm text-gray-500 cursor-pointer">Show Raw Analysis Data</summary>
-                        <ScrollArea className="mt-2 h-48 w-full rounded-md border p-4 bg-gray-900 text-gray-200 text-xs font-mono">
-                            <pre>{JSON.stringify(analysisResult, null, 2)}</pre>
-                        </ScrollArea>
-                    </details>
-                    */}
+
+                        {/* --- Optimization Section (Moved INSIDE the grid) --- */}
+                        <Card className="md:col-span-2 bg-gray-50 mt-6"> {/* Spans 2 cols on medium+, added mt-6 */} 
+                            <CardHeader>
+                                <CardTitle className="flex items-center">
+                                    <Crop className="h-5 w-5 mr-2 text-teal-600" />
+                                    Optimize Aspect Ratio
+                                </CardTitle>
+                                <CardDescription>
+                                    Crop the image to recommended aspect ratios for different platforms.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex flex-wrap gap-3 mb-4">
+                                   {/* Add back the missing buttons */}
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleOptimizeClick('9:16')}
+                                        disabled={isOptimizing}
+                                    >
+                                        {isOptimizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Crop className="mr-2 h-4 w-4" />}
+                                        Crop 9:16 (Stories/Reels)
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleOptimizeClick('1:1')}
+                                        disabled={isOptimizing}
+                                    >
+                                        {isOptimizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Crop className="mr-2 h-4 w-4" />}
+                                        Crop 1:1 (Square Post)
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleOptimizeClick('4:5')}
+                                        disabled={isOptimizing}
+                                    >
+                                         {isOptimizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Crop className="mr-2 h-4 w-4" />}
+                                        Crop 4:5 (Vertical Post)
+                                    </Button>
+                                </div>
+
+                                {/* Loading indicator */}
+                                {isOptimizing && (
+                                     <div className="flex items-center text-sm text-gray-500">
+                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                         <span>Optimizing image... please wait.</span>
+                                     </div>
+                                )}
+
+                                {/* Optimization Error Display */} 
+                                {optimizationError && (
+                                    <Alert variant="destructive" className="mt-4">
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertTitle>Optimization Error</AlertTitle>
+                                        <AlertDescription>{optimizationError}</AlertDescription>
+                                    </Alert>
+                                )}
+
+                                {/* Optimized Image Result */} 
+                                {optimizedImageUrl && !isOptimizing && (
+                                    <div className="mt-4 p-4 border rounded-lg bg-white">
+                                       {/* ... Optimized Image Display ... */} 
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                        {/* --- End Optimization Section --- */}
+
+                    </div> {/* End of the grid div */}
                 </div>
             )}
         </div>
