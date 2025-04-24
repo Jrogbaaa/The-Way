@@ -39,6 +39,8 @@ const getModelRoute = (modelId: string) => {
   switch (modelId) {
     case 'image-to-video':
       return '/models/image-to-video';
+    case 'text-to-image':
+      return '/storyboard-creator';
     case 'cristina':
       return '/models/cristina';
     case 'jaime':
@@ -68,6 +70,19 @@ export default function ImageCreatorPage() {
       tags: ['Video', 'Animation', 'Motion'],
       stars: 4.9,
       lastUsed: 'New',
+      image: '/images/models/image-to-video.jpg',
+      status: 'ready',
+      isNew: true,
+      isFeatured: true
+    },
+    {
+      id: 'text-to-image',
+      name: 'Text to Image',
+      description: 'Generate images from text prompts using a standard diffusion model.',
+      category: 'Image',
+      tags: ['Generation', 'Text', 'General'],
+      stars: 4.5,
+      lastUsed: 'Ready',
       image: '/images/models/image-to-video.jpg',
       status: 'ready',
       isNew: true,
@@ -138,6 +153,15 @@ export default function ImageCreatorPage() {
     ? models 
     : models.filter(model => model.category === selectedCategory);
 
+  // --- ADDED: Split models into standard and custom --- 
+  const standardModels = filteredModels.filter(model => 
+    ['text-to-image', 'image-to-video'].includes(model.id)
+  );
+  const customModels = filteredModels.filter(model => 
+    ['cristina', 'jaime', 'bea'].includes(model.id)
+  );
+  // --- END ADDED SECTION ---
+
   return (
     <MainLayout>
       <div className="bg-gray-50 min-h-screen">
@@ -186,93 +210,136 @@ export default function ImageCreatorPage() {
             {selectedCategory !== 'All' && ` in ${selectedCategory}`}
           </div>
           
-          {/* Models grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredModels.map((model, index) => (
-              <Link
-                href={getModelRoute(model.id)}
-                key={model.id}
-                className="no-underline"
-              >
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-2 h-full flex flex-col relative group">
-                  <div className="w-full aspect-[4/3] bg-gray-100 relative overflow-hidden">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Image
-                        src={model.image}
-                        alt={model.name}
-                        width={300}
-                        height={200}
-                        className="w-full h-full object-cover rounded-t-xl transform group-hover:scale-105 transition-transform duration-500"
-                        onError={(e) => {
-                          // Fall back to a generated placeholder on error
-                          const target = e.target as HTMLImageElement;
-                          target.onerror = null; // Prevent infinite loop
-                          target.src = "/placeholder-model.jpg";
-                        }}
-                      />
-                      
-                      {/* Gradient overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70"></div>
-                    </div>
-                    
-                    {model.isNew && (
-                      <div className="absolute top-3 left-3 z-10">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 shadow-sm border border-green-200">
-                          New
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Model category tag */}
-                    <div className="absolute bottom-3 right-3 z-10">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 shadow-sm border border-blue-200">
-                        {model.category}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="p-5 flex-1 flex flex-col">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{model.name}</h3>
-                      <p className="mt-1 text-sm text-gray-500 line-clamp-2">{model.description}</p>
-                      
-                      <div className="flex flex-wrap gap-1 mt-3">
-                        {model.tags?.slice(0, 3).map((tag) => (
-                          <span 
-                            key={tag} 
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star 
-                              key={i} 
-                              className={`h-4 w-4 ${
-                                i < Math.floor(model.stars) 
-                                  ? 'text-yellow-400 fill-yellow-400' 
-                                  : i < model.stars 
-                                    ? 'text-yellow-400 fill-yellow-200' 
-                                    : 'text-gray-300 fill-gray-100'
-                              }`} 
+          {/* --- MODIFIED: Render sections --- */}
+          <div className="space-y-12"> 
+            {/* Standard Models Section */}  
+            {standardModels.length > 0 && (
+              <section>
+                <h2 className="text-xl font-semibold mb-6 border-b pb-2 border-gray-200 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                  Standard Models
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {standardModels.map((model) => (
+                    <Link
+                      href={getModelRoute(model.id)}
+                      key={model.id}
+                      className="no-underline"
+                    >
+                      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all duration-300 hover:-translate-y-2 h-full flex flex-col relative group">
+                        <div className="w-full aspect-[4/3] bg-gray-100 relative overflow-hidden">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Image
+                              src={model.image}
+                              alt={model.name}
+                              width={300}
+                              height={200}
+                              className="w-full h-full object-cover rounded-t-xl transform group-hover:scale-105 transition-transform duration-500"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.onerror = null; 
+                                target.src = "/placeholder-model.jpg";
+                              }}
                             />
-                          ))}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70"></div>
+                          </div>
+                          {model.isNew && (
+                            <div className="absolute top-3 left-3 z-10">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 shadow-sm border border-green-200">New</span>
+                            </div>
+                          )}
+                          <div className="absolute bottom-3 right-3 z-10">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 shadow-sm border border-blue-200">{model.category}</span>
+                          </div>
                         </div>
-                        <span className="ml-1 text-xs text-gray-600">{model.stars.toFixed(1)}</span>
+                        <div className="p-5 flex-1 flex flex-col">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{model.name}</h3>
+                            <p className="mt-1 text-sm text-gray-500 line-clamp-2">{model.description}</p>
+                            <div className="flex flex-wrap gap-1 mt-3">
+                              {model.tags?.slice(0, 3).map((tag) => (
+                                <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors">{tag}</span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className="flex">
+                                {[...Array(5)].map((_, i) => (<Star key={i} className={`h-4 w-4 ${ i < Math.floor(model.stars) ? 'text-yellow-400 fill-yellow-400' : i < model.stars ? 'text-yellow-400 fill-yellow-200' : 'text-gray-300 fill-gray-100' }`} />))}
+                              </div>
+                              <span className="ml-1 text-xs text-gray-600">{model.stars.toFixed(1)}</span>
+                            </div>
+                            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-full">{model.lastUsed}</span>
+                          </div>
+                        </div>
                       </div>
-                      <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-full">{model.lastUsed}</span>
-                    </div>
-                  </div>
+                    </Link>
+                  ))}
                 </div>
-              </Link>
-            ))}
+              </section>
+            )}
+
+            {/* Custom Trained Models Section */}  
+            {customModels.length > 0 && (
+              <section>
+                <h2 className="text-xl font-semibold mb-6 border-b pb-2 border-gray-200 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                  Custom Trained Models
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {customModels.map((model) => (
+                    <Link
+                      href={getModelRoute(model.id)}
+                      key={model.id}
+                      className="no-underline"
+                    >
+                      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all duration-300 hover:-translate-y-2 h-full flex flex-col relative group">
+                        <div className="w-full aspect-[4/3] bg-gray-100 relative overflow-hidden">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Image
+                              src={model.image}
+                              alt={model.name}
+                              width={300}
+                              height={200}
+                              className="w-full h-full object-cover rounded-t-xl transform group-hover:scale-105 transition-transform duration-500"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.onerror = null; 
+                                target.src = "/placeholder-model.jpg";
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70"></div>
+                          </div>
+                          <div className="absolute bottom-3 right-3 z-10">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 shadow-sm border border-blue-200">{model.category}</span>
+                          </div>
+                        </div>
+                        <div className="p-5 flex-1 flex flex-col">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{model.name}</h3>
+                            <p className="mt-1 text-sm text-gray-500 line-clamp-2">{model.description}</p>
+                            <div className="flex flex-wrap gap-1 mt-3">
+                              {model.tags?.slice(0, 3).map((tag) => (
+                                <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors">{tag}</span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className="flex">
+                                {[...Array(5)].map((_, i) => (<Star key={i} className={`h-4 w-4 ${ i < Math.floor(model.stars) ? 'text-yellow-400 fill-yellow-400' : i < model.stars ? 'text-yellow-400 fill-yellow-200' : 'text-gray-300 fill-gray-100' }`} />))}
+                              </div>
+                              <span className="ml-1 text-xs text-gray-600">{model.stars.toFixed(1)}</span>
+                            </div>
+                            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-full">{model.lastUsed}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
+          {/* --- END MODIFIED SECTION --- */} 
         </div>
       </div>
     </MainLayout>

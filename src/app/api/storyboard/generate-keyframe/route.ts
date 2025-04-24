@@ -91,39 +91,65 @@ async function generateConsistentImage({
   // Implementation would depend on which image generation backend you're using
   // This could be Stable Diffusion, Midjourney, DALL-E, etc.
   
-  const response = await fetch("/api/images/generate", {
+  // Define the model ID (e.g., SDXL) - ensure this includes the version hash
+  const replicateModelId = 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b'; // Example SDXL model
+
+  const response = await fetch("/api/replicate", { // Target the generic replicate endpoint
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      prompt,
-      modelIds,
-      previousImageUrl,
-      consistencyLevel,
-      width: 1024,
-      height: 1024,
-      numberOfImages: 1
+      modelId: replicateModelId, // Pass the specific model/version
+      input: { // Structure input according to the model's needs
+        prompt: prompt,
+        // modelIds, // The generic endpoint doesn't handle multiple model IDs directly here
+        // previousImageUrl, // Consistency via previous image needs specific model support or logic
+        // consistencyLevel, // Not directly supported by the generic endpoint's input structure
+        width: 1024, // Standard params for SDXL
+        height: 1024,
+        num_outputs: 1,
+      }
     })
   });
   
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({
-      error: "Unknown error occurred"
+      error: "Unknown error occurred parsing error response" // Updated error message
     }));
     
+    // Log the detailed error from the API if available
+    console.error("Error response from /api/replicate:", errorData);
+    
     throw new Error(
-      `Image generation failed: ${errorData.error || response.statusText}`
+      `Image generation via /api/replicate failed: ${errorData.error || response.statusText}` // Use error from response body
     );
   }
   
+  // Handle response structure from /api/replicate
   const data = await response.json();
   
-  // Basic validation of the response
-  if (!data.images || !data.images[0]) {
-    throw new Error("Image generation service returned no images");
+  // Handle cases where polling might be required (status 201) or immediate output (status 200)
+  // For now, assume direct output is returned in data.output
+  // TODO: Implement polling for predictions that return status 201
+  if (response.status === 201) {
+     console.warn("Received status 201 from /api/replicate, polling not implemented yet. Prediction ID:", data.id);
+     // For now, throw an error or return a placeholder, as the image isn't ready
+     throw new Error("Image generation started but requires polling (not implemented).");
   }
-  
-  return {
-    imageUrl: data.images[0].url,
-    metadata: data.metadata || {}
-  };
+
+  if (response.status === 200 && data.output && Array.isArray(data.output) && data.output.length > 0) {
+    // Assuming the output is an array of URLs, take the first one
+    const imageUrl = data.output[0]; 
+    if (typeof imageUrl !== 'string') {
+       throw new Error("Image generation service returned invalid output format.");
+    }
+    return {
+      imageUrl: imageUrl,
+      // Metadata might not be directly available in the output array; depends on the Replicate model
+      metadata: data.metadata || {} // Attempt to get metadata if present, otherwise empty object
+    };
+  } else {
+     // Handle unexpected successful response structure
+     console.error("Unexpected successful response structure from /api/replicate:", data);
+     throw new Error("Image generation service returned an unexpected response structure.");
+  }
 } 

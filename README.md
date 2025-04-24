@@ -4,6 +4,7 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Recent Updates (July/August 2024)
 
+- **Text-to-Image Generator & Models Page Restructure**: Added a standard Text-to-Image generator (using SDXL) to the Storyboard Creator page. Restructured the main Models page (`/models`) to separate models into "Standard Models" (Text-to-Image, Image-to-Video) and "Custom Trained Models" (Cristina, Jaime, Bea) sections for clarity.
 - **UI Consistency & Model Images**: Unified the header styling (title font, color gradient, container rounding) between the Gallery and Creator Gallery pages for a more consistent look and feel. Updated the preview images for the Bea, Cristina, and Jaime models on the Creator Gallery page with new provided photos.
 - **Gallery Upload and Display Enhancements**: Improved the gallery functionality with several key updates:
   - Added robust image upload to Supabase storage with proper authentication
@@ -29,8 +30,13 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 ## Features
 
 - 🖌️ **Creator Gallery** (formerly Image Creator):
-  - Cristina Model (via Replicate)
-  - Jaime Model (via Replicate)
+  - *Now structured into Standard and Custom sections.*
+  - **Standard Models**:
+    - Text to Image (via Replicate SDXL, accessible from Storyboard Creator)
+    - Image to Video (via Replicate Wan 2.1)
+  - **Custom Trained Models**:
+    - Cristina Model (via Replicate)
+    - Jaime Model (via Replicate)
   - Bea Generator Model (via Replicate)
   - Standard Generations Model (via Replicate SDXL)
   - Google Vertex AI Imagen (fully implemented)
