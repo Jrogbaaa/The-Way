@@ -2,27 +2,36 @@
 
 ## Overview
 
-The Way platform includes intelligent post analysis powered by open-source Hugging Face models. This feature helps content creators ensure their images are suitable for social media by analyzing images for content quality and providing data-driven engagement potential estimates with specialized content pillar detection and platform-specific recommendations.
+The Way platform includes intelligent post analysis powered by open-source Hugging Face models. This feature helps content creators ensure their images are suitable for social media by analyzing images for content quality, technical specifications, and providing data-driven engagement potential estimates with platform-specific recommendations and actionable suggestions.
 
 ## Features
 
-- **Content Recognition**: Automatically identifies key subjects and elements in your images
-- **Content Pillar Detection**: Identifies which high-impact content categories your post belongs to
-- **Engagement Prediction**: Provides statistically-backed estimates of social media engagement potential
-- **Detailed Pros & Cons**: Offers specific strengths and weaknesses with engagement impact percentages
-- **Platform-Specific Recommendations**: Suggests optimal platforms and posting times based on content type
-- **Data-Driven Insights**: All recommendations are backed by engagement statistics and best practices
-- **Caption Optimization**: Advice for crafting high-performing captions with focus on first 125 characters
+- **Content Recognition**: Automatically identifies key subjects and elements in images using `Salesforce/blip-image-captioning-large`.
+- **Engagement Prediction**: Provides statistically-backed estimates of social media engagement potential using `facebook/bart-large-mnli` based on image caption.
+- **Technical Analysis**:
+    - Evaluates image resolution (width x height) with ratings (Good, Fair, Poor).
+    - Calculates and displays the aspect ratio (e.g., 16:9, 1:1).
+    - Assesses file size (MB) with ratings (Excellent, Good, Fair).
+- **Platform Fit Recommendations**:
+    - Suggests suitability and potential cropping needs for Instagram Posts (1:1, 4:5).
+    - Suggests suitability and potential cropping needs for Instagram Stories/Reels & TikTok (9:16).
+- **Detailed Insights**:
+    - **Pros**: Identifies strengths based on content and technical aspects.
+    - **Cons**: Highlights weaknesses based on content and technical aspects.
+    - **Actionable Suggestions**: Provides specific, numbered steps to address identified cons and improve overall quality and engagement potential.
+- **Overall Recommendation**: Summarizes the findings with a final recommendation level (Excellent, Good, Fair, Low).
+- **Data-Driven Insights**: All recommendations are backed by engagement statistics and best practices.
 
 ## How to Access
 
-1. Navigate to the "Upload Post" page via:
-   - The sidebar navigation menu
-   - The top navigation bar 
-   - Direct URL: `/posts/upload`
+1. Navigate to the "Analyze a Post" page via:
+   - The sidebar navigation menu (this links to `/social-analyzer`, which redirects to `/upload-post`)
+   - Direct URL: `/upload-post`
 
-2. Upload an image and click "Analyze for Social Media" to run the analysis
-3. Review the detailed analysis results before posting
+2. Upload an image using the upload area.
+3. Wait for the image metadata (dimensions) to be read (button will enable).
+4. Click "Analyze Image" to run the analysis.
+5. Review the detailed analysis results, including technical details, platform fit, engagement insights, and actionable suggestions.
 
 ## High-Impact Content Strategy
 
@@ -220,4 +229,20 @@ For optimal results:
 - Custom content policy configuration
 - Batch analysis for multiple images
 - User profile integration for personalized recommendations
-- Historical performance data analysis for continuous improvement 
+- Historical performance data analysis for continuous improvement
+
+## Models Used
+
+- **Captioning**: `Salesforce/blip-image-captioning-large`
+- **Engagement Classification**: `facebook/bart-large-mnli`
+
+## Technical Thresholds
+
+- **Resolution**: 
+    - Good: >= 1080px on shortest side
+    - Fair: >= 600px on shortest side
+    - Poor: < 600px on shortest side
+- **File Size**:
+    - Excellent: <= 5MB
+    - Good: <= 10MB
+    - Fair: > 10MB 

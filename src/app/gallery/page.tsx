@@ -820,154 +820,143 @@ export default function GalleryPage() {
         </aside>
 
         <main className="flex-1 p-6 overflow-y-auto min-h-0 rounded-t-2xl bg-white shadow-sm">
-           <div className="mb-6">
-             <h1 className="text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Gallery Home</h1>
+           <div className="mb-8 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+             <div>
+               <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">My Gallery</h1>
+               <p className="text-gray-600">Browse, manage, and upload your content.</p>
+             </div>
+             <div className="flex items-center gap-2 flex-wrap justify-start md:justify-end">
+                 <Select value={selectedFilter} onValueChange={setSelectedFilter}>
+                     <SelectTrigger className="w-auto min-w-[120px] bg-white/70 hover:bg-white shadow-sm">
+                         <Filter className="h-4 w-4 mr-2 text-gray-500" />
+                         <SelectValue placeholder="Filter items" />
+                     </SelectTrigger>
+                     <SelectContent>
+                         {filters.map(filter => (
+                             <SelectItem key={filter.name} value={filter.name}>{filter.label}</SelectItem>
+                         ))}
+                     </SelectContent>
+                 </Select>
+                 
+                 <Button 
+                    onClick={handleOpenCreateFolderModal} 
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                 >
+                    <FolderPlus className="mr-2 h-4 w-4" /> Create Folder
+                 </Button>
+             </div>
            </div>
-           <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-              <div className="flex items-center space-x-1 text-sm text-muted-foreground flex-wrap">
-          {breadcrumbs.map((crumb, index) => (
-                  <React.Fragment key={crumb.path || 'root'}>
-                    {index > 0 && <ChevronRight className="h-4 w-4 mx-1 flex-shrink-0" />}
-                <button
-                  onClick={() => handleBreadcrumbClick(crumb.path)}
-                      className={`hover:text-foreground px-1 py-0.5 rounded ${index === breadcrumbs.length - 1 ? 'font-semibold text-foreground bg-muted' : 'hover:bg-muted'} ${index === 0 ? 'hidden' : ''}`}
-                      aria-current={index === breadcrumbs.length - 1 ? 'page' : undefined}
-                >
-                  {crumb.name}
-                </button>
-                  </React.Fragment>
-          ))}
-          </div>
-              <div className="flex gap-2">
-                <Button onClick={handleOpenCreateFolderModal} className="bg-purple-600 hover:bg-purple-700 text-white">
-                  <FolderPlus className="mr-2 h-4 w-4" /> Create Folder
-              </Button>
-                <Button onClick={() => document.getElementById('gallery-upload-input')?.click()} className="bg-purple-600 hover:bg-purple-700 text-white">
-                  <Upload className="mr-2 h-4 w-4" /> Upload Photos
-                </Button>
-          </div>
-        </div>
 
-          {isLoadingItems ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-muted-foreground">Loading gallery items...</span>
-            </div>
-        ) : (
-            <>
-              {(selectedFilter === 'all' || selectedFilter === 'folders') && foldersToRender.length > 0 && (
-                <div className="mb-6">
-                  <h2 className="text-xl font-semibold mb-3 text-foreground">Folders</h2>
-                  <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                    {foldersToRender.map((folder) => (
-                      <div
-                        key={folder.name}
-                        className="group min-w-0 relative cursor-pointer rounded-lg border border-border p-3 bg-card hover:shadow-md transition-shadow flex flex-col items-center text-center aspect-square justify-center"
-                        onClick={() => handleFolderClick(folder.name)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleFolderClick(folder.name)}
-                        tabIndex={0}
-                        aria-label={`Open folder ${folder.name}`}
-                      >
-                        <FolderIcon size={48} className="mb-2 text-purple-500" />
-                        <span className="text-sm font-medium text-card-foreground truncate w-full">{folder.name}</span>
-                        <div className="absolute top-1 right-1 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-sm rounded p-1">
-                            <Button 
-                                variant="ghost" size="icon"
-                                className="h-7 w-7 text-white hover:bg-white/20 hover:text-white"
-                                onClick={(e) => { e.stopPropagation(); handleOpenMoveModal(folder); }}
-                                aria-label={`Move folder ${folder.name}`}
-                            >
-                                <Move size={16} />
-                            </Button>
-                            <Button 
-                                variant="ghost" size="icon"
-                                className="h-7 w-7 text-red-400 hover:bg-red-400/20 hover:text-red-400"
-                                onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(folder); }}
-                                aria-label={`Delete folder ${folder.name}`}
-                            >
-                                <Trash2 size={16} />
-                            </Button>
-                        </div>
-            </div>
-                    ))}
-                  </div>
-          </div>
-        )}
+           <nav aria-label="Breadcrumb" className="mb-6 flex items-center space-x-2 text-sm font-medium text-gray-500">
+               {breadcrumbs.map((crumb, index) => (
+                   <React.Fragment key={crumb.path}>
+                       {index > 0 && <ChevronRight className="h-4 w-4 text-gray-400" />}
+                       <button
+                           onClick={() => handleBreadcrumbClick(crumb.path)}
+                           className={`rounded p-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 ${index === breadcrumbs.length - 1 ? 'text-gray-700 font-semibold' : 'hover:text-indigo-600 hover:bg-gray-100'}`}
+                           aria-current={index === breadcrumbs.length - 1 ? 'page' : undefined}
+                       >
+                           {index === 0 ? <Home className="h-4 w-4" /> : crumb.name}
+                       </button>
+                   </React.Fragment>
+               ))}
+           </nav>
 
-              {foldersToRender.length > 0 && filesToRender.length > 0 && (selectedFilter === 'all') && (
-                  <hr className="my-6 border-border" />
-              )}
+           <div className="mb-8">
+             <GalleryUpload 
+                 pathPrefix={currentPathPrefix} 
+                 onUploadSuccess={() => fetchItems(currentPathPrefix)} 
+             />
+           </div>
 
-              {(selectedFilter === 'all' || selectedFilter === 'images') && filesToRender.length > 0 && (
-                   <h2 className="text-xl font-semibold mb-3 text-foreground">Files</h2>
-              )}
+           {isLoadingItems && (
+               <div className="text-center py-20">
+                   <Loader2 className="mx-auto h-12 w-12 text-gray-400 animate-spin" />
+                   <p className="mt-4 text-gray-500">Loading gallery items...</p>
+               </div>
+           )}
 
-              {(selectedFilter === 'all' || selectedFilter === 'images') && filesToRender.length > 0 ? (
-                <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {filesToRender.map((file) => (
-                    <Card
-                      key={file.id}
-                      className="overflow-hidden group relative cursor-pointer transition-all hover:shadow-lg min-w-0"
-                      onClick={() => handleImageClick(file)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleImageClick(file)}
-                      tabIndex={0}
-                      aria-label={`View image ${file.name}`}
-                    >
-                      <CardContent className="p-0">
-                        <div className="aspect-square w-full bg-muted flex items-center justify-center overflow-hidden">
-                          {file.imageUrl ? (
-                      <Image
-                               src={file.imageUrl}
-                               alt={file.name || 'Gallery image'}
-                               width={300}
-                               height={300}
-                               className="object-cover w-full h-full transition-transform group-hover:scale-105"
-                               onError={(e) => handleImageError(e, file.name)}
-                               unoptimized={true}
-                             />
-                           ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                      </div>
-                            )}
-            </div>
-                        <div className="p-3 bg-card">
-                          <p className="text-sm font-medium truncate text-card-foreground" title={file.name}>{file.name}</p>
-                          <p className="text-xs text-muted-foreground">{getTimeAgo(file.updated_at)}</p>
-                        </div>
-                        <div className="absolute top-1 right-1 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-sm rounded p-1">
-                            <Button 
-                                variant="ghost" size="icon"
-                                className="h-7 w-7 text-white hover:bg-white/20 hover:text-white"
-                                onClick={(e) => { e.stopPropagation(); handleOpenMoveModal(file); }}
-                                aria-label={`Move image ${file.name}`}
-                            >
-                                <Move size={16} />
-                            </Button>
-                            <Button 
-                                variant="ghost" size="icon"
-                                className="h-7 w-7 text-red-400 hover:bg-red-400/20 hover:text-red-400"
-                                onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(file); }}
-                                aria-label={`Delete image ${file.name}`}
-                            >
-                                <Trash2 size={16} />
-                            </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : null}
+           {!isLoadingItems && filteredItems.length === 0 && (
+               <div className="text-center py-20 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                   <FolderOpen className="mx-auto h-12 w-12 text-gray-400" />
+                   <h3 className="mt-2 text-lg font-semibold text-gray-900">
+                       {selectedFilter === 'all' ? 'This folder is empty' : `No ${selectedFilter} found`}
+                   </h3>
+                   <p className="mt-1 text-sm text-gray-500">
+                       {selectedFilter === 'all' ? 'Upload a photo above or create a new folder to get started.' : `There are no ${selectedFilter} in this folder.`}
+                   </p>
+                   <div className="mt-6 flex justify-center gap-3">
+                        <Button 
+                          onClick={handleOpenCreateFolderModal}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                        >
+                            <FolderPlus className="mr-2 h-4 w-4" /> Create Folder
+                        </Button>
+                   </div>
+               </div>
+           )}
 
-              {!isLoadingItems && foldersToRender.length === 0 && filesToRender.length === 0 && (
-                   <div className="text-center text-muted-foreground py-16">
-                      <FolderOpen size={48} className="mx-auto mb-4 opacity-50" />
-                      <p className="font-semibold text-lg">This folder is empty.</p>
-                      <p className="text-sm">Upload some images or create a new folder to get started.</p>
-                      </div>
-              )}
-                  </>
-                )}
+           {!isLoadingItems && filteredItems.length > 0 && (
+               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                   {filteredItems.map((item) => (
+                       item.type === 'folder' ? (
+                           <Card 
+                               key={item.name}
+                               className="cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all duration-200 overflow-hidden group"
+                               onClick={() => handleFolderClick(item.name)}
+                           >
+                               <CardContent className="p-4 flex flex-col items-center justify-center text-center aspect-square">
+                                   <FolderIcon className="w-12 h-12 text-indigo-600 mb-2 transition-colors" />
+                                   <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-700 break-words w-full line-clamp-2">{item.name}</span>
+                               </CardContent>
+                           </Card>
+                       ) : (
+                           <Card 
+                               key={item.id} 
+                               className="overflow-hidden group relative hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+                               onClick={() => handleImageClick(item)}
+                           >
+                               <CardContent className="p-0 aspect-square">
+                                   <Image
+                                       src={item.imageUrl || '/placeholder-image.png'}
+                                       alt={item.name || 'Gallery image'}
+                                       fill
+                                       style={{ objectFit: 'cover' }}
+                                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                                       className="transition-transform duration-300 group-hover:scale-105"
+                                       onError={(e) => handleImageError(e, item.name)}
+                                       priority={items.indexOf(item) < 12}
+                                   />
+                                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
+                                       <p className="text-xs font-medium text-white line-clamp-2 mb-1">{item.name}</p>
+                                       <p className="text-[10px] text-gray-200">{getTimeAgo(item.updated_at)}</p>
+                                   </div>
+                               </CardContent>
+                               <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                   <Button 
+                                        size="icon" 
+                                        variant="ghost" 
+                                        className="h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full"
+                                        onClick={(e) => { e.stopPropagation(); handleOpenMoveModal(item); }}
+                                        aria-label="Move item"
+                                    >
+                                        <Move className="h-3.5 w-3.5" />
+                                    </Button>
+                                   <Button 
+                                        size="icon" 
+                                        variant="ghost" 
+                                        className="h-7 w-7 bg-black/50 hover:bg-red-600/80 text-white rounded-full"
+                                        onClick={(e) => { e.stopPropagation(); handleOpenDeleteModal(item); }}
+                                        aria-label="Delete item"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                               </div>
+                           </Card>
+                       )
+                   ))}
+               </div>
+           )}
         </main>
       </div>
       

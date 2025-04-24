@@ -140,7 +140,7 @@ export default function ImageCreatorPage() {
 
   return (
     <MainLayout>
-      <div className="bg-gray-50 min-h-screen py-10">
+      <div className="bg-gray-50 min-h-screen">
         <div className={`container max-w-screen-xl mx-auto px-4 py-8 bg-white rounded-2xl shadow-sm ${animateIn ? 'opacity-100 transition-opacity duration-500' : 'opacity-0'}`}>
           
           {/* Header with title and filters */}

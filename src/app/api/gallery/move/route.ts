@@ -90,11 +90,11 @@ export async function POST(request: NextRequest) {
 
       console.log(`Move API: File moved successfully from "${sourcePath}" to "${destinationPath}"`);
       return NextResponse.json({ message: 'File moved successfully' }, { status: 200 });
-    }
+        }
 
     if (itemType === 'folder') {
       const { data, error: moveError } = await supabase.storage
-        .from(BUCKET_NAME)
+                .from(BUCKET_NAME)
         .move(sourcePath, destinationPath);
 
       if (moveError) {
@@ -113,4 +113,4 @@ export async function POST(request: NextRequest) {
     console.error('Move API: Internal server error:', e);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+} 

@@ -213,14 +213,17 @@ export default function Dashboard() {
   return (
     <MainLayout>
       <div className="space-y-8">
-        {/* Dashboard header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        {/* Dashboard header - Apply Creator Gallery Style */}
+        <div className="mb-8 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Action Items</h1>
-            <p className="text-gray-600 mt-1">Review your AI-suggested tasks and content plan</p>
+            {/* Apply gradient text to title */}
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Action Items</h1>
+            {/* Use standard text-gray-600 for subtitle */}
+            <p className="text-gray-600">Review your AI-suggested tasks and content plan</p>
           </div>
           
-          <div className="px-4 py-2 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center">
+          {/* Keep notification button, maybe restyle slightly if needed */}
+          <div className="px-4 py-2 rounded-full bg-white/50 text-indigo-700 border border-indigo-200 flex items-center self-start md:self-center hover:bg-white/80 transition-colors cursor-pointer shadow-sm">
             <Bell className="h-4 w-4 mr-2" />
             <span className="text-sm font-medium">3 new notifications</span>
           </div>

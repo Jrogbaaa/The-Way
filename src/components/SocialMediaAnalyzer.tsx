@@ -1,19 +1,26 @@
 'use client';
 
-import { useState, useRef, FormEvent, ChangeEvent } from 'react';
-import Image from 'next/image';
-import { Loader2, Upload, AlertCircle, Check, X, Image as ImageIcon, ThumbsUp, ThumbsDown, BarChart, Camera, Users, Sparkles, Star, Lightbulb } from 'lucide-react';
-
-type AnalysisResult = {
-  caption: string;
-  engagement: {
-    score: number;
-    level: string;
-  };
-  pros: string[];
-  cons: string[];
-  recommendation: string;
-};
+import React, { useState, useRef, ChangeEvent, useEffect } from 'react';
+import {
+    Loader2,
+    Upload,
+    AlertCircle,
+    Wand2, // Added for Analyze button
+    ThumbsUp,
+    ThumbsDown,
+    Target, // Added for Strategy section
+    TrendingUp, // Added for Engagement
+    Settings, // Added for Technical
+    MessageSquare, // Added for Caption
+    CheckCircle, // Added for Recommendation (and fixing linter error)
+    X // Added for potential dismiss buttons in future
+} from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Textarea } from "./ui/textarea"; // Keep if needed elsewhere, otherwise remove if unused
+import { ScrollArea } from "@/components/ui/scroll-area"; // Reverted import path back to alias
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "./ui/skeleton"; 
 
 // Define example images for different content categories
 const getSimilarExampleImages = (caption: string) => {
@@ -176,407 +183,447 @@ const getSpecificImprovements = (score: number, caption: string, cons: string[])
   return improvements.slice(0, 5);
 };
 
-const SocialMediaAnalyzer = () => {
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [showExamples, setShowExamples] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+// ... interfaces (AnalysisResult, etc. - unchanged) ...
+interface TechnicalAnalysis {
+    width: number;
+    height: number;
+    aspectRatio: string;
+    resolutionRating: 'Low' | 'Acceptable' | 'Good' | 'Excellent';
+    fileSizeMB: number;
+    sizeRating: 'Optimal' | 'Acceptable' | 'Large';
+}
 
-  /**
-   * Handles image selection from the file input
-   */
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    if (!file) return;
+interface PlatformRecommendations {
+    instagramPost?: string;
+    instagramStory?: string;
+    tiktok?: string; // Retained if API might send it
+}
 
-    // Reset previous analysis
-    setAnalysisResult(null);
-    setError(null);
-    setShowExamples(false);
-    
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      setError('Selected file is not an image');
-      return;
-    }
-    
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image size exceeds 5MB limit');
-      return;
-    }
-    
-    setSelectedImage(file);
-    
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImagePreview(e.target?.result as string);
+interface EngagementAnalysis {
+    score: number;
+    level: string;
+    prediction: string;
+}
+
+interface AnalysisResult {
+    caption: string;
+    engagement: EngagementAnalysis;
+    pros: string[];
+    cons: string[];
+    suggestions: string[];
+    recommendation: string;
+    technical: TechnicalAnalysis | null; // Allow technical to be potentially null from API
+    platformRecommendations: PlatformRecommendations | null; // Allow platformRecommendations to be potentially null
+    category: string;
+    categoryTips: string[];
+}
+
+
+const SocialMediaAnalyzer: React.FC = () => {
+    // ... state variables (unchanged) ...
+    const [imageSrc, setImageSrc] = useState<string | null>(null);
+    const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const [fileName, setFileName] = useState<string>("");
+    const [technicalData, setTechnicalData] = useState<{ width: number, height: number, fileSizeMB: number } | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const resultsRef = useRef<HTMLDivElement>(null); // Ref for the results container
+
+    // ... handleImageUpload, handleAnalyzeClick, triggerFileInput functions (unchanged logic) ...
+    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+            if (!validTypes.includes(file.type)) {
+                setError("Invalid file type. Please upload a JPG, PNG, WEBP, or GIF image.");
+                return;
+            }
+
+            const maxSizeMB = 15;
+            if (file.size > maxSizeMB * 1024 * 1024) {
+                setError(`File size exceeds the ${maxSizeMB}MB limit.`);
+                return;
+            }
+
+            setFileName(file.name);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const imgSrc = e.target?.result as string;
+                setImageSrc(imgSrc);
+                setAnalysisResult(null);
+                setError(null);
+
+                const img = new Image();
+                img.onload = () => {
+                    setTechnicalData({
+                        width: img.naturalWidth,
+                        height: img.naturalHeight,
+                        fileSizeMB: file.size / (1024 * 1024)
+                    });
+                };
+                img.onerror = () => {
+                    setError("Could not load image details.");
+                    setTechnicalData(null);
+                }
+                img.src = imgSrc;
+            };
+            reader.onerror = () => {
+                setError("Failed to read the image file.");
+                setImageSrc(null);
+                setTechnicalData(null);
+            }
+            reader.readAsDataURL(file);
+        }
     };
-    reader.readAsDataURL(file);
-  };
 
-  /**
-   * Triggers the file input click event
-   */
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
+    const handleAnalyzeClick = async () => {
+        if (!imageSrc || !technicalData || !fileInputRef.current?.files?.[0]) {
+            setError("Please upload an image first.");
+            return;
+        }
 
-  /**
-   * Analyzes the selected image using the Hugging Face API
-   */
-  const handleAnalyzeImage = async () => {
-    if (!selectedImage) {
-      setError('Please select an image to analyze');
-      return;
-    }
-    
-    setIsAnalyzing(true);
-    setError(null);
-    
-    try {
-      const formData = new FormData();
-      formData.append('image', selectedImage);
-      
-      const response = await fetch('/api/analyze-social-post', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze image');
-      }
-      
-      const data = await response.json();
-      // Safeguard against malformed response
-      if (!data || !data.analysis) {
-        throw new Error('Invalid response from image analysis service');
-      }
-      setAnalysisResult(data.analysis);
-      setShowExamples(true); // Show examples after successful analysis
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to analyze image');
-      console.error('Analysis error:', err);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
+        setIsLoading(true);
+        setError(null);
+        setAnalysisResult(null);
 
-  /**
-   * Reset the component state
-   */
-  const handleReset = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
-    setAnalysisResult(null);
-    setError(null);
-    setShowExamples(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+        try {
+            const formData = new FormData();
+            const file = fileInputRef.current.files[0];
+            formData.append('image', file);
+            formData.append('width', technicalData.width.toString());
+            formData.append('height', technicalData.height.toString());
+            formData.append('fileSizeMB', technicalData.fileSizeMB.toString());
 
-  /**
-   * Get color class based on engagement score
-   */
-  const getScoreColorClass = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 65) return 'text-green-500';
-    if (score >= 45) return 'text-yellow-500';
-    if (score >= 30) return 'text-orange-500';
-    return 'text-red-500';
-  };
+            console.log("Sending data to API:", {
+                fileName: file.name,
+                width: technicalData.width,
+                height: technicalData.height,
+                fileSizeMB: technicalData.fileSizeMB
+            });
 
-  return (
-    <div className="w-full max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="p-6">
-        <h2 className="text-xl font-medium text-gray-900 mb-4">Social Media Post Analyzer</h2>
-        <p className="text-sm text-gray-500 mb-6">
-          Upload an image to analyze its potential engagement on social media
-        </p>
-        
-        {/* Image upload section */}
-        <div className="space-y-4 mb-6">
-          {!imagePreview ? (
-            <div 
-              className="border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
-              onClick={handleUploadClick}
-              tabIndex={0}
-              aria-label="Upload image"
-              onKeyDown={(e) => e.key === 'Enter' && handleUploadClick()}
-            >
-              <ImageIcon className="w-10 h-10 text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500">Click to select an image</p>
-              <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP up to 5MB</p>
-            </div>
-          ) : (
-            <div className="relative rounded-lg overflow-hidden">
-              <div className="aspect-w-16 aspect-h-9 relative">
-                <Image
-                  src={imagePreview}
-                  alt="Preview"
-                  fill
-                  style={{ objectFit: 'cover' }}
-                  sizes="(max-width: 768px) 100vw, 768px"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleReset}
-                className="absolute top-2 right-2 bg-black bg-opacity-50 text-white rounded-full p-1.5 hover:bg-opacity-70 transition-opacity"
-                aria-label="Remove image"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-          
-          <input
-            ref={fileInputRef}
-            id="image"
-            type="file"
-            onChange={handleImageChange}
-            accept="image/*"
-            className="hidden"
-            aria-label="Upload image"
-          />
-          
-          {selectedImage && !analysisResult && !isAnalyzing && (
-            <button
-              type="button"
-              onClick={handleAnalyzeImage}
-              className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full transition-colors"
-              aria-label="Analyze image for social media potential"
-            >
-              <BarChart className="w-4 h-4 mr-2" />
-              Analyze for Social Media
-            </button>
-          )}
-          
-          {isAnalyzing && (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="w-6 h-6 text-blue-600 animate-spin mr-2" />
-              <span className="text-sm text-gray-700">Analyzing image...</span>
-            </div>
-          )}
-          
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start">
-              <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-        </div>
-        
-        {/* Analysis Results */}
-        {analysisResult && (
-          <div className="space-y-6 mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Analysis Results</h3>
-              
-              {/* Caption */}
-              <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Image Content</h4>
-                <p className="text-sm text-gray-600 bg-white p-3 rounded border border-gray-200">
-                  {analysisResult.caption}
+            const response = await fetch('/api/analyze-social-post', {
+                method: 'POST',
+                body: formData,
+            });
+
+            console.log("API Response Status:", response.status);
+
+            const result = await response.json();
+            console.log("API Response Body:", result);
+
+
+            if (!response.ok) {
+                throw new Error(result.error || `HTTP error! status: ${response.status}`);
+            }
+
+            if (!result.analysis) {
+                 console.error("API response missing 'analysis' key:", result);
+                throw new Error("Received an invalid response from the analysis server.");
+            }
+             // Add basic validation for nested structures if needed
+            if (!result.analysis.technical || !result.analysis.engagement || !result.analysis.platformRecommendations) {
+                console.warn("API response analysis object missing some expected keys (technical, engagement, platformRecommendations):", result.analysis);
+                // Potentially set a specific error or handle gracefully
+            }
+
+            setAnalysisResult(result.analysis);
+
+        } catch (err: any) {
+            console.error("Analysis failed:", err);
+            setError(err.message || "An unexpected error occurred during analysis.");
+            setAnalysisResult(null); 
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+     const triggerFileInput = () => {
+        fileInputRef.current?.click();
+    };
+
+    const renderScore = (score: number) => {
+        let colorClass = "text-yellow-600"; 
+        if (score >= 70) colorClass = "text-green-600"; 
+        else if (score < 40) colorClass = "text-red-600"; 
+
+        return <span className={`font-bold ${colorClass}`}>{score}/100</span>;
+    };
+
+    // Effect to scroll to results when analysis is complete
+    useEffect(() => {
+        if (analysisResult && !isLoading && resultsRef.current) {
+            resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [analysisResult, isLoading]); // Re-run when analysisResult or isLoading changes
+
+    // ... JSX return statement ...
+    return (
+        <div className="container mx-auto p-4 md:p-8 max-w-6xl">
+            {/* Header Section: Styled like Creator Gallery - Left Aligned */}
+            <div className="bg-indigo-50 p-6 md:p-8 rounded-lg mb-8"> 
+                <h1 className="text-3xl md:text-4xl font-bold mb-4 text-indigo-600">Social Media Post Analyzer</h1>
+                <p className="text-gray-700 mb-6"> 
+                    Upload an image to analyze its potential engagement and get improvement suggestions.
                 </p>
-              </div>
-              
-              {/* Engagement Score */}
-              <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Engagement Potential</h4>
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 rounded-full bg-gray-100 border-4 flex items-center justify-center relative">
-                    <div className={`text-lg font-bold ${getScoreColorClass(analysisResult.engagement.score)}`}>
-                      {analysisResult.engagement.score}
-                    </div>
-                    <div className="absolute -bottom-6 w-full text-center">
-                      <span className={`text-xs font-medium ${getScoreColorClass(analysisResult.engagement.score)}`}>
-                        {analysisResult.engagement.level}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full ${
-                          analysisResult.engagement.score >= 65 ? 'bg-green-500' :
-                          analysisResult.engagement.score >= 45 ? 'bg-yellow-500' :
-                          'bg-red-500'
-                        }`}
-                        style={{ width: `${analysisResult.engagement.score}%` }}
-                      />
-                    </div>
-                  </div>
+            </div>
+
+            {/* File Input & Analyze Buttons Area */}
+            <div className="mb-6 rounded-lg text-center transition-colors duration-200"> 
+                <input
+                    type="file"
+                    accept="image/jpeg, image/png, image/webp, image/gif"
+                    onChange={handleImageUpload}
+                    ref={fileInputRef}
+                    className="hidden" 
+                    aria-label="Upload image"
+                />
+                <Button onClick={triggerFileInput} variant="outline" size="lg" className="mb-4">
+                    <Upload className="mr-2 h-5 w-5" /> {fileName || "Select Image"}
+                </Button>
+                {fileName && <p className="text-sm text-gray-500 mt-[-8px] mb-2">Using: {fileName}</p>} 
+                 <p className="text-xs text-gray-500 mt-1 mb-4">Supports JPG, PNG, WEBP, GIF (Max 15MB)</p>
+
+                {/* Analyze Button - Moved here, visible after selection */}
+                 <Button 
+                    onClick={handleAnalyzeClick} 
+                    disabled={isLoading || !technicalData || !imageSrc} 
+                    className="w-full md:w-auto" 
+                    size="lg"
+                >
+                    {isLoading ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing...
+                        </>
+                    ) : (
+                        <><Wand2 className="mr-2 h-5 w-5" /> Analyze Post</>
+                    )}
+                </Button>
+            </div>
+
+            {/* Image Preview Area (below buttons) */}
+            {imageSrc && (
+                <div className="mb-6 flex flex-col items-center">
+                    <img src={imageSrc} alt="Uploaded preview" className="max-w-full md:max-w-lg max-h-96 rounded-lg shadow-md object-contain" />
+                    {technicalData && (
+                         <p className="text-sm text-gray-500 mt-2">
+                            Size: {technicalData.width}x{technicalData.height}px | {(technicalData.fileSizeMB).toFixed(2)} MB
+                        </p>
+                    )}
+                    {/* Analyze Button removed from here */}
                 </div>
-              </div>
-              
-              {/* Pros and Cons */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="bg-green-50 p-3 rounded-md border border-green-100">
-                  <div className="flex items-center mb-2">
-                    <ThumbsUp className="w-4 h-4 text-green-600 mr-2" />
-                    <h4 className="text-sm font-medium text-green-800">Pros</h4>
-                  </div>
-                  <ul className="space-y-1">
-                    {analysisResult.pros.map((pro, index) => (
-                      <li key={index} className="text-sm text-green-700 flex items-start">
-                        <Check className="w-4 h-4 text-green-500 mr-1.5 mt-0.5 flex-shrink-0" />
-                        <span>{pro}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                
-                <div className="bg-red-50 p-3 rounded-md border border-red-100">
-                  <div className="flex items-center mb-2">
-                    <ThumbsDown className="w-4 h-4 text-red-600 mr-2" />
-                    <h4 className="text-sm font-medium text-red-800">Cons</h4>
-                  </div>
-                  <ul className="space-y-1">
-                    {analysisResult.cons.map((con, index) => (
-                      <li key={index} className="text-sm text-red-700 flex items-start">
-                        <X className="w-4 h-4 text-red-500 mr-1.5 mt-0.5 flex-shrink-0" />
-                        <span>{con}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              
-              {/* Recommendation */}
-              <div className="bg-blue-50 p-4 rounded-md border border-blue-100 mb-6">
-                <h4 className="text-sm font-medium text-blue-800 mb-1">Recommendation</h4>
-                <p className="text-sm text-blue-700">{analysisResult.recommendation}</p>
-              </div>
-              
-              {/* NEW SECTION: Optimization Guide */}
-              {showExamples && (
-                <div className="mt-6 border border-indigo-100 rounded-lg overflow-hidden">
-                  <div className="bg-indigo-50 p-3">
-                    <div className="flex items-center">
-                      <Star className="w-5 h-5 text-indigo-600 mr-2" />
-                      <h3 className="text-base font-medium text-indigo-900">Perfect Score Strategy</h3>
+            )}
+
+            {/* Loading Skeleton (shows ONLY when loading) */}
+            {isLoading && (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                     {/* Left Column Skeleton */}
+                     <div className="space-y-4">
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-8 w-1/2" />
+                        <div className="flex space-x-4">
+                            <Skeleton className="h-24 w-1/2" />
+                            <Skeleton className="h-24 w-1/2" />
+                        </div>
+                         <Skeleton className="h-8 w-1/2" />
+                         <div className="space-y-2">
+                             <Skeleton className="h-4 w-full" />
+                             <Skeleton className="h-4 w-5/6" />
+                         </div>
+                     </div>
+                     {/* Right Column Skeleton */}
+                    <div className="space-y-4">
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-40 w-full" />
+                        <Skeleton className="h-8 w-1/2" />
+                        <div className="space-y-2">
+                           <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-5/6" />
+                        </div>
                     </div>
-                    <p className="text-xs text-indigo-700 mt-1">
-                      Based on your image content, here's how to achieve a perfect social media engagement score
-                    </p>
-                  </div>
-                  
-                  {/* Category recognition */}
-                  {(() => {
-                    const examples = getSimilarExampleImages(analysisResult.caption);
-                    const improvements = getSpecificImprovements(
-                      analysisResult.engagement.score, 
-                      analysisResult.caption,
-                      analysisResult.cons
-                    );
+                 </div>
+            )}
+
+            {/* Error Display (unchanged) */} 
+            {error && (
+                <Alert variant="destructive" className="mt-6">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Analysis Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
+
+            {/* Analysis Results (shows ONLY when results exist and not loading) */}
+            {analysisResult && !isLoading && (
+                <div ref={resultsRef} className="mt-8 p-4 md:p-6 rounded-lg bg-white">
+                    <h2 className="text-2xl font-semibold mb-6 text-gray-800">Analysis Results</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+                        
+                        {/* Left Column: Scores & Technical */}
+                        <div className="space-y-6">
+                            {/* Overall Recommendation */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center">
+                                        <CheckCircle className="h-5 w-5 mr-2 text-blue-600" />
+                                        Overall Recommendation
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-gray-700">{analysisResult.recommendation}</p>
+                                </CardContent>
+                            </Card>
+
+                            {/* Engagement Score */}
+                            <Card>
+                                <CardHeader>
+                                     <CardTitle className="flex items-center">
+                                        <TrendingUp className="h-5 w-5 mr-2 text-purple-600" />
+                                        Engagement Potential
+                                    </CardTitle>
+                                     <CardDescription>Based on model prediction: {analysisResult.engagement.prediction}</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                     <p className="text-lg">Score: {renderScore(analysisResult.engagement.score)} ({analysisResult.engagement.level})</p>
+                                </CardContent>
+                            </Card>
+
+                            {/* Technical Details */} 
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center">
+                                        <Settings className="h-5 w-5 mr-2 text-gray-600" />
+                                        Technical Details
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                     {analysisResult.technical ? (
+                                        <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+                                            <li>Resolution: {analysisResult.technical.width}x{analysisResult.technical.height}px ({analysisResult.technical.resolutionRating})</li>
+                                            <li>File Size: {analysisResult.technical.fileSizeMB.toFixed(2)} MB ({analysisResult.technical.sizeRating})</li>
+                                            <li>Aspect Ratio: {analysisResult.technical.aspectRatio}</li>
+                                        </ul>
+                                     ) : (
+                                         <p className="text-sm text-gray-500 italic">Technical details not available.</p>
+                                     )}
+                                     {analysisResult.platformRecommendations && (
+                                        <div className="mt-3 pt-3 border-t border-gray-200">
+                                            <h4 className="font-medium text-sm mb-1 text-gray-700">Platform Fit:</h4>
+                                            <ul className="list-none space-y-1 text-xs text-gray-500">
+                                                {analysisResult.platformRecommendations.instagramPost && <li>Instagram Post: {analysisResult.platformRecommendations.instagramPost}</li>}
+                                                {analysisResult.platformRecommendations.instagramStory && <li>Story/Reels/TikTok: {analysisResult.platformRecommendations.instagramStory}</li>}
+                                                {analysisResult.platformRecommendations.tiktok && <li>TikTok: {analysisResult.platformRecommendations.tiktok}</li>}
+                                            </ul>
+                                        </div>
+                                     )}
+                                </CardContent>
+                            </Card>
+
+                        </div>
+
+                        {/* Right Column: Caption, Pros/Cons, Suggestions & Strategy */}
+                        <div className="space-y-6">
+                            {/* Generated Caption */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center">
+                                        <MessageSquare className="h-5 w-5 mr-2 text-orange-600" />
+                                        Generated Caption Idea
+                                     </CardTitle>
+                                     <CardDescription>This caption is generated by AI and can be used as a starting point.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                     <ScrollArea className="h-20 w-full rounded-md border p-2 text-sm bg-gray-50">
+                                         <p className="text-gray-700">{analysisResult.caption}</p>
+                                     </ScrollArea>
+                                </CardContent>
+                            </Card>
+
+                            {/* Combined Pros & Cons Card */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Strengths & Weaknesses</CardTitle>
+                                    <CardDescription>Key positive aspects and areas identified for improvement.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {/* Pros Column */}
+                                        <div>
+                                            <h4 className="font-semibold text-base mb-2 flex items-center">
+                                                <ThumbsUp className="h-4 w-4 mr-2 text-green-600" />
+                                                Strengths
+                                            </h4>
+                                            <ul className="list-disc list-inside space-y-1 text-sm text-green-700">
+                                                {analysisResult.pros.map((pro, index) => <li key={`pro-${index}`}>{pro}</li>)}
+                                            </ul>
+                                        </div>
+                                        {/* Cons Column */}
+                                        <div>
+                                            <h4 className="font-semibold text-base mb-2 flex items-center">
+                                                <ThumbsDown className="h-4 w-4 mr-2 text-red-600" />
+                                                Improvements
+                                            </h4>
+                                            <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
+                                                {analysisResult.cons.map((con, index) => <li key={`con-${index}`}>{con}</li>)}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            
+                            {/* Perfect Score Strategy Section */}
+                            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-indigo-100 shadow-sm">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center text-indigo-800">
+                                        <Target className="h-5 w-5 mr-2" />
+                                        Perfect Score Strategy ({analysisResult.category})
+                                    </CardTitle>
+                                     <CardDescription className="text-indigo-600">
+                                        Tips for maximizing impact based on the detected content category and general suggestions.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="mb-4">
+                                        <h4 className="font-semibold text-sm mb-2 text-indigo-700">Category-Specific Tips ({analysisResult.category}):</h4>
+                                        <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                                             {analysisResult.categoryTips.map((tip, index) => (
+                                                <li key={`cat-tip-${index}`}>{tip}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="pt-4 border-t border-indigo-100">
+                                        <h4 className="font-semibold text-sm mb-2 text-indigo-700">General Suggestions:</h4>
+                                        {analysisResult.suggestions && analysisResult.suggestions.length > 0 ? (
+                                            <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                                                {analysisResult.suggestions.map((suggestion, index) => (
+                                                    <li key={`suggestion-${index}`}>{suggestion}</li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-sm text-gray-500 italic">No specific improvement suggestions generated. Focus on the category tips!</p>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            
+                        </div>
+                    </div>
                     
-                    return (
-                      <div className="p-4">
-                        <div className="mb-4">
-                          <div className="flex items-center mb-2">
-                            <Camera className="w-4 h-4 text-indigo-600 mr-2" />
-                            <h4 className="text-sm font-medium text-gray-900">
-                              {examples.category.charAt(0).toUpperCase() + examples.category.slice(1)} Content Detected
-                            </h4>
-                          </div>
-                          
-                          {/* Similar optimized examples */}
-                          <p className="text-xs text-gray-600 mb-3">
-                            Here are some high-performing examples similar to your content:
-                          </p>
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {examples.images.map((img, index) => (
-                              <div key={index} className="relative rounded overflow-hidden border border-gray-200 bg-white">
-                                <div className="aspect-w-16 aspect-h-9 relative bg-gray-100">
-                                  {/* Use a placeholder or create placeholders in your public directory */}
-                                  <div className="absolute inset-0 bg-indigo-50 flex items-center justify-center">
-                                    <p className="text-xs text-indigo-600 text-center p-2">
-                                      Example {index + 1}: High-scoring {examples.category} content
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="absolute top-1 right-1 bg-green-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
-                                  98
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Best practices */}
-                        <div className="mb-4">
-                          <div className="flex items-center mb-2">
-                            <Sparkles className="w-4 h-4 text-indigo-600 mr-2" />
-                            <h4 className="text-sm font-medium text-gray-900">
-                              {examples.category.charAt(0).toUpperCase() + examples.category.slice(1)} Content Best Practices
-                            </h4>
-                          </div>
-                          
-                          <ul className="space-y-1.5">
-                            {examples.tips.map((tip, index) => (
-                              <li key={index} className="text-xs text-gray-700 flex items-start">
-                                <Check className="w-3.5 h-3.5 text-indigo-500 mr-1.5 mt-0.5 flex-shrink-0" />
-                                <span>{tip}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        
-                        {/* Specific improvement actions */}
-                        <div>
-                          <div className="flex items-center mb-2">
-                            <Lightbulb className="w-4 h-4 text-yellow-600 mr-2" />
-                            <h4 className="text-sm font-medium text-gray-900">
-                              Actions to Improve Your Score
-                            </h4>
-                          </div>
-                          
-                          <ul className="space-y-1.5 mb-3">
-                            {improvements.map((improvement, index) => (
-                              <li key={index} className="text-xs text-gray-700 flex items-start">
-                                <div className="w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 flex items-center justify-center mr-1.5 mt-0.5 flex-shrink-0 text-[10px] font-bold">
-                                  {index + 1}
-                                </div>
-                                <span>{improvement}</span>
-                              </li>
-                            ))}
-                          </ul>
-                          
-                          <div className="text-xs text-indigo-700 bg-indigo-50 p-2 rounded">
-                            <strong>Pro Tip:</strong> After making these improvements, try our AI Model creation to generate perfect social media content consistently.
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                    {/* Optional Raw JSON Output */}
+                    {/* 
+                    <details className="mt-6">
+                        <summary className="text-sm text-gray-500 cursor-pointer">Show Raw Analysis Data</summary>
+                        <ScrollArea className="mt-2 h-48 w-full rounded-md border p-4 bg-gray-900 text-gray-200 text-xs font-mono">
+                            <pre>{JSON.stringify(analysisResult, null, 2)}</pre>
+                        </ScrollArea>
+                    </details>
+                    */}
                 </div>
-              )}
-            </div>
-            
-            {/* Action buttons */}
-            <div className="flex justify-between pt-2">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                aria-label="Analyze another image"
-              >
-                Analyze Another Image
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+            )}
+        </div>
+    );
 };
 
-export default SocialMediaAnalyzer; 
+export default SocialMediaAnalyzer;

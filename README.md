@@ -73,8 +73,13 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
   - Get professional advice on social media strategy, content creation, and analytics
   
 - 📊 **Social Media Content Analysis**:
-  - Google Vertex AI-powered comprehensive image analysis
-  - Hugging Face-powered engagement prediction (open-source alternative)
+  - Hugging Face-powered engagement prediction (`/api/analyze-social-post` via `/upload-post` page)
+    - **Image Captioning:** Uses `Salesforce/blip-image-captioning-large`.
+    - **Engagement Prediction:** Uses `facebook/bart-large-mnli` based on the generated caption.
+    - **Technical Analysis:** Evaluates resolution, aspect ratio, and file size.
+    - **Platform Fit:** Provides recommendations for Instagram (Post, Story/Reels) and TikTok based on aspect ratio.
+    - **Actionable Insights:** Generates specific pros, cons, and suggestions for improvement based on technical and content analysis.
+  - *Note: Vertex AI analysis (`/api/analyze-image`) backend exists but is not currently wired to the main UI.*
   - Get pros and cons of your content before posting
   
 - 🔄 **Modular Architecture**: Easily extensible for adding new AI models and capabilities
@@ -107,6 +112,17 @@ When using OAuth providers like Google, the authentication flow involves redirec
     - **Purpose**: Automatically triggered (likely by a database trigger on `auth.users` insertion) when a new user signs up. It ensures a corresponding row is created in the `profiles` table for the new user, typically setting `onboarded` to `false` by default.
     - **Environment**: Runs in a separate **Deno environment** on Supabase infrastructure, distinct from the Next.js application environment on Vercel.
     - **Secrets**: Requires its own environment variables/secrets (e.g., `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) configured directly within the Supabase dashboard under **Settings -> Functions -> ensure-profile -> Secrets**. These are separate from the Vercel environment variables.
+
+## API Documentation
+
+The application provides several API endpoints for client-side operations. Detailed documentation is available for specific functional areas:
+
+- **[Authentication API Endpoints](./docs/api-authentication.md)**: Documentation for user authentication, session validation, and user onboarding endpoints.
+- **[Post Analysis Documentation](./docs/post-analysis.md)**: Detailed guide on the Hugging Face-powered social media post analysis feature.
+
+Key analysis endpoints include:
+- `/api/analyze-social-post`: Analyzes image content, technical specs, and predicts engagement using Hugging Face models. (Currently active via `/upload-post` page).
+- `/api/analyze-image`: *Backend exists for Vertex AI analysis but is not currently used by the primary UI.*
 
 ### Onboarding Flow for New Users
 
@@ -305,23 +321,25 @@ We've integrated Google's Vertex AI to provide intelligent image analysis for so
 
 For detailed documentation, see [Post Analysis Documentation](./docs/post-analysis.md).
 
-### Social Media Analyzer with Hugging Face (New)
+### Social Media Analyzer with Hugging Face (New -> Updated)
 
 We've added an alternative social media content analyzer powered by open-source Hugging Face models. This provides a focused engagement prediction analysis with clear pros and cons.
 
 **How to Access:**
-1. Click on "Social Media Analyzer" in the sidebar
+1. Click on "Analyze a Post" in the sidebar (this redirects to `/upload-post`)
 2. Upload an image to analyze
-3. Get instant feedback on engagement potential
+3. Get instant feedback on engagement potential, technical suitability, and platform fit.
 
 **Features:**
-- Open-source AI models for transparent analysis
+- Open-source AI models for transparent analysis (`Salesforce/blip-image-captioning-large`, `facebook/bart-large-mnli`)
 - Visual engagement score indicator
+- Technical analysis (resolution, aspect ratio, file size) with ratings
+- Platform-specific formatting recommendations (Instagram, TikTok)
 - Detailed pros and cons list for content optimization
-- Content-specific recommendations
+- Actionable suggestions for improvement
 - No account required for quick analysis
 
-For detailed documentation, see [Post Analysis Documentation](./the-way/docs/post-analysis.md).
+For detailed documentation, see [Post Analysis Documentation](./docs/post-analysis.md).
 
 ### Gallery Management with Supabase Storage
 

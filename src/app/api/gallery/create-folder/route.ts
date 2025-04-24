@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       user = userData.user;
       // Add explicit check for TS
       if (user) {
-        console.log(`API Route/create-folder: Authenticated via token for user ${user.id}`);
+      console.log(`API Route/create-folder: Authenticated via token for user ${user.id}`);
       } else {
         // This case should logically not be reached due to the check above, but satisfies TS
         console.error('API Route/create-folder: Token verification succeeded but user object is unexpectedly null.');
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       user = userData.user;
       // Add explicit check for TS
       if (user) {
-        console.log(`API Route/create-folder: Authenticated via cookies for user ${user.id}`);
+      console.log(`API Route/create-folder: Authenticated via cookies for user ${user.id}`);
       } else {
         // This case should logically not be reached due to the check above, but satisfies TS
         console.error('API Route/create-folder: Cookie auth succeeded but user object is unexpectedly null.');
