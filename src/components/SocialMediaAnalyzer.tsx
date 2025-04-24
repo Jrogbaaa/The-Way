@@ -23,7 +23,7 @@ import { Textarea } from "./ui/textarea"; // Keep if needed elsewhere, otherwise
 import { ScrollArea } from "@/components/ui/scroll-area"; // Reverted import path back to alias
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "./ui/skeleton"; 
-import { createBrowserClient } from '@supabase/ssr'; // <-- Import Supabase browser client helper
+import { useAuth } from "@/components/AuthProvider"; // <-- Correct path
 
 // Define example images for different content categories
 const getSimilarExampleImages = (caption: string) => {
@@ -223,11 +223,10 @@ interface AnalysisResult {
 
 
 const SocialMediaAnalyzer: React.FC = () => {
-    // ... state variables (unchanged) ...
-    const [supabase] = useState(() => createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    ));
+    // Get Supabase client from Auth context
+    const { supabase } = useAuth();
+
+    // Existing state variables
     const [imageSrc, setImageSrc] = useState<string | null>(null);
     const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);

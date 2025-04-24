@@ -5,11 +5,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { ROUTES } from '@/lib/config';
 import type { Session, User } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 // Define the shape of the context value
 interface AuthContextProps {
   user: User | null;
   session: Session | null;
+  supabase: SupabaseClient;
   loading: boolean;
   showWelcomeModal: boolean;
   signOut: () => Promise<void>;
@@ -215,6 +217,7 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const value: AuthContextProps = {
     user,
     session,
+    supabase,
     loading,
     showWelcomeModal,
     signOut: handleSignOut,
