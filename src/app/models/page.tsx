@@ -40,7 +40,7 @@ const getModelRoute = (modelId: string) => {
     case 'image-to-video':
       return '/models/image-to-video';
     case 'text-to-image':
-      return '/storyboard-creator';
+      return '/generate/image';
     case 'cristina':
       return '/models/cristina';
     case 'jaime':
