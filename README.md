@@ -766,7 +766,7 @@ If you encounter errors with remote images like `Invalid src prop on next/image,
 
 1. Check which remote domain is causing the issue in the error message
 2. Open `next.config.mjs` and add the domain to the `remotePatterns` array
-3. Follow the existing pattern for domains like `i.pravatar.cc` and `images.unsplash.com`
+3. Follow the existing pattern for domains like `i.pravatar.cc`, `images.unsplash.com`, and `replicate.delivery`.
 4. Restart the development server after making changes
 
 ## Contributing
