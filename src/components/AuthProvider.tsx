@@ -270,120 +270,135 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     console.log('AuthProvider: Client initialized, setting up onAuthStateChange listener.');
     setLoading(true); // Set loading initially when listener is attached
 
-    // Set up the onAuthStateChange listener using the ref client
-    const { data: { subscription } } = supabaseRef.current.auth.onAuthStateChange(async (event: string, session: Session | null) => {
-      console.log(`AuthProvider Event: ${event} - Path: ${pathname} - Has Session: ${!!session}`);
-
-      // Always update session state regardless of event
-      setSession(session);
-      
-      // Debug the loading state
-      console.log(`AuthProvider DEBUG: Loading state changed to: ${loading}`);
-      // Debug the profile state
-      console.log(`AuthProvider DEBUG: Profile state changed: ${profile ? profile.id : 'null'}`);
-
-      // Use the client instance from the ref consistently
-      const supabase = supabaseRef.current;
-      if (!supabase) {
-        console.error('AuthProvider: supabaseRef.current is null inside listener! This should not happen.');
-        setUser(null);
-        setProfile(null);
+    try {
+      // Verify the client has auth property before setting up listener
+      if (!supabaseRef.current.auth) {
+        console.error('AuthProvider: supabaseRef.current.auth is undefined. Cannot set up listener.');
         setLoading(false);
         return;
       }
+  
+      // Set up the onAuthStateChange listener using the ref client
+      const { data: { subscription } } = supabaseRef.current.auth.onAuthStateChange(async (event: string, session: Session | null) => {
+        console.log(`AuthProvider Event: ${event} - Path: ${pathname} - Has Session: ${!!session}`);
 
-      // Use getUser() to get the definitive user state
-      let authUser: User | null = null;
+        // Always update session state regardless of event
+        setSession(session);
+        
+        // Debug the loading state
+        console.log(`AuthProvider DEBUG: Loading state changed to: ${loading}`);
+        // Debug the profile state
+        console.log(`AuthProvider DEBUG: Profile state changed: ${profile ? profile.id : 'null'}`);
 
-      console.log(`AuthProvider [${event}]: Verifying auth state with getUser()...`);
-      
-      // Add timeout mechanism for getUser call
-      try {
-        // Create promise with timeout for getUser
-        const timeoutPromise = new Promise<{data: {user: null}, error: Error}>((_, reject) => {
-          setTimeout(() => reject(new Error('getUser timeout')), 2000);
-        });
-        
-        // Race between the actual getUser call and a timeout
-        const result = await Promise.race([
-          supabase.auth.getUser(),
-          timeoutPromise
-        ]);
-        
-        console.log(`AuthProvider [${event}]: getUser() successful. User ID: ${result.data.user?.id || 'null'}`);
-        authUser = result.data.user;
-      } catch (error) {
-        if (error instanceof Error && error.message === 'getUser timeout') {
-          console.warn(`AuthProvider [${event}]: getUser() timed out after 2 seconds. Using session data instead.`);
-          // Fall back to session data if getUser times out
-          authUser = session?.user || null;
-        } else if (error instanceof Error && error.message === 'Auth session missing!') {
-          console.log(`AuthProvider [${event}]: getUser() failed with AuthSessionMissingError (expected if not logged in).`);
-          authUser = null;
-        } else {
-          console.error(`AuthProvider [${event}]: Unexpected error calling getUser():`, error);
-          authUser = null;
+        // Use the client instance from the ref consistently
+        const supabase = supabaseRef.current;
+        if (!supabase) {
+          console.error('AuthProvider: supabaseRef.current is null inside listener! This should not happen.');
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
         }
-      }
-      
-      console.log(`AuthProvider [${event}]: Setting user state based on getUser() result. User ID: ${authUser?.id || 'null'}`);
-      setUser(authUser);
 
-      // CRITICAL: Ensure loading doesn't stay true forever 
-      // This prevents the UI from being stuck in loading state
-      if (authUser) {
-        setTimeout(() => {
-          if (loading) {
-            console.log(`AuthProvider [${event}]: Safety timeout - forcing loading=false after 5s`);
-            setLoading(false);
+        // Use getUser() to get the definitive user state
+        let authUser: User | null = null;
+
+        console.log(`AuthProvider [${event}]: Verifying auth state with getUser()...`);
+        
+        // Add timeout mechanism for getUser call
+        try {
+          // Create promise with timeout for getUser
+          const timeoutPromise = new Promise<{data: {user: null}, error: Error}>((_, reject) => {
+            setTimeout(() => reject(new Error('getUser timeout')), 2000);
+          });
+          
+          // Race between the actual getUser call and a timeout
+          const result = await Promise.race([
+            supabase.auth.getUser(),
+            timeoutPromise
+          ]);
+          
+          console.log(`AuthProvider [${event}]: getUser() successful. User ID: ${result.data.user?.id || 'null'}`);
+          authUser = result.data.user;
+        } catch (error) {
+          if (error instanceof Error && error.message === 'getUser timeout') {
+            console.warn(`AuthProvider [${event}]: getUser() timed out after 2 seconds. Using session data instead.`);
+            // Fall back to session data if getUser times out
+            authUser = session?.user || null;
+          } else if (error instanceof Error && error.message === 'Auth session missing!') {
+            console.log(`AuthProvider [${event}]: getUser() failed with AuthSessionMissingError (expected if not logged in).`);
+            authUser = null;
+          } else {
+            console.error(`AuthProvider [${event}]: Unexpected error calling getUser():`, error);
+            authUser = null;
           }
-        }, 5000);
-      }
+        }
+        
+        console.log(`AuthProvider [${event}]: Setting user state based on getUser() result. User ID: ${authUser?.id || 'null'}`);
+        setUser(authUser);
 
-      // Handle profile fetching based on the user state
-      if (authUser) {
-        console.log(`AuthProvider [${event}]: User authenticated (ID: ${authUser.id}), initiating profile fetch...`);
-        setLoading(true); // Set loading before async fetch
-        await fetchProfile(authUser, supabase);
-        // Note: setLoading(false) is handled within fetchProfile's finally block
-      } else {
-        console.log(`AuthProvider [${event}]: No authenticated user found by getUser(). Clearing profile, setting loading=false.`);
-        console.log(`AuthProvider [${event}]: Clearing profile/session state.`);
-        setProfile(null);
-        setShowWelcomeModal(false);
-        setLoading(false);
-      }
-      
-      // Specific event handling (mostly for logging or minor adjustments now)
-      switch(event) {
-          case 'SIGNED_OUT':
-              console.log('AuthProvider [SIGNED_OUT]: Clearing profile/session state.');
-              // State should already be cleared by the logic above, but double-check
-              setProfile(null);
-              setSession(null);
-              setShowWelcomeModal(false);
-              setLoading(false); // Ensure loading is false
-              break;
-          // Other cases might just log now, as the main logic is driven by getUser()
-          case 'PASSWORD_RECOVERY':
-          case 'USER_UPDATED': 
-          case 'TOKEN_REFRESHED':
-                console.log(`AuthProvider [${event}]: Event received. State updated based on preceding getUser().`);
-                // Loading state handled by fetchProfile call or the 'else' block above
+        // CRITICAL: Ensure loading doesn't stay true forever 
+        // This prevents the UI from being stuck in loading state
+        if (authUser) {
+          setTimeout(() => {
+            if (loading) {
+              console.log(`AuthProvider [${event}]: Safety timeout - forcing loading=false after 5s`);
+              setLoading(false);
+            }
+          }, 5000);
+        }
+
+        // Handle profile fetching based on the user state
+        if (authUser) {
+          console.log(`AuthProvider [${event}]: User authenticated (ID: ${authUser.id}), initiating profile fetch...`);
+          setLoading(true); // Set loading before async fetch
+          await fetchProfile(authUser, supabase);
+          // Note: setLoading(false) is handled within fetchProfile's finally block
+        } else {
+          console.log(`AuthProvider [${event}]: No authenticated user found by getUser(). Clearing profile, setting loading=false.`);
+          console.log(`AuthProvider [${event}]: Clearing profile/session state.`);
+          setProfile(null);
+          setShowWelcomeModal(false);
+          setLoading(false);
+        }
+        
+        // Specific event handling (mostly for logging or minor adjustments now)
+        switch(event) {
+            case 'SIGNED_OUT':
+                console.log('AuthProvider [SIGNED_OUT]: Clearing profile/session state.');
+                // State should already be cleared by the logic above, but double-check
+                setProfile(null);
+                setSession(null);
+                setShowWelcomeModal(false);
+                setLoading(false); // Ensure loading is false
                 break;
-            default:
-                // Includes INITIAL_SESSION, SIGNED_IN - primary logic handled above
-                 console.log(`AuthProvider [${event}]: Event received. State updated based on preceding getUser().`);
-                 break;
-      }
-    });
-
-    // Cleanup function
-    return () => {
-      subscription?.unsubscribe();
-      console.log('AuthProvider: Unsubscribing from auth changes.');
-    };
-  }, [isClientInitialized, pathname, fetchProfile]); // Added fetchProfile and pathname dependencies 
+            // Other cases might just log now, as the main logic is driven by getUser()
+            case 'PASSWORD_RECOVERY':
+            case 'USER_UPDATED': 
+            case 'TOKEN_REFRESHED':
+                  console.log(`AuthProvider [${event}]: Event received. State updated based on preceding getUser().`);
+                  // Loading state handled by fetchProfile call or the 'else' block above
+                  break;
+              default:
+                  // Includes INITIAL_SESSION, SIGNED_IN - primary logic handled above
+                   console.log(`AuthProvider [${event}]: Event received. State updated based on preceding getUser().`);
+                   break;
+        }
+      });
+  
+      // Cleanup function
+      return () => {
+        if (subscription) {
+          subscription.unsubscribe();
+          console.log('AuthProvider: Unsubscribing from auth changes.');
+        }
+      };
+    } catch (error) {
+      console.error('AuthProvider: Error setting up auth listener:', error);
+      setLoading(false);
+      return () => {}; // Return empty cleanup function
+    }
+  }, [isClientInitialized, pathname, fetchProfile]);
 
   // For debugging - log profile and loading state changes
   useEffect(() => {
@@ -395,14 +410,14 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     console.log('AuthProvider DEBUG: Profile state changed:', profile ? `User ${profile.id}, Onboarded: ${profile.onboarded}` : 'null');
   }, [profile]);
 
-  // Define the context value
+  // Define the context value - with safer access
   const value: AuthContextProps = {
     user,
     profile,
     session,
     // Use a safe way to get the supabase client, with fallback to empty object
-    supabase: isBrowser() 
-      ? (supabaseRef.current || (isClientInitialized ? getSupabaseBrowserClient() : {} as SupabaseClient)) 
+    supabase: (isBrowser() && supabaseRef.current) 
+      ? supabaseRef.current 
       : {} as SupabaseClient,
     loading,
     showWelcomeModal,

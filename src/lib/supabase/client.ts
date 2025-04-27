@@ -5,7 +5,6 @@ import { isBrowser } from '@/lib/utils';
 // Create a single instance of the Supabase client for browser usage
 // Using a module-scoped variable to ensure true singleton pattern
 let supabaseClient: ReturnType<typeof createBrowserClient> | null = null;
-const clientPromise = isBrowser() ? initializeClient() : null;
 
 // Helper to determine if we're in a local development environment
 const isLocalDevelopment = () => {
@@ -45,54 +44,61 @@ const getCookieDomain = () => {
   return hostname;
 };
 
-// Initialize client once and return a promise to await
-async function initializeClient() {
+// Initialize client
+function initializeClient() {
   if (!isBrowser()) return null;
   
-  if (!supabaseClient) {
-    console.log('Creating new Supabase browser client');
-    
-    // Check for required environment variables
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      console.error('Missing Supabase environment variables');
-      throw new Error('Missing required environment variables for Supabase client');
+  try {
+    if (!supabaseClient) {
+      console.log('Creating new Supabase browser client');
+      
+      // Check for required environment variables
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.error('Missing Supabase environment variables');
+        throw new Error('Missing required environment variables for Supabase client');
+      }
+      
+      // Set up proper cookie options based on environment
+      const cookieOptions = {
+        domain: getCookieDomain(),
+        path: '/',
+        sameSite: 'lax' as const,
+        secure: window.location.protocol === 'https:',
+        maxAge: 30 * 24 * 60 * 60 // 30 days
+      };
+      
+      console.log('Cookie options:', JSON.stringify(cookieOptions, null, 2));
+      
+      supabaseClient = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        {
+          cookieOptions,
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            flowType: 'pkce', // Explicit PKCE for OAuth security
+            storageKey: 'the-way-auth', // Custom storage key to avoid conflicts
+          }
+        }
+      );
+      
+      // Set up cross-tab auth state sync
+      if (supabaseClient) {
+        window.addEventListener('storage', (event) => {
+          if (event.key === 'the-way-auth') {
+            supabaseClient?.auth.refreshSession();
+          }
+        });
+      }
     }
     
-    // Set up proper cookie options based on environment
-    const cookieOptions = {
-      domain: getCookieDomain(),
-      path: '/',
-      sameSite: 'lax' as const,
-      secure: window.location.protocol === 'https:',
-      maxAge: 30 * 24 * 60 * 60 // 30 days
-    };
-    
-    console.log('Cookie options:', JSON.stringify(cookieOptions, null, 2));
-    
-    supabaseClient = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      {
-        cookieOptions,
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-          flowType: 'pkce', // Explicit PKCE for OAuth security
-          storageKey: 'the-way-auth', // Custom storage key to avoid conflicts
-        }
-      }
-    );
-    
-    // Set up cross-tab auth state sync
-    window.addEventListener('storage', (event) => {
-      if (event.key === 'the-way-auth') {
-        supabaseClient?.auth.refreshSession();
-      }
-    });
+    return supabaseClient;
+  } catch (error) {
+    console.error('Failed to initialize Supabase client:', error);
+    return null;
   }
-  
-  return supabaseClient;
 }
 
 // Safely get the Supabase client - will initialize if needed
@@ -104,17 +110,12 @@ export const getSupabaseBrowserClient = () => {
   // Return existing client if available
   if (supabaseClient) return supabaseClient;
   
-  // Initialize client if needed
-  if (!clientPromise) {
-    return initializeClient() as any;
-  }
-  
-  return clientPromise;
+  // Initialize and return a new client
+  return initializeClient();
 };
 
 // Export an explicit initialization function for use in _app.js or layout.js
-export const initializeSupabaseClient = async () => {
+export const initializeSupabaseClient = () => {
   if (!isBrowser()) return null;
-  if (!clientPromise) return initializeClient();
-  return clientPromise;
+  return initializeClient();
 }; 
