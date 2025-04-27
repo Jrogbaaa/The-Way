@@ -105,3 +105,8 @@ export async function getPersistentImageUrl(url: string, options?: {
   // Default to returning the original URL on the server
   return url;
 }
+
+/**
+ * Check if the code is running in a browser environment
+ */
+export const isBrowser = () => typeof window !== 'undefined';

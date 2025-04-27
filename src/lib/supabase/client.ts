@@ -1,21 +1,22 @@
 import { createBrowserClient } from '@supabase/ssr';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
+import { isBrowser } from '@/lib/utils';
 
 // Create a single instance of the Supabase client for browser usage
 // Using a module-scoped variable to ensure true singleton pattern
 let supabaseClient: ReturnType<typeof createBrowserClient> | null = null;
-const clientPromise = typeof window !== 'undefined' ? initializeClient() : null;
+const clientPromise = isBrowser() ? initializeClient() : null;
 
 // Helper to determine if we're in a local development environment
 const isLocalDevelopment = () => {
-  if (typeof window === 'undefined') return false;
+  if (!isBrowser()) return false;
   const hostname = window.location.hostname;
   return hostname === 'localhost' || hostname === '127.0.0.1';
 };
 
 // Helper to determine the cookie domain
 const getCookieDomain = () => {
-  if (typeof window === 'undefined') return undefined;
+  if (!isBrowser()) return undefined;
   
   // CRITICAL: For localhost or development environments, NEVER set domain
   // This ensures cookies work properly in the local dev environment
@@ -46,7 +47,7 @@ const getCookieDomain = () => {
 
 // Initialize client once and return a promise to await
 async function initializeClient() {
-  if (typeof window === 'undefined') return null;
+  if (!isBrowser()) return null;
   
   if (!supabaseClient) {
     console.log('Creating new Supabase browser client');
@@ -96,7 +97,7 @@ async function initializeClient() {
 
 // Safely get the Supabase client - will initialize if needed
 export const getSupabaseBrowserClient = () => {
-  if (typeof window === 'undefined') {
+  if (!isBrowser()) {
     throw new Error('getSupabaseBrowserClient should only be called in browser environment');
   }
   
@@ -113,7 +114,7 @@ export const getSupabaseBrowserClient = () => {
 
 // Export an explicit initialization function for use in _app.js or layout.js
 export const initializeSupabaseClient = async () => {
-  if (typeof window === 'undefined') return null;
+  if (!isBrowser()) return null;
   if (!clientPromise) return initializeClient();
   return clientPromise;
 }; 

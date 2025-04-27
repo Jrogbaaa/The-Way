@@ -6,6 +6,7 @@ import { ROUTES } from '@/lib/config';
 import type { Session, User } from '@supabase/supabase-js';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { isBrowser } from '@/lib/utils';
 
 // Define profile type (adjust based on your actual profiles table columns)
 interface Profile {
@@ -57,16 +58,25 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
   // Initialize Supabase client safely in useEffect (only runs in browser)
   useEffect(() => {
-    if (typeof window !== 'undefined' && !supabaseRef.current) {
+    // Safety check - only run in browser environment
+    if (!isBrowser()) return;
+    
+    if (!supabaseRef.current) {
       console.log('AuthProvider: Initializing Supabase client ref');
-      supabaseRef.current = getSupabaseBrowserClient();
-      setIsClientInitialized(true); // Signal that the client is ready
+      try {
+        supabaseRef.current = getSupabaseBrowserClient();
+        setIsClientInitialized(true); // Signal that the client is ready
+      } catch (error) {
+        console.error('Failed to initialize Supabase client:', error);
+        // Set loading to false to prevent UI from being stuck
+        setLoading(false);
+      }
     }
   }, []); // Empty dependency array: runs only once on mount
   
   // Sign out function
   const handleSignOut = useCallback(async () => {
-    if (!supabaseRef.current) return;
+    if (!isBrowser() || !supabaseRef.current) return;
     
     console.log('AuthProvider: Signing out...');
     const { error } = await supabaseRef.current.auth.signOut();
@@ -83,45 +93,30 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
   // Modify markUserOnboarded to remove validateSession call
   const markUserOnboarded = useCallback(async () => {
-    if (!supabaseRef.current) return;
+    if (!isBrowser() || !supabaseRef.current || !user) return;
     
-    console.log('AuthProvider: markUserOnboarded called'); 
-    
-    // Get current session for access token
-    const { data: { session: currentSession } } = await supabaseRef.current.auth.getSession();
-    
-    if (!user || !currentSession?.access_token) { 
-      console.error('AuthProvider: No user or access token for markUserOnboarded');
-      return; 
-    }
-    
-    const accessToken = currentSession.access_token;
-    
-    setShowWelcomeModal(false); 
-    console.log('AuthProvider: Hiding welcome modal');
+    const supabase = supabaseRef.current;
+    console.log('AuthProvider: Marking user as onboarded...');
     
     try {
-      console.log('AuthProvider: Attempting fetch to /api/user/mark-onboarded with token');
-      // Use standard fetch - the middleware and ssr client handle cookies
-      const response = await fetch('/api/user/mark-onboarded', {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json',
-           // Include Bearer token for API routes that might expect it explicitly
-           'Authorization': `Bearer ${accessToken}` 
-         }
-       });
+      const { error } = await supabase
+        .from('profiles')
+        .update({ onboarded: true })
+        .eq('id', user.id);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to mark user onboarded: ${response.status}`);
+      if (error) {
+        console.error('Error updating onboarding status:', error.message);
+      } else {
+        setShowWelcomeModal(false);
+        if (profile) {
+          setProfile({ ...profile, onboarded: true });
+        }
+        console.log('AuthProvider: User marked as onboarded successfully');
       }
-      console.log('AuthProvider: Successfully marked user onboarded via API');
-    } catch (error) {
-      console.error('AuthProvider: Error marking user onboarded:', 
-        error instanceof Error ? error.message : String(error));
+    } catch (e) {
+      console.error('Exception in markUserOnboarded:', e);
     }
-  }, [user]);
+  }, [user, profile]);
 
   // Fetch user profile function (ensure it handles its loading state correctly)
   const fetchProfile = useCallback(async (currentUser: User, clientInstance?: SupabaseClient | null): Promise<Profile | null> => {
@@ -266,8 +261,8 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
   // Set up listener useEffect - Runs when client is initialized
   useEffect(() => {
-    // Only proceed if the Supabase client ref is set
-    if (!isClientInitialized || !supabaseRef.current) {
+    // Only proceed if in browser and Supabase client ref is set
+    if (!isBrowser() || !isClientInitialized || !supabaseRef.current) {
       console.log('AuthProvider: Listener useEffect waiting for client initialization...');
       return; 
     }
@@ -405,7 +400,10 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     user,
     profile,
     session,
-    supabase: supabaseRef.current || getSupabaseBrowserClient() || ({} as SupabaseClient),
+    // Use a safe way to get the supabase client, with fallback to empty object
+    supabase: isBrowser() 
+      ? (supabaseRef.current || (isClientInitialized ? getSupabaseBrowserClient() : {} as SupabaseClient)) 
+      : {} as SupabaseClient,
     loading,
     showWelcomeModal,
     signOut: handleSignOut,
