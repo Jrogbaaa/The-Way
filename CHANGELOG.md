@@ -40,6 +40,16 @@ All notable changes to this project will be documented in this file.
 - Removed Photo Editor documentation file (`docs/photo-editor.md`) prior to rebuild
 
 ### Fixed
+- Fixed Google OAuth authentication flow and profile display issues in Navbar
+  - Implemented timeout mechanism for Supabase `getUser()` calls that hang during OAuth redirects
+  - Enhanced cookie handling for Vercel deployments to prevent authentication loops
+  - Fixed cookie domain configuration for localhost, Vercel deployments, and custom domains
+  - Added stronger error handling in the auth callback route
+  - Improved session persistence across redirects
+  - Added automatic profile creation for new users after successful OAuth login
+  - Enhanced Navbar rendering to properly display user info regardless of loading state
+  - Added fallback user data display from Google metadata when profile fetch fails
+  - Implemented a timeout safety mechanism to prevent infinite loading states
 - Fixed Link component error in Dashboard page causing prop type errors
 - Updated the Dashboard to use valid routes after feature removal
 - Updated documentation to reflect feature removal and UI improvements
