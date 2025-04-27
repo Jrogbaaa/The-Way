@@ -35,6 +35,9 @@ export async function GET(request: NextRequest) {
     // Await the cookie store in Route Handlers
     const cookieStore = await cookies();
     
+    // Create a response object that we'll return at the end
+    const response = NextResponse.redirect(new URL(ROUTES.dashboard, origin));
+    
     // Use createServerClient from @supabase/ssr
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -56,18 +59,24 @@ export async function GET(request: NextRequest) {
               ...options,
               // Max age 30 days
               maxAge: 30 * 24 * 60 * 60,
-              // Don't restrict by domain in development
-              domain: isLocalDevelopment ? undefined : options.domain,
+              // Don't restrict by domain in development or vercel/netlify
+              domain: isLocalDevelopment || hostname.includes('.vercel.app') || hostname.includes('.netlify.app') 
+                ? undefined 
+                : options.domain,
               // Path should always be root 
-              path: '/'
+              path: '/',
+              secure: process.env.NODE_ENV === 'production'
             };
             
+            // Set the cookie both in the cookie store and in the response
             cookieStore.set({ name, value, ...cookieOptions });
+            response.cookies.set({ name, value, ...cookieOptions });
           },
           remove(name: string, options: CookieOptions) {
             // `set` is used for removal as well
             console.log(`Auth Callback: Removing cookie ${name}`);
-            cookieStore.set({ name, value: '', ...options });
+            cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+            response.cookies.set({ name, value: '', ...options, maxAge: 0 });
           },
         },
       }
@@ -77,36 +86,62 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     console.log('Auth Callback: Exchange code result:', data ? 'Session data received' : 'No session data', error ? `Error: ${error.message}` : 'No error');
-
-    if (error) {
-      console.error('Auth Callback Error exchanging code:', error.message);
-      // Redirect to login with an error query param
-      return NextResponse.redirect(new URL(`${ROUTES.login}?error=${encodeURIComponent(error.message)}`, origin));
-    }
-
-    // Test if session was actually created
-    const { data: sessionData } = await supabase.auth.getSession();
-    console.log('Auth Callback: Session check after exchange:', sessionData.session ? `Valid session exists for user ${sessionData.session.user.id}` : 'No session found');
-
-    // Log all cookies to help debugging
-    const allCookies = cookieStore.getAll();
-    console.log('Auth Callback: Cookies set:', allCookies.map(c => `${c.name}: ${c.value ? 'set' : 'empty'}`));
-
-    // IMPORTANT: Force the redirect to stay on the same origin (localhost or production) 
-    // to prevent cross-origin issues with session cookies
-    const redirectUrl = new URL(ROUTES.dashboard, origin);
-    console.log(`Auth Callback: Redirecting to ${redirectUrl.toString()}`);
     
-    // Add cache control headers to prevent caching of the redirect
-    const response = NextResponse.redirect(redirectUrl);
-    response.headers.set('Cache-Control', 'no-store, max-age=0, no-cache, must-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
+    // If there's an error, redirect to the login page with the error
+    if (error) {
+      console.error('Auth Callback: Error exchanging code for session:', error.message);
+      // Return the redirect with error information in the query params
+      return NextResponse.redirect(new URL(`${ROUTES.login}?error=${error.message}`, origin));
+    }
+    
+    if (!data.session) {
+      console.error('Auth Callback: No session returned after code exchange');
+      return NextResponse.redirect(new URL(`${ROUTES.login}?error=no_session`, origin));
+    }
+    
+    console.log('Auth Callback: Successfully authenticated, redirecting to dashboard');
+    
+    // Make sure to manually set the essential auth cookies in the response
+    const sessionCookieName = 'sb-session';
+    const sessionCookie = cookieStore.get(sessionCookieName);
+    if (sessionCookie) {
+      response.cookies.set({
+        name: sessionCookieName,
+        value: sessionCookie.value,
+        domain: isLocalDevelopment || hostname.includes('.vercel.app') || hostname.includes('.netlify.app') 
+          ? undefined 
+          : hostname,
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+      });
+    }
+    
+    // Also create a profile for the user using our ensure-profile endpoint
+    try {
+      const profileResponse = await fetch(new URL('/api/user/ensure-profile', origin).toString(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${data.session.access_token}`
+        }
+      });
+      
+      if (profileResponse.ok) {
+        console.log('Auth Callback: Successfully created/updated user profile');
+      } else {
+        console.warn('Auth Callback: Failed to create/update user profile, but continuing');
+      }
+    } catch (profileError) {
+      console.error('Auth Callback: Error creating/updating user profile:', profileError);
+      // Continue anyway, we don't want to block the login flow
+    }
+    
+    // Redirect to the dashboard
     return response;
-  } catch (err) {
-    // Log and handle any unexpected errors
-    const error = err as Error;
-    console.error('Auth Callback: Unexpected error:', error.message);
-    return NextResponse.redirect(new URL(`${ROUTES.login}?error=${encodeURIComponent('Authentication failed. Please try again.')}`, origin));
+  } catch (catchError) {
+    console.error('Auth Callback: Unexpected error:', catchError);
+    return NextResponse.redirect(new URL(`${ROUTES.login}?error=unexpected`, origin));
   }
 } 

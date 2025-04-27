@@ -24,9 +24,16 @@ const getCookieDomain = () => {
   
   const hostname = window.location.hostname;
   
-  // For deployment preview environments, also don't set domain
-  if (hostname.includes('.vercel.app') || hostname.includes('.netlify.app')) {
-    console.log('Using undefined cookie domain for deployment preview');
+  // Handle Vercel deployment previews - IMPORTANT: Don't set domain for Vercel.app domains
+  // This allows cookies to be properly set on the specific subdomain
+  if (hostname.includes('.vercel.app')) {
+    console.log('Using undefined cookie domain for vercel.app - allows subdomain-specific cookies');
+    return undefined; // undefined allows the browser to use the current domain
+  }
+  
+  // For Netlify previews, use the same approach
+  if (hostname.includes('.netlify.app')) {
+    console.log('Using undefined cookie domain for netlify.app');
     return undefined;
   }
   
@@ -41,24 +48,54 @@ export const getSupabaseBrowserClient = () => {
   
   if (!supabaseClient && isBrowser) {
     console.log('Creating new Supabase browser client');
+    
+    // Set up proper cookie options based on environment
+    const cookieOptions = {
+      domain: getCookieDomain(),
+      path: '/',
+      sameSite: 'lax' as const,
+      secure: isBrowser ? window.location.protocol === 'https:' : true,
+      maxAge: 30 * 24 * 60 * 60 // 30 days
+    };
+    
+    console.log('Cookie options:', JSON.stringify(cookieOptions, null, 2));
+    
     supabaseClient = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        cookieOptions: {
-          // Get the appropriate domain for cookies
-          domain: getCookieDomain(),
-          path: '/',
-          sameSite: 'lax',
-          secure: isBrowser ? window.location.protocol === 'https:' : true,
-          // Set a longer max age to prevent frequent re-authentications
-          maxAge: 30 * 24 * 60 * 60 // 30 days
-        },
-        // Enable storage persistence for better session handling
+        cookieOptions,
         auth: {
           persistSession: true,
           autoRefreshToken: true,
-          detectSessionInUrl: true
+          detectSessionInUrl: true,
+          flowType: 'pkce', // Explicit PKCE for OAuth security
+          storageKey: 'the-way-auth', // Custom storage key to avoid conflicts
+          // Prevent multiple instances from fighting for the same storage
+          storage: {
+            getItem: (key: string) => {
+              try {
+                return localStorage.getItem(key);
+              } catch (error) {
+                console.error('Error accessing localStorage:', error);
+                return null;
+              }
+            }, 
+            setItem: (key: string, value: string) => {
+              try {
+                localStorage.setItem(key, value);
+              } catch (error) {
+                console.error('Error writing to localStorage:', error);
+              }
+            },
+            removeItem: (key: string) => {
+              try {
+                localStorage.removeItem(key);
+              } catch (error) {
+                console.error('Error removing from localStorage:', error);
+              }
+            }
+          }
         },
         // Add debug flag in development to log auth events
         ...(isLocalDevelopment() && { debug: true }),

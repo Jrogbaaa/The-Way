@@ -281,6 +281,11 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
       // Always update session state regardless of event
       setSession(session);
+      
+      // Debug the loading state
+      console.log(`AuthProvider DEBUG: Loading state changed to: ${loading}`);
+      // Debug the profile state
+      console.log(`AuthProvider DEBUG: Profile state changed: ${profile ? profile.id : 'null'}`);
 
       // Use the client instance from the ref consistently
       const supabase = supabaseRef.current;
@@ -294,70 +299,44 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
       // Use getUser() to get the definitive user state
       let authUser: User | null = null;
-      let verifiedUser: User | null = null;
 
-      // --- Always try getUser() inside the listener to verify state --- 
       console.log(`AuthProvider [${event}]: Verifying auth state with getUser()...`);
       
-      // Remove the delay and replace with timeout mechanism
-      let getUserResult: User | null = null;
-      let getUserError: any = null;
-
       // Add timeout mechanism for getUser call
       try {
-          // Set up a Promise.race between getUser and a timeout
-          const getUserPromise = supabase.auth.getUser();
-          const timeoutPromise = new Promise<{data: {user: null}, error: Error}>((_, reject) => 
-              setTimeout(() => reject(new Error('getUser timeout')), 2000));
-          
-          // Race between the getUser call and the timeout
-          const result = await Promise.race([getUserPromise, timeoutPromise]);
-          console.log(`AuthProvider [${event}]: <<< Call to supabase.auth.getUser() completed.`);
-          getUserResult = result.data.user;
-          getUserError = result.error;
-      } catch (e) {
-          // Handle timeout or other errors
-          if (e instanceof Error && e.message === 'getUser timeout') {
-              console.warn(`AuthProvider [${event}]: getUser() timed out after 2 seconds. Using session data instead.`);
-              // When getUser times out, we'll use the session data directly
-              getUserResult = session?.user || null;
-              getUserError = null;
-          } else {
-              console.error(`AuthProvider [${event}]: XXX CRITICAL ERROR during await supabase.auth.getUser():`, e);
-              getUserError = e;
-          }
-      }
-
-      if (getUserError) {
-          // Handle specific expected error if no session
-          if (getUserError.message === 'Auth session missing!') {
-              console.log(`AuthProvider [${event}]: getUser() failed with AuthSessionMissingError (expected if not logged in).`);
-              verifiedUser = null;
-          } else {
-              // Log other unexpected errors from getUser()
-              console.error(`AuthProvider [${event}]: Unexpected error calling getUser():`, getUserError);
-              // Reset state on unexpected error
-              setUser(null);
-              setProfile(null);
-              setSession(null); // Clear session too
-              setLoading(false); 
-              return; 
-          }
-      } else {
-          console.log(`AuthProvider [${event}]: getUser() successful. User ID:`, getUserResult?.id ?? 'null');
-          verifiedUser = getUserResult;
+        // Create promise with timeout for getUser
+        const timeoutPromise = new Promise<{data: {user: null}, error: Error}>((_, reject) => {
+          setTimeout(() => reject(new Error('getUser timeout')), 2000);
+        });
+        
+        // Race between the actual getUser call and a timeout
+        const result = await Promise.race([
+          supabase.auth.getUser(),
+          timeoutPromise
+        ]);
+        
+        console.log(`AuthProvider [${event}]: getUser() successful. User ID: ${result.data.user?.id || 'null'}`);
+        authUser = result.data.user;
+      } catch (error) {
+        if (error instanceof Error && error.message === 'getUser timeout') {
+          console.warn(`AuthProvider [${event}]: getUser() timed out after 2 seconds. Using session data instead.`);
+          // Fall back to session data if getUser times out
+          authUser = session?.user || null;
+        } else if (error instanceof Error && error.message === 'Auth session missing!') {
+          console.log(`AuthProvider [${event}]: getUser() failed with AuthSessionMissingError (expected if not logged in).`);
+          authUser = null;
+        } else {
+          console.error(`AuthProvider [${event}]: Unexpected error calling getUser():`, error);
+          authUser = null;
+        }
       }
       
-      // Assign the verified user (or null) - this is the most reliable source
-      authUser = verifiedUser; 
-      console.log(`AuthProvider [${event}]: Setting user state based on getUser() result. User ID: ${authUser?.id ?? 'null'}`);
+      console.log(`AuthProvider [${event}]: Setting user state based on getUser() result. User ID: ${authUser?.id || 'null'}`);
       setUser(authUser);
 
-      // CRITICAL: Ensure loading doesn't stay true forever if we have a user
+      // CRITICAL: Ensure loading doesn't stay true forever 
       // This prevents the UI from being stuck in loading state
       if (authUser) {
-        // We'll set loading to true again below right before fetching profile
-        // But this ensures it doesn't stay true forever if profile fetch fails
         setTimeout(() => {
           if (loading) {
             console.log(`AuthProvider [${event}]: Safety timeout - forcing loading=false after 5s`);
@@ -366,23 +345,18 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
         }, 5000);
       }
 
-      // Handle profile fetching and loading state based ONLY on the getUser() result
-      // Ensure loading is set to true *before* the async fetchProfile call
-      // and set to false *after* it completes (in fetchProfile's finally block) or if no fetch is needed.
-      
+      // Handle profile fetching based on the user state
       if (authUser) {
-          // If user is confirmed, fetch profile (fetchProfile handles its own loading state internally now)
-           console.log(`AuthProvider [${event}]: User authenticated (ID: ${authUser.id}), initiating profile fetch...`);
-           setLoading(true); // Set loading before async fetch
-           await fetchProfile(authUser, supabase);
-           // setLoading(false) is handled within fetchProfile's finally block
+        console.log(`AuthProvider [${event}]: User authenticated (ID: ${authUser.id}), initiating profile fetch...`);
+        setLoading(true); // Set loading before async fetch
+        await fetchProfile(authUser, supabase);
+        // Note: setLoading(false) is handled within fetchProfile's finally block
       } else {
-          // If no user is confirmed by getUser()
-          console.log(`AuthProvider [${event}]: No authenticated user found by getUser(). Clearing profile, setting loading=false.`);
-          setProfile(null);
-          setShowWelcomeModal(false);
-          // Explicitly ensure loading is false if no user/profile fetch needed
-          setLoading(false); 
+        console.log(`AuthProvider [${event}]: No authenticated user found by getUser(). Clearing profile, setting loading=false.`);
+        console.log(`AuthProvider [${event}]: Clearing profile/session state.`);
+        setProfile(null);
+        setShowWelcomeModal(false);
+        setLoading(false);
       }
       
       // Specific event handling (mostly for logging or minor adjustments now)
