@@ -6,15 +6,7 @@ import Link from 'next/link';
 import { runCristinaModel } from '@/lib/api/replicate';
 import { generateContent } from '@/lib/api/gemini';
 import visionAPI from '@/lib/api/vision';
-
-// Prevent client initialization of supabase at build time
-let supabase: any;
-if (typeof window !== 'undefined') {
-  // Only import supabase on the client side
-  import('@/lib/supabase').then((module) => {
-    supabase = module.supabase;
-  });
-}
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export default function ApiTestPage() {
   const [results, setResults] = useState<Record<string, any>>({});
@@ -27,9 +19,7 @@ export default function ApiTestPage() {
     setError(prev => ({ ...prev, supabase: null }));
     
     try {
-      if (!supabase) {
-        throw new Error('Supabase client not initialized yet');
-      }
+      const supabase = getSupabaseBrowserClient();
       // Just check if we can connect to Supabase by testing the auth endpoint
       const { data, error } = await supabase.auth.getSession();
       

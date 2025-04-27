@@ -170,18 +170,24 @@ export default function Home() {
                 tabIndex={0}
                     aria-label="Go to dashboard"
                   >
+                    <div className="relative h-6 w-6 overflow-hidden rounded-full border border-gray-300 dark:border-gray-600">
                     {user.user_metadata?.avatar_url ? (
-                      <img 
+                        <Image
                         src={user.user_metadata.avatar_url}
-                        alt="User Avatar"
-                        className="h-6 w-6 rounded-full border border-gray-300 dark:border-gray-700"
+                          alt="User avatar"
+                          fill
+                          className="object-cover"
+                          sizes="24px"
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600">
-                        <UserIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                      </span>
+                        <div className="flex h-full w-full items-center justify-center bg-primary text-primary-foreground">
+                          {(user.user_metadata?.name?.[0] || 
+                            user.user_metadata?.full_name?.[0] || 
+                            user.email?.[0] || 'U').toUpperCase()}
+                        </div>
                     )}
+                    </div>
                     <span className="truncate max-w-[150px]"> 
                       {user.user_metadata?.name || user.user_metadata?.full_name || user.email}
                     </span>
@@ -247,7 +253,24 @@ export default function Home() {
                     aria-label="Go to dashboard"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                    <UserIcon className="mr-2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <div className="relative h-6 w-6 overflow-hidden rounded-full border border-gray-300 dark:border-gray-600 mr-2 flex-shrink-0">
+                      {user.user_metadata?.avatar_url ? (
+                        <Image
+                          src={user.user_metadata.avatar_url}
+                          alt="User avatar"
+                          fill
+                          className="object-cover"
+                          sizes="24px"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-primary text-primary-foreground">
+                          {(user.user_metadata?.name?.[0] || 
+                            user.user_metadata?.full_name?.[0] || 
+                            user.email?.[0] || 'U').toUpperCase()}
+                        </div>
+                      )}
+                    </div>
                     <span className="truncate max-w-[150px]"> 
                       {user.user_metadata?.name || user.user_metadata?.full_name || user.email}
                     </span>

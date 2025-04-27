@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/config';
 import OnboardingWelcome from '@/components/OnboardingWelcome';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -44,15 +44,55 @@ export default function LoginPage() {
   };
 
   const handleGoogleSignIn = useCallback(async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+    // Use the singleton Supabase client
+    const supabase = getSupabaseBrowserClient();
+    
+    // Force localhost URL in development, use origin in production
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const origin = isLocalhost ? `http://${window.location.hostname}:${window.location.port}` : window.location.origin;
+    const redirectUrl = `${origin}/auth/callback`;
+    
+    console.log('Login: Initiating Google sign-in');
+    console.log('Login: Current origin:', origin);
+    console.log('Login: Using redirect URL:', redirectUrl);
+    
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          // Force localhost return by specifying it explicitly in development
+          ...(isLocalhost && {
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            }
+          }),
+          // Use normal params in production
+          ...(!isLocalhost && {
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
+          })
+        }
+      });
+      
+      if (error) {
+        console.error('Error signing in with Google:', error.message);
+        // Show error message to user
+        alert(`Sign-in error: ${error.message}`);
+      } else {
+        console.log('Login: OAuth initiated successfully, redirecting...');
+        // No need to redirect manually, the OAuth flow will handle it
       }
-    });
-    if (error) {
-      console.error('Error signing in with Google:', error.message);
-      // Handle error appropriately (e.g., show a notification)
+    } catch (e) {
+      console.error('Exception during Google sign-in:', e);
+      alert('An error occurred during sign in. Please try again.');
+    } finally {
+      setLoading(false);
     }
   }, []);
 

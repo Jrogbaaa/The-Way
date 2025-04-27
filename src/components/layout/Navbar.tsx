@@ -194,32 +194,32 @@ const Navbar = () => {
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
             {/* Mobile menu toggle */}
-            {isInteriorPage && (
-              <button
-                type="button"
-                className="p-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
-                onClick={handleToggleSidebar}
-                onKeyDown={handleSidebarKeyDown}
-                tabIndex={0}
-                aria-expanded={sidebarOpen}
-                aria-label="Toggle sidebar"
-              >
-                <Menu className="h-7 w-7" />
-              </button>
-            )}
+          {isInteriorPage && (
+            <button
+              type="button"
+              className="p-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
+              onClick={handleToggleSidebar}
+              onKeyDown={handleSidebarKeyDown}
+              tabIndex={0}
+              aria-expanded={sidebarOpen}
+              aria-label="Toggle sidebar"
+            >
+              <Menu className="h-7 w-7" />
+            </button>
+          )}
           
             {/* Logo */}
-            <Link 
-              href={ROUTES.home}
-              className="flex items-center gap-3 text-lg font-semibold hover:opacity-90 transition-opacity rounded-md p-1 focus:outline-none border-0 whitespace-nowrap"
-              style={{ textDecoration: 'none', outline: 'none', border: 'none' }}
-              tabIndex={0}
-              aria-label="Go to home page"
-            >
-              <Logo size="md" />
-              <span style={{ border: 'none', outline: 'none' }}>Content AI Agent</span>
-            </Link>
-          </div>
+          <Link 
+            href={ROUTES.home}
+            className="flex items-center gap-3 text-lg font-semibold hover:opacity-90 transition-opacity rounded-md p-1 focus:outline-none border-0 whitespace-nowrap"
+            style={{ textDecoration: 'none', outline: 'none', border: 'none' }}
+            tabIndex={0}
+            aria-label="Go to home page"
+          >
+            <Logo size="md" />
+            <span style={{ border: 'none', outline: 'none' }}>Content AI Agent</span>
+          </Link>
+        </div>
           
           <div className="flex items-center gap-2">
             {/* Desktop navigation - authenticated */}
@@ -241,54 +241,54 @@ const Navbar = () => {
 
             {/* Notifications toggle */}
             {user && (
-              <div className="relative">
-                <button
-                  type="button"
-                  className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 relative"
-                  onClick={toggleNotifications}
-                  aria-expanded={notificationsOpen}
-                  aria-label="View notifications"
-                >
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
-                </button>
-                
-                {/* Notifications dropdown */}
-                {notificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-50 border border-gray-200 dark:border-gray-700 dark:bg-gray-800">
-                    <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                      <h3 className="text-sm font-semibold">Notifications</h3>
-                      <button className="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">
-                        Mark all as read
-                      </button>
-                    </div>
-                    <div className="max-h-96 overflow-y-auto">
-                      {notifications.map(notification => (
-                        <div 
-                          key={notification.id} 
-                          className={`p-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 cursor-pointer ${notification.read ? 'bg-white dark:bg-gray-800' : 'bg-indigo-50 dark:bg-indigo-900/20'}`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <h4 className="text-sm font-medium">{notification.title}</h4>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">{notification.time}</span>
-                          </div>
-                          <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">{notification.message}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="p-2 text-center border-t border-gray-200 dark:border-gray-700">
-                      <Link 
-                        href="/notifications"
-                        className="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
-                      >
-                        View all notifications
-                      </Link>
-                    </div>
+            <div className="relative">
+              <button
+                type="button"
+                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 relative"
+                onClick={toggleNotifications}
+                aria-expanded={notificationsOpen}
+                aria-label="View notifications"
+              >
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
+              </button>
+              
+              {/* Notifications dropdown */}
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-50 border border-gray-200 dark:border-gray-700 dark:bg-gray-800">
+                  <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <h3 className="text-sm font-semibold">Notifications</h3>
+                    <button className="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">
+                      Mark all as read
+                    </button>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    {notifications.map(notification => (
+                      <div 
+                        key={notification.id} 
+                        className={`p-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 cursor-pointer ${notification.read ? 'bg-white dark:bg-gray-800' : 'bg-indigo-50 dark:bg-indigo-900/20'}`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <h4 className="text-sm font-medium">{notification.title}</h4>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{notification.time}</span>
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">{notification.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-2 text-center border-t border-gray-200 dark:border-gray-700">
+                    <Link 
+                      href="/notifications"
+                      className="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+                    >
+                      View all notifications
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+            </div>
         </div>
       </div>
       

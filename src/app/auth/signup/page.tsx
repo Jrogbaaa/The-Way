@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/config';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import OnboardingWelcome from '@/components/OnboardingWelcome';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -44,16 +44,32 @@ export default function SignupPage() {
   
   // Add Google Sign In handler
   const handleGoogleSignIn = useCallback(async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+    // Use the singleton Supabase client
+    const supabase = getSupabaseBrowserClient();
+    const redirectUrl = `${window.location.origin}/auth/callback`;
+    console.log('Signup: Initiating Google sign-in using the singleton client');
+    console.log('Signup: Using redirect URL:', redirectUrl);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
+        }
+      });
+      
+      if (error) {
+        console.error('Error signing in with Google:', error.message);
+        // Handle error appropriately (e.g., show a notification)
+      } else {
+        console.log('Signup: OAuth initiated successfully, redirect data:', data);
       }
-    });
-    if (error) {
-      console.error('Error signing in with Google:', error.message);
-      // Handle error appropriately (e.g., show a notification)
-      // You might want to set an error state here to display to the user
+    } catch (e) {
+      console.error('Exception during Google sign-in:', e);
     }
     // Supabase handles the redirect, no explicit redirect here needed generally
   }, []);

@@ -5,6 +5,16 @@
 
 export const APP_NAME = "Content AI Agent";
 
+// Detect if we're in development or production
+let defaultAppUrl = "http://localhost:3000";
+if (typeof window !== 'undefined') {
+  // If in a browser, default to the current URL
+  defaultAppUrl = window.location.origin;
+} else if (process.env.NODE_ENV === 'production') {
+  // In production (server-side), use the environment variable 
+  defaultAppUrl = process.env.NEXT_PUBLIC_APP_URL || "https://the-way-amber.vercel.app";
+}
+
 export const API_CONFIG = {
   // Supabase
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -36,8 +46,8 @@ export const API_CONFIG = {
     animateAnyone: "ByteDance/AnimateAnyone"
   },
   
-  // App URLs
-  appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  // App URLs - use the dynamic approach for determining the appUrl
+  appUrl: process.env.NEXT_PUBLIC_APP_URL || defaultAppUrl,
 };
 
 export const ROUTES = {

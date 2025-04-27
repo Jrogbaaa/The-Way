@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/lib/config';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import {
   Heart,
   MessageCircle,
@@ -49,7 +49,6 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs';
 import { redirect } from 'next/navigation';
 import MainLayout from '@/components/layout/MainLayout';
 import GalleryUpload from '@/components/gallery/GalleryUpload';
@@ -152,6 +151,7 @@ const filters = [
 export default function GalleryPage() {
   const { user, loading, session } = useAuth();
   const router = useRouter();
+  const supabase = getSupabaseBrowserClient();
 
   const [items, setItems] = useState<CombinedItem[]>([]);
   const [currentPathPrefix, setCurrentPathPrefix] = useState<string>('');
