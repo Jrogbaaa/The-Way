@@ -71,7 +71,9 @@ export const ROUTES = {
   photoEditor: "/photo-editor",
   terms: "/terms",
   privacy: "/privacy",
-  help: "/help"
+  help: "/help",
+  authDebug: "/auth/debug",
+  authCallback: "/auth/callback"
 };
 
 export const AI_MODELS = {

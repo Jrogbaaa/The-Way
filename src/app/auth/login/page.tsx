@@ -47,13 +47,18 @@ export default function LoginPage() {
     // Use the singleton Supabase client
     const supabase = getSupabaseBrowserClient();
     
-    // Force localhost URL in development, use origin in production
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const origin = isLocalhost ? `http://${window.location.hostname}:${window.location.port}` : window.location.origin;
-    const redirectUrl = `${origin}/auth/callback`;
+    // Determine the appropriate redirect URL based on environment
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    const isBrowser = typeof window !== 'undefined';
+    const isLocalhost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    
+    // Use app URL (from env) in production, fallback to origin if not set
+    const baseUrl = isLocalhost ? `http://${window.location.hostname}:${window.location.port}` : appUrl;
+    const redirectUrl = `${baseUrl}/auth/callback`;
     
     console.log('Login: Initiating Google sign-in');
-    console.log('Login: Current origin:', origin);
+    console.log('Login: NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL);
+    console.log('Login: Current origin:', window.location.origin);
     console.log('Login: Using redirect URL:', redirectUrl);
     
     try {
@@ -63,20 +68,10 @@ export default function LoginPage() {
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
-          // Force localhost return by specifying it explicitly in development
-          ...(isLocalhost && {
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent',
-            }
-          }),
-          // Use normal params in production
-          ...(!isLocalhost && {
           queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
+            access_type: 'offline', // Request a refresh token
+            prompt: 'consent', // Force consent screen to ensure refresh token
           }
-          })
         }
       });
       
@@ -84,9 +79,13 @@ export default function LoginPage() {
         console.error('Error signing in with Google:', error.message);
         // Show error message to user
         alert(`Sign-in error: ${error.message}`);
+      } else if (data) {
+        console.log('Login: OAuth initiated successfully, redirecting to:', data.url);
+        // We need to navigate to the provided URL
+        window.location.href = data.url;
       } else {
-        console.log('Login: OAuth initiated successfully, redirecting...');
-        // No need to redirect manually, the OAuth flow will handle it
+        console.error('Login: No data returned from signInWithOAuth');
+        alert('Something went wrong. Please try again.');
       }
     } catch (e) {
       console.error('Exception during Google sign-in:', e);
@@ -236,6 +235,13 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
+      </div>
+      
+      {/* Debug link */}
+      <div className="mt-8 text-center text-xs text-gray-500 dark:text-gray-400">
+        <Link href="/auth/debug" className="underline hover:text-blue-600 dark:hover:text-blue-400">
+          Authentication Debug
+        </Link>
       </div>
     </div>
   );

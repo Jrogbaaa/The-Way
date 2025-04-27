@@ -46,32 +46,53 @@ export default function SignupPage() {
   const handleGoogleSignIn = useCallback(async () => {
     // Use the singleton Supabase client
     const supabase = getSupabaseBrowserClient();
-    const redirectUrl = `${window.location.origin}/auth/callback`;
-    console.log('Signup: Initiating Google sign-in using the singleton client');
+    
+    // Determine the appropriate redirect URL based on environment
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    const isBrowser = typeof window !== 'undefined';
+    const isLocalhost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    
+    // Use app URL (from env) in production, fallback to origin if not set
+    const baseUrl = isLocalhost ? `http://${window.location.hostname}:${window.location.port}` : appUrl;
+    const redirectUrl = `${baseUrl}/auth/callback`;
+    
+    console.log('Signup: Initiating Google sign-in');
+    console.log('Signup: NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL);
+    console.log('Signup: Current origin:', window.location.origin);
     console.log('Signup: Using redirect URL:', redirectUrl);
     
     try {
+      setLoading(true);
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
           queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
+            access_type: 'offline', // Request a refresh token
+            prompt: 'consent', // Force consent screen to ensure refresh token
           }
         }
       });
       
       if (error) {
         console.error('Error signing in with Google:', error.message);
-        // Handle error appropriately (e.g., show a notification)
+        // Show error message to user
+        alert(`Sign-in error: ${error.message}`);
+      } else if (data) {
+        console.log('Signup: OAuth initiated successfully, redirecting to:', data.url);
+        // We need to navigate to the provided URL
+        window.location.href = data.url;
       } else {
-        console.log('Signup: OAuth initiated successfully, redirect data:', data);
+        console.error('Signup: No data returned from signInWithOAuth');
+        alert('Something went wrong. Please try again.');
       }
     } catch (e) {
       console.error('Exception during Google sign-in:', e);
+      alert('An error occurred during sign in. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    // Supabase handles the redirect, no explicit redirect here needed generally
   }, []);
   
   return (

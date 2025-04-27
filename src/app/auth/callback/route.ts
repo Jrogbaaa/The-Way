@@ -10,6 +10,8 @@ import { ROUTES } from '@/lib/config';
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
+  const authError = requestUrl.searchParams.get('error');
+  const authErrorDescription = requestUrl.searchParams.get('error_description');
   
   // Ensure we're using the correct origin (localhost in development, production in production)
   const hostname = requestUrl.hostname;
@@ -24,6 +26,14 @@ export async function GET(request: NextRequest) {
   console.log('Auth Callback: Is local development?', isLocalDevelopment);
   console.log('Auth Callback: Full request URL is', request.url);
   console.log('Auth Callback: Dashboard route is', ROUTES.dashboard);
+  
+  // Check for OAuth provider errors
+  if (authError || authErrorDescription) {
+    console.error('Auth Callback: OAuth provider returned an error:', authError, authErrorDescription);
+    return NextResponse.redirect(
+      new URL(`${ROUTES.login}?error=${encodeURIComponent(authErrorDescription || authError || 'oauth_error')}`, origin)
+    );
+  }
   
   // If there's no code, redirect to login page with error
   if (!code) {
@@ -82,6 +92,7 @@ export async function GET(request: NextRequest) {
       }
     );
 
+    console.log('Auth Callback: About to exchange code for session...');
     // CRITICAL: Exchange the code for a session
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
@@ -91,7 +102,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Auth Callback: Error exchanging code for session:', error.message);
       // Return the redirect with error information in the query params
-      return NextResponse.redirect(new URL(`${ROUTES.login}?error=${error.message}`, origin));
+      return NextResponse.redirect(new URL(`${ROUTES.login}?error=${encodeURIComponent(error.message)}`, origin));
     }
     
     if (!data.session) {
@@ -102,9 +113,11 @@ export async function GET(request: NextRequest) {
     console.log('Auth Callback: Successfully authenticated, redirecting to dashboard');
     
     // Make sure to manually set the essential auth cookies in the response
-    const sessionCookieName = 'sb-session';
+    const sessionCookieName = 'sb-' + process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token';
     const sessionCookie = cookieStore.get(sessionCookieName);
+    
     if (sessionCookie) {
+      console.log(`Auth Callback: Found session cookie ${sessionCookieName}, adding to response`);
       response.cookies.set({
         name: sessionCookieName,
         value: sessionCookie.value,
@@ -116,10 +129,13 @@ export async function GET(request: NextRequest) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax'
       });
+    } else {
+      console.warn(`Auth Callback: Session cookie ${sessionCookieName} not found in store`);
     }
     
     // Also create a profile for the user using our ensure-profile endpoint
     try {
+      console.log('Auth Callback: Attempting to ensure user profile');
       const profileResponse = await fetch(new URL('/api/user/ensure-profile', origin).toString(), {
         method: 'POST',
         headers: {
