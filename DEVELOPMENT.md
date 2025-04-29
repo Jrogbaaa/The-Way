@@ -16,6 +16,7 @@ The Content AI Agent is a platform for optimizing social media content using AI.
   - [Onboarding UI Pattern](#onboarding-ui-pattern)
 - [Image Generation](#image-generation)
 - [Image Analysis](#image-analysis)
+- [Authentication](#authentication)
 - [Code Style and Best Practices](#code-style-and-best-practices)
 - [Testing](#testing)
 - [Deployment](#deployment)
@@ -70,7 +71,8 @@ The application is built using:
 - **NextJS** - React framework
 - **TypeScript** - For type safety
 - **TailwindCSS** - For styling
-- **Supabase** - For database and authentication
+- **Supabase** - For database
+- **NextAuth.js** - For authentication with Google OAuth and credentials
 - **Replicate** - For AI model inference and training
 - **Google Vertex AI** - For image analysis
 - **Google Gemini** - For social media expert chat functionality
@@ -185,6 +187,36 @@ The model training system is implemented with a client-server architecture:
 
 #### Database Schema
 Models are stored in a Supabase `trained_models` table with RLS policies.
+
+## Authentication
+
+The application uses NextAuth.js for user authentication with the following features:
+
+### Setup
+- **Configuration:** The auth configuration is in `src/auth.ts`
+- **Providers:** 
+  - Google OAuth for social login
+  - Credentials provider for email/password
+
+### Auth Flow
+1. User signs in via Google OAuth or credentials
+2. NextAuth creates and manages the user session
+3. Session data is available on both client and server
+
+### Environment Variables
+Required environment variables for authentication:
+```
+AUTH_SECRET="your-secure-secret-key"
+NEXTAUTH_URL="http://localhost:3000"
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+```
+
+### Implementation Details
+- Protected routes check session status via `getServerSession` or React hooks
+- Unauthenticated users are redirected to login
+- User data is retrieved from the session
+- Session persistence handled by HTTP-only cookies
 
 ## Development Guidelines
 
