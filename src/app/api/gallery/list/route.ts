@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { StorageError } from '@supabase/storage-js';
-// Re-add createSupabaseClient for token-based auth
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'; 
+import { auth } from '@/auth';
 
 // Track recent requests to implement basic rate limiting
 const recentRequests = new Map<string, { count: number, lastRequest: number }>();
@@ -56,121 +55,38 @@ export const GET = async (request: NextRequest) => {
       });
     }
     
-    // --- Authentication: Prioritize Token, Fallback to Cookie --- 
-    let user = null;
-    let supabase; 
+    // --- Authentication using NextAuth --- 
+    const session = await auth();
     
-    // Check for Authorization header first
-    const authHeader = request.headers.get('Authorization');
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      console.log('GalleryAPI/list: Found Authorization header, attempting token auth');
-      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-      
-      // Create a direct client with the token
-      try {
-        // Use createSupabaseClient (the standard JS client) for token auth
-        supabase = createSupabaseClient( 
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          {
-            global: {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            },
-            auth: { // Important: disable auto-refresh and persistence for server-side token use
-              autoRefreshToken: false,
-              persistSession: false,
-            },
-          }
-        );
-        
-        // Verify token validity by fetching the user
-        const { data: userData, error: verifyError } = await supabase.auth.getUser();
-
-        if (verifyError || !userData.user) {
-          console.error('GalleryAPI/list: Token verification failed:', verifyError?.message);
-          // Return 401 if token is invalid
-          return NextResponse.json({ 
-            error: 'Unauthorized', 
-            message: 'Invalid or expired token. Please sign in again.'
-          }, { status: 401 });
-        }
-        
-        user = userData.user;
-        console.log(`GalleryAPI/list: Authenticated via token for user ${user.id}`);
-
-      } catch (tokenError) {
-        console.error('GalleryAPI/list: Error processing token:', tokenError);
-        return NextResponse.json({ 
-          error: 'Unauthorized', 
-          message: 'Failed to process authentication token.'
-        }, { status: 401 });
-      }
-
-    } else {
-      // Fall back to cookie-based auth if no token header is present
-      console.log('GalleryAPI/list: No Authorization header, falling back to cookie auth');
-      try {
-        // Use the server helper client for cookie auth
-        supabase = await createClient('GalleryListAPI_Cookie'); 
-        
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('GalleryAPI/list: Cookie auth - Error getting session:', sessionError.message);
-          return NextResponse.json({
-            error: 'Authentication failed',
-            message: sessionError.message
-          }, { status: 401 });
-        }
-        
-        if (!session || !session.user) {
-          console.error('GalleryAPI/list: Cookie auth - No valid session found');
-          return NextResponse.json({ 
-            error: 'Unauthorized', 
-            message: 'No authenticated user found via cookies. Please sign in again.'
-          }, { status: 401 });
-  }
-        
-        user = session.user;
-        console.log(`GalleryAPI/list: Authenticated via cookies for user ${user.id}`);
-
-      } catch (cookieError) {
-        console.error('GalleryAPI/list: Error during cookie-based authentication setup:', cookieError);
-        return NextResponse.json({ 
-          error: 'Authentication setup failed', 
-          message: cookieError instanceof Error ? cookieError.message : 'Unknown authentication error.'
-        }, { status: 500 });
-      }
+    if (!session || !session.user) {
+      console.error('GalleryAPI/list: No authenticated session found');
+      return NextResponse.json({ 
+        error: 'Unauthorized', 
+        message: 'No authenticated user found. Please sign in again.'
+      }, { status: 401 });
     }
+    
+    const user = session.user;
+    console.log(`GalleryAPI/list: Authenticated via NextAuth for user ${user.id || user.email}`);
+    
+    // Create a Supabase client for storage operations
+    const supabase = await createClient('GalleryListAPI');
+    
     // --- End Authentication Logic ---
     
-    // At this point, we should have a valid user and supabase client instance
-    // if authentication succeeded either way.
-    if (!user || !supabase) { 
-      // This should theoretically not be reached if the logic above is correct, but acts as a safeguard.
-      console.error('GalleryAPI/list: Failed to establish authenticated Supabase client.');
-      return NextResponse.json({ 
-        error: 'Internal Server Error', 
-        message: 'Could not initialize authentication context.'
-      }, { status: 500 });
-    }
-    
-    console.log(`GalleryAPI/list: Proceeding with user ${user.id}`);
+    const searchParams = request.nextUrl.searchParams;
+    const recursive = searchParams.get('recursive') === 'true';
 
-  const searchParams = request.nextUrl.searchParams;
-  const recursive = searchParams.get('recursive') === 'true';
+    // Get pathPrefix, decode it (as it might contain spaces or special chars), and remove leading/trailing slashes
+    const rawPathPrefix = searchParams.get('pathPrefix') || '';
+    const decodedPathPrefix = decodeURIComponent(rawPathPrefix).replace(/^\/+|\/+$/g, '');
 
-  // Get pathPrefix, decode it (as it might contain spaces or special chars), and remove leading/trailing slashes
-  const rawPathPrefix = searchParams.get('pathPrefix') || '';
-  const decodedPathPrefix = decodeURIComponent(rawPathPrefix).replace(/^\/+|\/+$/g, '');
-
-  // Construct the prefix for Supabase: user_id/decoded_path/
-  // Ensure it ends with a slash if it's not the root
-  const supabasePrefix = decodedPathPrefix ? `${decodedPathPrefix}/` : '';
-  const fullPrefix = `${user.id}/${supabasePrefix}`;
+    // Construct the prefix for Supabase: user_id/decoded_path/
+    // Use NextAuth user ID or email
+    const userId = user.id || user.email;
+    // Ensure it ends with a slash if it's not the root
+    const supabasePrefix = decodedPathPrefix ? `${decodedPathPrefix}/` : '';
+    const fullPrefix = `${userId}/${supabasePrefix}`;
 
     console.log(`GalleryAPI/list: Listing items for prefix: ${fullPrefix}` + (recursive ? ' (Recursive)' : ''));
 
@@ -178,7 +94,7 @@ export const GET = async (request: NextRequest) => {
         // --- Recursive Folder Listing Logic --- 
         let allObjects: StorageListItem[] = [];
         let marker: string | undefined = undefined;
-        const userRootPrefix = `${user.id}/`;
+        const userRootPrefix = `${userId}/`;
 
         console.log(`GalleryAPI/list: Starting recursive fetch for user root: ${userRootPrefix}`);
 
@@ -238,7 +154,7 @@ export const GET = async (request: NextRequest) => {
 
         } catch (listError: any) {
             // Handle errors similarly to non-recursive path
-            console.error(`GalleryAPI/list: Error during recursive listing for user ${user.id}:`, listError);
+            console.error(`GalleryAPI/list: Error during recursive listing for user ${userId}:`, listError);
             if (listError instanceof StorageError) {
                 if (listError.message.includes('Bucket not found')) {
                   return NextResponse.json({ error: 'Storage not initialized', message: 'Storage bucket not found' }, { status: 404 });

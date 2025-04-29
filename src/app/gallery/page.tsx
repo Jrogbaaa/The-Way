@@ -193,27 +193,27 @@ export default function GalleryPage() {
 
     console.log(`GalleryPage: Fetching item list for prefix: "${pathPrefix}"`);
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-
-    if (sessionError || !sessionData.session) {
-      console.error('GalleryPage: Error fetching client session or no session found:', sessionError?.message);
+    // Check if we have a user from NextAuth session
+    if (!session) {
+      console.error('GalleryPage: Error fetching client session or no session found:', undefined);
       if (user) toast.error('Authentication session issue. Please sign in again.');
       setIsLoadingItems(false);
       return null;
     }
 
-    let accessToken = sessionData.session.access_token;
-    console.log("GalleryPage: Fetched access token client-side for list request.");
+    // NextAuth doesn't have the same access token concept, but we can use the session token
+    let accessToken = session.user?.email || user?.email || 'anonymous';
+    console.log("GalleryPage: Using NextAuth session for authentication");
 
     let listData: ListApiResponse | null = null;
 
     while (retryCount <= MAX_RETRIES && !listData) {
       try {
         const response = await fetch(`/api/gallery/list?pathPrefix=${encodeURIComponent(pathPrefix)}`, {
-        method: 'GET',
-        headers: {
+          method: 'GET',
+          headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
+            // We don't need to pass a token with NextAuth, as it uses cookies
           },
           cache: 'no-store'
         });
@@ -241,19 +241,14 @@ export default function GalleryPage() {
           if (retryCount <= MAX_RETRIES) {
             await new Promise(resolve => setTimeout(resolve, backoffTime));
             backoffTime *= 2;
-            const { data: refreshed, error: refreshErr } = await supabase.auth.getSession();
-            if (refreshErr || !refreshed.session) {
-                console.error('GalleryPage: Failed to refresh session:', refreshErr?.message);
-                toast.error('Session expired or invalid. Please sign in again.');
-          router.push(ROUTES.login);
-        }
-            accessToken = refreshed.session!.access_token;
-          } else {
-             console.error(`GalleryPage: Unauthorized (401) fetching items after ${MAX_RETRIES} retries. Redirecting to login.`);
-             toast.error('Authentication failed. Please sign in again.');
-             router.push(ROUTES.login);
-             setIsLoadingItems(false);
-             return null;
+            // With NextAuth, we don't need to manually refresh the session
+            // Just redirect to login if unauthorized
+            if (response.status === 401) {
+              console.error('GalleryPage: Session expired or invalid. Redirecting to login.');
+              toast.error('Session expired or invalid. Please sign in again.');
+              router.push(ROUTES.login);
+              return null;
+            }
           }
         } else if (response.status === 429) {
           console.warn(`GalleryPage: Rate limited (429) fetching list (Retry ${retryCount + 1}/${MAX_RETRIES}).`);
@@ -343,7 +338,7 @@ export default function GalleryPage() {
     setBreadcrumbs(generateBreadcrumbs(listData.currentPrefix));
     setIsLoadingItems(false);
     return listData;
-  }, [user, router]);
+  }, [user, router, session]);
 
   useEffect(() => {
     if (!loading) {
@@ -394,21 +389,21 @@ export default function GalleryPage() {
 
     console.log(`GalleryPage: Attempting to create folder "${newFolderName}" in prefix "${currentPathPrefix}"`);
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !sessionData.session) {
-        console.error('GalleryPage: Error fetching client session for create folder:', sessionError?.message);
-        toast.error('Authentication session issue. Please sign in again.');
-        setIsCreatingFolder(false);
-        setCreateFolderError('Failed to get authentication token.');
+    // Check if we have a user from NextAuth session
+    if (!session) {
+      console.error('GalleryPage: Error fetching client session for create folder:', undefined);
+      toast.error('Authentication session issue. Please sign in again.');
+      setIsCreatingFolder(false);
+      setCreateFolderError('Failed to get authentication token.');
       return;
     }
 
-    const accessToken = sessionData.session.access_token;
-    console.log("GalleryPage: Fetched access token client-side for create folder request.");
+    // NextAuth doesn't have the same access token concept, but we can use the session token
+    let accessToken = session.user?.email || user?.email || 'anonymous';
+    console.log("GalleryPage: Using NextAuth session for create folder request.");
 
     const requestHeaders: HeadersInit = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
     };
     console.log('GalleryPage: Sending create-folder request with headers:', requestHeaders);
 
@@ -489,16 +484,14 @@ export default function GalleryPage() {
       setIsLoadingMoveFolders(true);
       setMoveDestinationFolders([]);
 
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !sessionData.session) {
-          console.error('GalleryPage/FetchMoveDest: Error fetching client session:', sessionError?.message);
-          toast.error('Authentication error fetching folders. Please sign in again.');
-          router.push(ROUTES.login);
-          setIsLoadingMoveFolders(false);
-          return;
+      // Check if we have a user from NextAuth session
+      if (!session) {
+        console.error('GalleryPage/FetchMoveDest: Error fetching client session:', undefined);
+        toast.error('Authentication error fetching folders. Please sign in again.');
+        router.push(ROUTES.login);
+        setIsLoadingMoveFolders(false);
+        return;
       }
-      const accessToken = sessionData.session.access_token;
-      console.log("GalleryPage/FetchMoveDest: Fetched access token.");
 
       try {
           // Request recursive list of folders from the API
@@ -506,7 +499,6 @@ export default function GalleryPage() {
                method: 'GET',
                headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${accessToken}`,
                },
                cache: 'no-store'
           });
@@ -610,16 +602,17 @@ export default function GalleryPage() {
 
     setIsMovingItem(true);
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !sessionData.session) {
-        console.error('GalleryPage/MoveItem: Error fetching client session:', sessionError?.message);
-        toast.error('Authentication error. Please sign in again.');
-        router.push(ROUTES.login);
-        setIsMovingItem(false);
-        return;
+    // Check if we have a user from NextAuth session
+    if (!session) {
+      console.error('GalleryPage/MoveItem: Error fetching client session:', undefined);
+      toast.error('Authentication error. Please sign in again.');
+      router.push(ROUTES.login);
+      setIsMovingItem(false);
+      return;
     }
-    const accessToken = sessionData.session.access_token;
-    console.log("GalleryPage/MoveItem: Fetched access token.");
+
+    const accessToken = session.user?.email || user?.email || 'anonymous';
+    console.log("GalleryPage/MoveItem: Using NextAuth session for authentication");
 
     const sourcePath = itemToMove.path;
      if (!sourcePath) {
@@ -636,7 +629,6 @@ export default function GalleryPage() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ 
                 sourcePath: sourcePath,
@@ -681,16 +673,17 @@ export default function GalleryPage() {
     if (!itemToDelete) return;
     setIsDeletingItem(true);
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !sessionData.session) {
-        console.error('GalleryPage/DeleteItem: Error fetching client session:', sessionError?.message);
-        toast.error('Authentication error. Please sign in again.');
-        router.push(ROUTES.login);
-        setIsDeletingItem(false);
+    // Check if we have a user from NextAuth session
+    if (!session) {
+      console.error('GalleryPage/DeleteItem: Error fetching client session:', undefined);
+      toast.error('Authentication error. Please sign in again.');
+      router.push(ROUTES.login);
+      setIsDeletingItem(false);
       return;
     }
-    const accessToken = sessionData.session.access_token;
-    console.log("GalleryPage/DeleteItem: Fetched access token.");
+
+    const accessToken = session.user?.email || user?.email || 'anonymous';
+    console.log("GalleryPage/DeleteItem: Using NextAuth session for authentication");
 
     const itemPath = itemToDelete.path;
     const itemType = itemToDelete.type;
@@ -709,7 +702,6 @@ export default function GalleryPage() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`,
             },
             body: JSON.stringify({ 
                 path: itemPath,
