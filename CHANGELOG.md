@@ -40,6 +40,11 @@ All notable changes to this project will be documented in this file.
 - Removed Photo Editor documentation file (`docs/photo-editor.md`) prior to rebuild
 
 ### Fixed
+- Fixed Gallery page to work with NextAuth.js instead of Supabase Auth
+  - Updated API routes to use NextAuth session instead of Supabase token-based auth
+  - Removed dependency on Supabase session in client-side code
+  - Fixed authentication flow for uploading and managing gallery items
+  - Improved error handling for session validation
 - Fixed NextAuth.js authentication implementation
   - Added proper Credentials provider configuration
   - Fixed environment variable configuration (AUTH_SECRET and NEXTAUTH_URL)
