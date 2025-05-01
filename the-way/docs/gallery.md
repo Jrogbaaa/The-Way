@@ -42,6 +42,17 @@ Your gallery displays your uploaded images in a responsive grid layout. Each ima
 - Author information
 - Tags for categorization
 
+### Organizing Your Content
+
+You can organize your gallery content using folders:
+
+1. **Create Folders**: Click "New Folder" to create organizational folders
+2. **Move Images**: Hover over any image and click the move icon to relocate it
+3. **Drag and Drop**: Drag images directly onto folder cards to quickly move them
+4. **Return to Gallery Home**: Use the "Gallery Home" option or home icon to move items back to the root gallery
+
+When moving images, a dropdown will display all available folders as destinations, with "Gallery Home" always available as an option.
+
 ### Filtering Content
 
 You can filter your gallery content by:
