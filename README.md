@@ -10,6 +10,15 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
   - Enhanced Navbar rendering to properly display user info regardless of loading state
   - Added fallback user data display from Google metadata when profile fetch fails
 
+- **Gallery Enhancements**: Comprehensive improvements to the gallery functionality:
+  - Fixed file and folder deletion functionality with server-side API endpoints
+  - Resolved port-specific authentication issues affecting gallery operations
+  - Improved error handling and feedback for delete operations
+  - Repositioned the back button to the left side of navigation for more intuitive UI
+  - Updated folder icons to match the purple theme of the application for visual consistency
+  - Added drag and drop functionality for organizing content between folders
+  - Enhanced folder view with prominent folder titles and improved navigation
+
 - **Image Optimization Feature**: Added an image optimization step to the Social Media Post Analyzer. Users can now automatically crop/resize uploaded images to recommended aspect ratios (e.g., 9:16 for TikTok/Reels/Stories) directly after analysis.
 - **Text-to-Image Generator & Models Page Restructure**: Added a standard Text-to-Image generator (using SDXL) on its own dedicated page (`/generate/image`). Restructured the main Models page (`/models`) to separate models into "Standard Models" (Text-to-Image, Image-to-Video) and "Custom Trained Models" (Cristina, Jaime, Bea) sections for clarity, and updated the model link.
 - **UI Consistency & Model Images**: Unified the header styling (title font, color gradient, container rounding) between the Gallery and Creator Gallery pages for a more consistent look and feel. Updated the preview images for the Bea, Cristina, and Jaime models on the Creator Gallery page with new provided photos.

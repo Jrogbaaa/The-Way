@@ -36,6 +36,8 @@ All notable changes to this project will be documented in this file.
 - Rebranded from "Social AI Agent" to "Content AI Agent" across the entire application
 - Updated all documentation to reflect the new branding
 - Improved UI consistency throughout the application
+- Repositioned gallery back button to the left side of the navigation for more intuitive UI
+- Updated folder icons to match the purple theme of the application for visual consistency
 
 ### Removed
 - Removed standalone GenFill page and route to consolidate functionality into the Photo Editor
@@ -75,6 +77,9 @@ All notable changes to this project will be documented in this file.
 - Resolved Supabase storage authentication issues in gallery
 - Fixed error handling for storage operations
 - Addressed issues with folder creation and file movement
+- Fixed file and folder deletion functionality in gallery with server-side API endpoints
+- Resolved port-specific authentication issues affecting gallery operations
+- Improved error handling and feedback for delete operations in gallery
 
 ### Updated
 - Updated authentication implementation to use NextAuth.js with both Google OAuth and credential providers
