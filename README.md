@@ -109,82 +109,86 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Authentication & Access
 
-This application uses Supabase for user authentication and management, primarily leveraging Google OAuth for sign-in and sign-up.
+This application uses NextAuth.js (Auth.js) for user authentication, primarily leveraging Google OAuth for sign-in and sign-up.
 
-**OAuth Callback Route**
+### NextAuth.js Implementation
 
-When using OAuth providers like Google, the authentication flow involves redirecting the user to the provider's site and then back to the application. This application now uses a dedicated callback route at `/auth/callback` to handle the redirect from the OAuth provider. This route is responsible for exchanging the received authentication code for a user session using Supabase's `exchangeCodeForSession` method and then redirecting the user to their dashboard (`/dashboard`). Ensure that your OAuth provider (e.g., Google Cloud Console) is configured with the correct Redirect URI: `YOUR_APP_URL/auth/callback`.
+The application is configured to use NextAuth.js for authentication with the following setup:
 
-### Core Technologies & Concepts
-
-- **Supabase Auth**: Handles user registration, login (Google OAuth), and session management.
-- **`@supabase/ssr`**: The official Supabase helper library for Next.js, used to manage authentication state seamlessly across Server Components, Client Components, and API Routes. It utilizes `createBrowserClient` for the client-side and `createServerClient` (with `cookies()` from `next/headers`) for server-side operations.
-- **`src/components/AuthProvider.tsx`**: A key client-side component that wraps the application. It listens for authentication state changes, manages the user session, fetches the user's profile data (including onboarding status) from the `profiles` table, and controls the visibility of the `WelcomeModal`.
-- **`profiles` Table**: A Supabase database table storing additional user information linked to the `auth.users` table via the user ID. It contains an `onboarded` boolean flag to track whether a user has completed the initial welcome/onboarding flow.
-- **Row Level Security (RLS)**: RLS policies are **enabled** on the `profiles` table in Supabase. These policies typically restrict users to only view and modify their *own* profile data. Crucially, they often prevent direct modification of certain fields (like `onboarded`) through the Supabase dashboard UI or generic API calls, ensuring that updates happen through designated application logic (like the `/api/user/mark-onboarded` route). This is why you might not be able to manually toggle the `onboarded` flag in the Supabase table browser.
-- **`supabase/functions/ensure-profile` Edge Function**: A Supabase Edge Function written in Deno.
-    - **Purpose**: Automatically triggered (likely by a database trigger on `auth.users` insertion) when a new user signs up. It ensures a corresponding row is created in the `profiles` table for the new user, typically setting `onboarded` to `false` by default.
-    - **Environment**: Runs in a separate **Deno environment** on Supabase infrastructure, distinct from the Next.js application environment on Vercel.
-    - **Secrets**: Requires its own environment variables/secrets (e.g., `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) configured directly within the Supabase dashboard under **Settings -> Functions -> ensure-profile -> Secrets**. These are separate from the Vercel environment variables.
-
-## API Documentation
-
-The application provides several API endpoints for client-side operations. Detailed documentation is available for specific functional areas:
-
-- **[Authentication API Endpoints](./docs/api-authentication.md)**: Documentation for user authentication, session validation, and user onboarding endpoints.
-- **[Post Analysis Documentation](./docs/post-analysis.md)**: Detailed guide on the Hugging Face-powered social media post analysis feature.
-
-Key analysis endpoints include:
-- `/api/analyze-social-post`: Analyzes image content, technical specs, and predicts engagement using Hugging Face models. (Currently active via `/upload-post` page).
-- `/api/analyze-image`: *Backend exists for Vertex AI analysis but is not currently used by the primary UI.*
-
-### Onboarding Flow for New Users
-
-1.  **Sign Up/Log In**: User signs up or logs in using Google OAuth.
-2.  **Profile Creation (Edge Function)**: The `ensure-profile` Edge Function triggers, creating a new row in the `profiles` table if one doesn't exist, with `onboarded` set to `false`.
-3.  **Session & Profile Fetch (`AuthProvider`)**: The client-side `AuthProvider` detects the new session, fetches the user data and the associated profile from the `profiles` table.
-4.  **Modal Trigger**: Since `profile.onboarded` is `false`, the `AuthProvider` sets the state to show the `WelcomeModal`.
-5.  **Welcome Modal Display**: The `src/components/WelcomeModal.tsx` component is rendered.
-6.  **User Interaction**: The user clicks one of the feature buttons (e.g., "Browse Models") or the "Skip for now" button.
-7.  **Mark Onboarded (Client)**: The `onClick` handler in `WelcomeModal` calls the `markUserOnboarded` function provided by `useAuth` (from `AuthProvider`).
-8.  **API Call**: The `markUserOnboarded` function makes a `POST` request to the `/api/user/mark-onboarded` API route handler.
-9.  **Database Update (API Route)**: The `/api/user/mark-onboarded` route (`src/app/api/user/mark-onboarded/route.ts`) uses `createServerClient` (with the user's cookies) to connect to Supabase and execute an `UPDATE` query on the `profiles` table, setting the `onboarded` column to `true` for the authenticated user.
-10. **State Update**: The `AuthProvider` likely updates its state (either by refetching the profile or optimistically setting `onboarded` to `true`), causing the `WelcomeModal` to hide.
-11. **Subsequent Logins**: On future logins, `AuthProvider` fetches the profile, finds `onboarded` is `true`, and does *not* show the `WelcomeModal`.
+1. **Configuration**: The auth system is configured in `src/auth.config.ts` which defines the Google provider and callback handlers.
+2. **API Routes**: Authentication endpoints are exposed at `/api/auth/*` and are handled by the API route in `src/app/api/auth/[...nextauth]/route.ts`.
+3. **Login/Signup Pages**: Custom login and signup pages located at `/auth/login` and `/auth/signup` that use the NextAuth.js `signIn` function for authentication.
+4. **Session Management**: The `SessionProvider` in `src/components/AuthProvider.tsx` provides session information throughout the application.
+5. **Protected Routes**: The middleware in `src/middleware.ts` checks authentication status and redirects unauthenticated users from protected routes.
 
 ### Environment Variables
 
-Ensure the following environment variables are configured:
+To configure authentication, you need to set up the following environment variables in your `.env.local` file:
 
-**For Vercel Deployment (Next.js App):**
+```
+# NextAuth.js Configuration
+NEXTAUTH_URL=http://localhost:3000                # Use your deployment URL in production
+NEXTAUTH_SECRET=your-strong-secret-key-here       # Generate with: openssl rand -base64 32
 
-- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL.
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase project's anonymous key (safe for browser exposure).
-- `SUPABASE_SERVICE_ROLE_KEY` (Optional but common): Your Supabase project's service role key (keep secret, used for server-side operations requiring elevated privileges, if any). *Note: Many server-side operations within API routes using `@supabase/ssr` might operate under the user's authenticated context if set up correctly.*
+# Google OAuth Provider
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+```
 
-**For Supabase Edge Function (`ensure-profile`):**
+**For Vercel deployment:**
+Make sure to add these environment variables in your Vercel project settings.
 
-*Set these directly in the Supabase Dashboard under Settings -> Functions -> ensure-profile -> Secrets*
+### Google OAuth Setup
 
-- `SUPABASE_URL`: Your Supabase project URL.
-- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase project's service role key (often required for functions triggered by auth events to perform actions like inserting into `profiles`).
-- `SUPABASE_ANON_KEY`: Your Supabase project's anonymous key.
+1. Create a project in the [Google Cloud Console](https://console.cloud.google.com/)
+2. Configure the OAuth consent screen
+3. Create OAuth credentials (Web application type)
+4. Add your app's domains to the authorized JavaScript origins:
+   - `http://localhost:3000` for local development
+   - `https://your-production-domain.com` for production
+5. Add the following authorized redirect URIs:
+   - `http://localhost:3000/api/auth/callback/google` for local development
+   - `https://your-production-domain.com/api/auth/callback/google` for production
+6. Copy the generated Client ID and Client Secret to your environment variables
 
-## Navigation Structure
+### User Session and Data Access
 
-The application has been organized for intuitive access to all features:
+When a user is authenticated:
+- The session object contains the user's basic information (name, email, image)
+- The user ID is available as `session.user.id` for database queries
+- Protected API routes can verify authentication using the `auth()` function
 
-- **Dashboard**: View activity summary and recent content
-- **Photo Editor**: Edit and enhance photos using AI
-- **Quick Video Test**: Test simple video generation functionality
-- **Image Creator**: Create custom images with various AI models
-  - All models are accessible from this section
-  - Includes Cristina, Jaime, and SDXL models
-- **Video Creator**: Transform still images into high-quality videos
-- **Analyze Post**: Analyze images for social media optimization
-- **Chat**: Interact with the Social Media Expert Agent
-- **Gallery**: View and manage generated content
-- **Profile**: Manage your account settings
+### Accessing User Session
+
+In client components:
+```tsx
+'use client';
+import { useAuthUser } from '@/hooks/useAuthUser';
+
+export default function MyComponent() {
+  const { user, isLoading, isAuthenticated } = useAuthUser();
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (!isAuthenticated) return <div>Not authenticated</div>;
+  
+  return <div>Hello {user.name}</div>;
+}
+```
+
+In server components:
+```tsx
+import { auth } from '@/auth';
+
+export default async function MyServerComponent() {
+  const session = await auth();
+  
+  if (!session) {
+    return <div>Not authenticated</div>;
+  }
+  
+  return <div>Hello {session.user.name}</div>;
+}
+```
 
 ## New Features
 
@@ -1009,3 +1013,11 @@ gallery-uploads/[user_id]/[timestamp]-[filename]
 ```
 
 This structure works with the RLS policies to ensure users can only upload to their own directory.
+
+### Gallery Improvements (Latest)
+- Added drag and drop functionality for moving images between folders
+- Enhanced folder navigation with clearer visual hierarchy 
+- Separated folders and images into distinct sections
+- Improved folder view UI with larger, more prominent folder titles
+- Fixed Supabase storage authentication issues
+- Implemented proper error handling for storage operations

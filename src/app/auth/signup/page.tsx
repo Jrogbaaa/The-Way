@@ -7,6 +7,8 @@ import { ROUTES } from '@/lib/config';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import OnboardingWelcome from '@/components/OnboardingWelcome';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { signIn } from "next-auth/react";
+import { useRouter } from 'next/navigation';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -15,6 +17,8 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [signupComplete, setSignupComplete] = useState(false);
   const [userName, setUserName] = useState('');
+  const router = useRouter();
+  const [error, setError] = useState('');
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,57 +47,25 @@ export default function SignupPage() {
   };
   
   // Add Google Sign In handler
-  const handleGoogleSignIn = useCallback(async () => {
-    // Use the singleton Supabase client
-    const supabase = getSupabaseBrowserClient();
-    
-    // Determine the appropriate redirect URL based on environment
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
-    const isBrowser = typeof window !== 'undefined';
-    const isLocalhost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    
-    // Use app URL (from env) in production, fallback to origin if not set
-    const baseUrl = isLocalhost ? `http://${window.location.hostname}:${window.location.port}` : appUrl;
-    const redirectUrl = `${baseUrl}/auth/callback`;
-    
-    console.log('Signup: Initiating Google sign-in');
-    console.log('Signup: NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL);
-    console.log('Signup: Current origin:', window.location.origin);
-    console.log('Signup: Using redirect URL:', redirectUrl);
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError('');
     
     try {
-      setLoading(true);
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-          queryParams: {
-            access_type: 'offline', // Request a refresh token
-            prompt: 'consent', // Force consent screen to ensure refresh token
-          }
-        }
+      await signIn('google', {
+        callbackUrl: '/dashboard',
+        redirect: true
       });
       
-      if (error) {
-        console.error('Error signing in with Google:', error.message);
-        // Show error message to user
-        alert(`Sign-in error: ${error.message}`);
-      } else if (data) {
-        console.log('Signup: OAuth initiated successfully, redirecting to:', data.url);
-        // We need to navigate to the provided URL
-        window.location.href = data.url;
-      } else {
-        console.error('Signup: No data returned from signInWithOAuth');
-        alert('Something went wrong. Please try again.');
-      }
-    } catch (e) {
-      console.error('Exception during Google sign-in:', e);
-      alert('An error occurred during sign in. Please try again.');
+      // If we get here, it means redirect didn't happen automatically
+      setError('Redirect failed. Please try again.');
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
   
   return (
     <div className="flex min-h-screen flex-col">

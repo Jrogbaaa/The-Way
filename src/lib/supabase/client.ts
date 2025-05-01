@@ -1,6 +1,8 @@
 import { createBrowserClient } from '@supabase/ssr';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { isBrowser } from '@/lib/utils';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { CookieOptions } from '@supabase/auth-helpers-shared';
 
 // Create a single instance of the Supabase client for browser usage
 // Using a module-scoped variable to ensure true singleton pattern
@@ -13,34 +15,29 @@ const isLocalDevelopment = () => {
   return hostname === 'localhost' || hostname === '127.0.0.1';
 };
 
-// Helper to determine the cookie domain
+// Helper to determine the appropriate cookie domain
 const getCookieDomain = () => {
   if (!isBrowser()) return undefined;
   
-  // CRITICAL: For localhost or development environments, NEVER set domain
-  // This ensures cookies work properly in the local dev environment
-  if (isLocalDevelopment()) {
-    console.log('Using undefined cookie domain for localhost');
-    return undefined;
-  }
-  
   const hostname = window.location.hostname;
   
-  // Handle Vercel deployment previews - IMPORTANT: Don't set domain for Vercel.app domains
-  // This allows cookies to be properly set on the specific subdomain
-  if (hostname.includes('.vercel.app')) {
-    console.log('Using undefined cookie domain for vercel.app - allows subdomain-specific cookies');
-    return undefined; // undefined allows the browser to use the current domain
-  }
+  // For localhost, don't set a domain (browser default behavior works best)
+  if (isLocalDevelopment()) return undefined;
   
-  // For Netlify previews, use the same approach
-  if (hostname.includes('.netlify.app')) {
-    console.log('Using undefined cookie domain for netlify.app');
+  // For Vercel preview deployments or Netlify, don't set a domain
+  if (hostname.includes('.vercel.app') || hostname.includes('.netlify.app')) 
     return undefined;
+  
+  // For custom domains, you might want the root domain for cross-subdomain auth
+  // This is a simple approach that works for many common domains
+  // For example, if hostname is "app.example.com", this will return "example.com"
+  const parts = hostname.split('.');
+  if (parts.length > 2) {
+    // Get the top two parts for most domains (e.g., example.com)
+    return parts.slice(-2).join('.');
   }
   
-  // For production custom domains, use the base domain
-  console.log('Using cookie domain:', hostname);
+  // Return the hostname itself for simple domains
   return hostname;
 };
 
@@ -59,6 +56,9 @@ function initializeClient() {
       }
       
       // Set up proper cookie options based on environment
+      const hostname = window.location.hostname;
+      const isVercel = hostname.includes('.vercel.app');
+      
       const cookieOptions = {
         domain: getCookieDomain(),
         path: '/',
@@ -67,7 +67,13 @@ function initializeClient() {
         maxAge: 30 * 24 * 60 * 60 // 30 days
       };
       
+      // Log cookie settings for debugging
       console.log('Cookie options:', JSON.stringify(cookieOptions, null, 2));
+      console.log('Environment details:', {
+        hostname,
+        isVercel,
+        protocol: window.location.protocol
+      });
       
       supabaseClient = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -91,6 +97,13 @@ function initializeClient() {
             supabaseClient?.auth.refreshSession();
           }
         });
+        
+        // Force session refresh immediately after creation
+        // This helps with ensuring the session is properly initialized
+        setTimeout(() => {
+          console.log('Attempting initial session refresh');
+          supabaseClient?.auth.refreshSession();
+        }, 100);
       }
     }
     
@@ -118,4 +131,10 @@ export const getSupabaseBrowserClient = () => {
 export const initializeSupabaseClient = () => {
   if (!isBrowser()) return null;
   return initializeClient();
+};
+
+// Deprecated - use getSupabaseBrowserClient instead
+export const createClient = () => {
+  console.warn('Warning: createClient() is deprecated, use getSupabaseBrowserClient() instead for better consistency');
+  return getSupabaseBrowserClient();
 }; 

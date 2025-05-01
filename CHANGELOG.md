@@ -24,6 +24,8 @@ All notable changes to this project will be documented in this file.
 - Google Sign-In integration using Supabase Auth.
 - Personalized navigation bar showing user's Google photo and name/email when logged in.
 - Gated feature access: Redirects logged-out users to signup when attempting to access core features.
+- Drag and drop functionality for moving images between folders in gallery
+- Enhanced folder view with prominent folder titles and improved navigation
 
 ### Changed
 - Updated navigation menu to replace standalone GenFill page with consolidated Photo Editor functionality
@@ -31,6 +33,9 @@ All notable changes to this project will be documented in this file.
 - Enhanced drawing tools with toggle buttons for Draw/Erase modes
 - Added floating instruction overlays for better user guidance in masking modes
 - Restarted Bria AI integration for Photo Editor, removing previous implementation and SDK
+- Rebranded from "Social AI Agent" to "Content AI Agent" across the entire application
+- Updated all documentation to reflect the new branding
+- Improved UI consistency throughout the application
 
 ### Removed
 - Removed standalone GenFill page and route to consolidate functionality into the Photo Editor
@@ -67,6 +72,9 @@ All notable changes to this project will be documented in this file.
 - Updated documentation to reflect feature removal and UI improvements
 - Fixed 404 error when clicking on the Video Creator tab by updating route path to point directly to "/models/image-to-video"
 - Fixed metadata error in Photo Editor page by separating client and server components
+- Resolved Supabase storage authentication issues in gallery
+- Fixed error handling for storage operations
+- Addressed issues with folder creation and file movement
 
 ### Updated
 - Updated authentication implementation to use NextAuth.js with both Google OAuth and credential providers

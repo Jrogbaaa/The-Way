@@ -2,6 +2,7 @@
 
 import { SessionProvider, useSession, signOut as nextAuthSignOut } from 'next-auth/react';
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 // Create an auth context
 interface AuthContextType {
@@ -44,6 +45,18 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [supabase, setSupabase] = useState<any>(null);
+  
+  // Initialize Supabase client
+  useEffect(() => {
+    try {
+      const client = getSupabaseBrowserClient();
+      setSupabase(client);
+      console.log('Supabase client initialized in AuthProvider');
+    } catch (error) {
+      console.error('Failed to initialize Supabase client in AuthProvider:', error);
+    }
+  }, []);
   
   // Check if user should see welcome modal
   useEffect(() => {
@@ -72,6 +85,13 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
   } : null;
   
   const handleSignOut = async () => {
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.error('Error signing out of Supabase:', e);
+      }
+    }
     await nextAuthSignOut();
   };
   
@@ -85,7 +105,7 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
         session,
         signOut: handleSignOut,
         profile,
-        supabase: null // Add actual Supabase client if you're using it
+        supabase
       }}
     >
       {children}
