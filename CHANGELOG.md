@@ -80,6 +80,13 @@ All notable changes to this project will be documented in this file.
 - Fixed file and folder deletion functionality in gallery with server-side API endpoints
 - Resolved port-specific authentication issues affecting gallery operations
 - Improved error handling and feedback for delete operations in gallery
+- Fixed image move functionality in gallery
+  - Enhanced folder selection dropdown to display all available folders correctly
+  - Ensured Gallery Home is always available as a destination option
+  - Fixed UI inconsistencies in the move dialog
+  - Improved visual feedback during the move operation
+  - Added better error handling for edge cases with no folders
+  - Ensured consistent terminology using "Gallery Home" instead of "Root"
 
 ### Updated
 - Updated authentication implementation to use NextAuth.js with both Google OAuth and credential providers
