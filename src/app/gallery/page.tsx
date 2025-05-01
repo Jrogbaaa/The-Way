@@ -743,9 +743,13 @@ export default function GalleryPage() {
     console.log("GalleryPage: Opening move modal for item:", item.name, "Type:", item.type);
     setItemToMove(item);
     setSelectedMoveDestination(null);
-    fetchMoveDestinationFolders();
     setIsMoveModalOpen(true);
-  };
+    
+    // Delay slightly to ensure itemToMove is set before fetching folders
+    setTimeout(() => {
+      fetchMoveDestinationFolders();
+    }, 50);
+};
 
   const handleOpenDeleteModal = (item: CombinedItem) => {
     console.log("GalleryPage: Opening delete modal for item:", item.name, "Type:", item.type);
@@ -754,41 +758,44 @@ export default function GalleryPage() {
   };
 
   const fetchMoveDestinationFolders = async () => {
-      if (!itemToMove) return;
+    if (!itemToMove) return;
 
-      setIsLoadingMoveFolders(true);
-      setMoveDestinationFolders([]);
+    setIsLoadingMoveFolders(true);
+    setMoveDestinationFolders([]);
 
     // Check if we have a user from auth context
     if (!session || !user) {
       console.error('GalleryPage/FetchMoveDest: No authenticated user found');
       toast.error('Authentication required. Please sign in.');
-        router.push(ROUTES.login);
-        setIsLoadingMoveFolders(false);
-        return;
-      }
+      router.push(ROUTES.login);
+      setIsLoadingMoveFolders(false);
+      return;
+    }
 
-      try {
-      // Add "Root" as a potential destination
+    try {
+      // IMPORTANT: Always add Gallery Home as a destination
       const destinations: DestinationFolder[] = [
-        { name: 'Root (Gallery Home)', path: '' }
+        { name: 'Gallery Home', path: 'root' }
       ];
       
-      // Get a direct list of just the top-level folders
-      // This is a simplified approach that should be more reliable
-      const { data: folderItems, error } = await supabase.storage
+      console.log(`GalleryPage/FetchMoveDest: Starting folder fetch for user ID: ${user.id}`);
+      
+      // Get a list of all top-level folders in the storage
+      const { data: topLevelItems, error: topLevelError } = await supabase.storage
         .from('gallery-uploads')
         .list(`${user.id}`, {
           limit: 1000,
         });
 
-      if (error) {
-        console.error('GalleryPage/FetchMoveDest: Error listing folders:', error);
-        throw error;
+      if (topLevelError) {
+        console.error('GalleryPage/FetchMoveDest: Error listing top-level folders:', topLevelError);
+        throw topLevelError;
       }
+      
+      console.log(`GalleryPage/FetchMoveDest: Found ${topLevelItems?.length || 0} top-level items`);
 
-      // Find all folders at this level
-      for (const item of folderItems || []) {
+      // Find all folders at the top level
+      for (const item of topLevelItems || []) {
         // Check if item is a directory (folders don't have mimetype)
         if (!item.metadata || !item.metadata.mimetype) {
           const folderName = item.name.endsWith('/') ? item.name.slice(0, -1) : item.name;
@@ -797,17 +804,18 @@ export default function GalleryPage() {
           if (itemToMove.type === 'file') {
             const itemParentPath = itemToMove.path?.substring(0, itemToMove.path.lastIndexOf('/') + 1) || '';
             if (itemParentPath === `${folderName}/`) {
-              console.log(`Filtering out current parent folder: ${folderName}`);
+              console.log(`GalleryPage/FetchMoveDest: Filtering out current parent folder: ${folderName}`);
               continue;
             }
           }
           
           // Don't add the folder if we're trying to move a folder into itself
           if (itemToMove.type === 'folder' && itemToMove.name === folderName) {
-            console.log(`Filtering out the folder itself when moving: ${folderName}`);
+            console.log(`GalleryPage/FetchMoveDest: Filtering out the folder itself when moving: ${folderName}`);
             continue;
           }
           
+          console.log(`GalleryPage/FetchMoveDest: Adding folder destination: ${folderName}`);
           destinations.push({
             name: folderName,
             path: `${folderName}/`
@@ -820,7 +828,7 @@ export default function GalleryPage() {
         const lastSlashIndex = currentPathPrefix.lastIndexOf('/', currentPathPrefix.length - 2);
         if (lastSlashIndex >= 0) {
           const parentPath = currentPathPrefix.substring(0, lastSlashIndex + 1);
-          const parentName = parentPath === '' ? 'Root' : 
+          const parentName = parentPath === '' ? 'Gallery Home' : 
             parentPath.substring(0, parentPath.length - 1).split('/').pop() || 'Parent';
           
           destinations.push({
@@ -830,174 +838,105 @@ export default function GalleryPage() {
         }
       }
       
-      console.log(`GalleryPage/FetchMoveDest: Found ${destinations.length} potential destinations`, destinations);
+      console.log(`GalleryPage/FetchMoveDest: Final destination count: ${destinations.length}`);
+      for (const dest of destinations) {
+        console.log(`- ${dest.name} (${dest.path})`);
+      }
       
+      // Even if there are no other folders, we should at least have the Gallery Home option
       setMoveDestinationFolders(destinations);
-      } catch (error: any) {
+    } catch (error: any) {
       console.error('GalleryPage/FetchMoveDest: Error fetching folders:', error.message);
       toast.error('Failed to fetch destination folders. Please try again.');
-      } finally {
-          setIsLoadingMoveFolders(false);
-      }
-  };
+      
+      // Set Gallery Home as fallback option even if there's an error
+      setMoveDestinationFolders([
+        { name: 'Gallery Home', path: 'root' }
+      ]);
+    } finally {
+      setIsLoadingMoveFolders(false);
+    }
+};
 
   const handleConfirmMove = async () => {
-    if (!itemToMove || selectedMoveDestination === null) {
-      toast.error('Please select a destination folder.');
+    // Early exit if no item to move
+    if (!itemToMove) {
+      toast.error('No item selected to move.');
       return;
     }
-    const itemParentPath = itemToMove.path?.substring(0, itemToMove.path.lastIndexOf('/') + 1) ?? currentPathPrefix;
-     if (selectedMoveDestination === itemParentPath) {
-         toast('Item is already in the selected destination folder.');
-      setIsMoveModalOpen(false);
-         return;
-     }
 
+    // Check if a destination is selected
+    if (selectedMoveDestination === null) {
+      // If no destination is selected but we have Gallery Home as the only option, use that
+      if (moveDestinationFolders.length === 1 && moveDestinationFolders[0].path === 'root') {
+        setSelectedMoveDestination('root');
+      } else {
+        toast.error('Please select a destination folder.');
+        return;
+      }
+    }
+    
+    // Get the actual selected destination (either from state or default to 'root')
+    const actualDestination = selectedMoveDestination || 'root';
+    
+    // Log the move operation details
+    console.log(`GalleryPage/ConfirmMove: Moving ${itemToMove.name} to destination: ${actualDestination}`);
+    
+    // Get parent path of the item
+    const itemParentPath = itemToMove.path?.substring(0, itemToMove.path.lastIndexOf('/') + 1) ?? currentPathPrefix;
+    
+    // Convert 'root' path to empty string for root gallery folder
+    const effectiveDestination = actualDestination === 'root' ? '' : actualDestination;
+    
+    // Check if item is already in the selected destination
+    if (effectiveDestination === itemParentPath) {
+      toast('Item is already in the selected destination folder.');
+      setIsMoveModalOpen(false);
+      return;
+    }
+
+    // Show loading toast
+    const toastId = toast.loading(`Moving ${itemToMove.name}...`);
     setIsMovingItem(true);
 
-    // Check if we have a user from auth context
-    if (!session || !user) {
-      console.error('GalleryPage/MoveItem: No authenticated user found');
-      toast.error('Authentication required. Please sign in.');
-      setIsMovingItem(false);
-      setIsMoveModalOpen(false);
-      router.push(ROUTES.login);
-      return;
-    }
-
-    const sourcePath = itemToMove.path;
-     if (!sourcePath) {
-         console.error("GalleryPage/MoveItem: Source path missing for item:", itemToMove);
-         toast.error("Cannot move item: source path information missing.");
-         setIsMovingItem(false);
-      setIsMoveModalOpen(false);
-         return;
-     }
-
-    const itemType = itemToMove.type;
-    const destinationPath = `${selectedMoveDestination}${itemToMove.name}${itemType === 'folder' ? '/' : ''}`;
-
-    console.log(`GalleryPage/MoveItem: Moving ${itemType} from "${sourcePath}" to "${destinationPath}"`);
-
     try {
-      if (itemType === 'file') {
-        // For files, we need to:
-        // 1. Download the file from the source
-        // 2. Upload it to the destination
-        // 3. Delete the original
-        
-        // Download the file
-        const { data: fileData, error: downloadError } = await supabase.storage
-          .from('gallery-uploads')
-          .download(`${user.id}/${sourcePath}`);
-          
-        if (downloadError || !fileData) {
-          throw downloadError || new Error('Failed to download the file');
-        }
-        
-        // Upload to new location
-        const { error: uploadError } = await supabase.storage
-          .from('gallery-uploads')
-          .upload(`${user.id}/${destinationPath}`, fileData, {
-            upsert: false
-          });
-          
-        if (uploadError) {
-          throw uploadError;
-        }
-        
-        // Delete the original
-        const { error: deleteError } = await supabase.storage
-          .from('gallery-uploads')
-          .remove([`${user.id}/${sourcePath}`]);
-          
-        if (deleteError) {
-          console.warn('GalleryPage/MoveItem: Failed to delete original file:', deleteError);
-          // Continue anyway, as we've successfully copied the file
-        }
-      } else if (itemType === 'folder') {
-        // For folders:
-        // 1. List all files in the folder
-        // 2. Move each file (download and upload to new location)
-        // 3. Delete the originals
-        
-        const { data: folderContents, error: listError } = await supabase.storage
-          .from('gallery-uploads')
-          .list(`${user.id}/${sourcePath}`, { recursive: true });
-          
-        if (listError) {
-          throw listError;
-        }
-        
-        if (folderContents && folderContents.length > 0) {
-          // Process each file in the folder
-          const movePromises = folderContents.map(async (item: any) => {
-            const sourceFilePath = `${sourcePath}${item.name}`;
-            const destFilePath = `${destinationPath}${item.name}`;
-            
-            // Download the file
-            const { data: fileData, error: downloadError } = await supabase.storage
-              .from('gallery-uploads')
-              .download(`${user.id}/${sourceFilePath}`);
-              
-            if (downloadError || !fileData) {
-              console.warn(`Failed to download file: ${sourceFilePath}`, downloadError);
-              return false;
-            }
-            
-            // Upload to new location
-            const { error: uploadError } = await supabase.storage
-              .from('gallery-uploads')
-              .upload(`${user.id}/${destFilePath}`, fileData, {
-                upsert: false
-              });
-              
-            if (uploadError) {
-              console.warn(`Failed to upload file to: ${destFilePath}`, uploadError);
-              return false;
-            }
-            
-            return true;
-          });
-          
-          await Promise.all(movePromises);
-          
-          // Delete the original files
-          const filePaths = folderContents.map((item: any) => 
-            `${user.id}/${sourcePath}${item.name}`
-          );
-          
-          await supabase.storage
-            .from('gallery-uploads')
-            .remove(filePaths);
-            
-          // Create .keep file in the destination folder if needed
-          await supabase.storage
-            .from('gallery-uploads')
-            .upload(`${user.id}/${destinationPath}.keep`, new Blob(['']));
-        } else {
-          // For empty folders, just create .keep file in destination
-          await supabase.storage
-            .from('gallery-uploads')
-            .upload(`${user.id}/${destinationPath}.keep`, new Blob(['']));
-        }
-        
-        // Try to delete the original .keep file
-        await supabase.storage
-          .from('gallery-uploads')
-          .remove([`${user.id}/${sourcePath}.keep`]);
-      }
-      
-            const destinationName = moveDestinationFolders.find(f => f.path === selectedMoveDestination)?.name || selectedMoveDestination || 'Root';
-            toast.success(`"${itemToMove.name}" moved successfully to ${destinationName}!`);
-      setIsMoveModalOpen(false);
-            setItemToMove(null);
-            await fetchItems(currentPathPrefix);
-    } catch (error: any) {
-      console.error('GalleryPage/MoveItem: Error moving item:', error);
-      toast.error(`Failed to move item: ${error.message}`);
-    } finally {
+      // Check if we have a user from auth context
+      if (!session || !user) {
+        console.error('GalleryPage/ConfirmMove: No authenticated user found');
+        toast.error('Authentication required. Please sign in.', { id: toastId });
         setIsMovingItem(false);
+        setIsMoveModalOpen(false);
+        router.push(ROUTES.login);
+        return;
+      }
+
+      const sourcePath = itemToMove.path;
+      if (!sourcePath) {
+        console.error("GalleryPage/ConfirmMove: Source path missing for item:", itemToMove);
+        toast.error("Cannot move item: source path information missing.", { id: toastId });
+        setIsMovingItem(false);
+        setIsMoveModalOpen(false);
+        return;
+      }
+
+      const itemType = itemToMove.type;
+      const destinationPath = `${effectiveDestination}${itemToMove.name}${itemType === 'folder' ? '/' : ''}`;
+      const destinationName = actualDestination === 'root' ? 'Gallery Home' : 
+        moveDestinationFolders.find(f => f.path === actualDestination)?.name || actualDestination;
+
+      console.log(`GalleryPage/ConfirmMove: Moving ${itemType} from "${sourcePath}" to "${destinationPath}"`);
+
+      await handleDirectMove(itemToMove, effectiveDestination);
+      
+      toast.success(`"${itemToMove.name}" moved successfully to ${destinationName}!`, { id: toastId });
+      setIsMoveModalOpen(false);
+      setItemToMove(null);
+      await fetchItems(currentPathPrefix);
+    } catch (error: any) {
+      console.error('GalleryPage/ConfirmMove: Error moving item:', error);
+      toast.error(`Failed to move item: ${error.message || 'Unknown error'}`, { id: toastId });
+    } finally {
+      setIsMovingItem(false);
       setIsMoveModalOpen(false);
     }
   };
@@ -1295,14 +1234,17 @@ export default function GalleryPage() {
     e.stopPropagation();
     setDragOverFolderId(null);
     
-    if (!draggedItem) return;
+    if (!draggedItem) {
+      console.log("No dragged item found");
+      return;
+    }
     
     // Use folder path if available, otherwise construct from folder name
     const targetFolderPath = folder.path ? 
       (folder.path.endsWith('/') ? folder.path : `${folder.path}/`) : 
       `${folder.name}/`;
     
-    console.log(`Attempting to move file to folder: ${targetFolderPath}`);
+    console.log(`GalleryPage/DragDrop: Attempting to move file ${draggedItem.name} to folder: ${targetFolderPath}`);
     
     // Check if the item is already in this folder
     const itemParentPath = draggedItem.path?.substring(0, draggedItem.path.lastIndexOf('/') + 1) || '';
@@ -1322,16 +1264,17 @@ export default function GalleryPage() {
       // Refresh the current view to show changes
       await fetchItems(currentPathPrefix);
     } catch (error) {
-      console.error('Error in drag and drop move operation:', error);
+      console.error('GalleryPage/DragDrop: Error in move operation:', error);
       toast.error(`Failed to move file: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: toastId });
     } finally {
       // Reset dragged item
       setDraggedItem(null);
     }
-  };
+};
 
   // Fix the handleDirectMove function to properly extract user ID
   const handleDirectMove = async (itemToMoveDirectly: CombinedItem, destinationPath: string) => {
+    console.log(`GalleryPage/DirectMove: Starting move for ${itemToMoveDirectly.name} to ${destinationPath}`);
     setIsMovingItem(true);
 
     // Check if we have a user from auth context
@@ -1397,7 +1340,7 @@ export default function GalleryPage() {
         throw new Error('Unable to determine user ID for storage operations');
       }
       
-      console.log(`Using user ID for move operation: ${userIdToUse}`);
+      console.log(`GalleryPage/DirectMove: Using user ID for move operation: ${userIdToUse}`);
       
       // Try to use the server-side API first to avoid client-side permissions issues
       try {
@@ -1413,39 +1356,40 @@ export default function GalleryPage() {
             sourcePath: sourcePath,
             destinationPath: destinationFullPath,
             itemType: itemType
-          })
+          }),
+          credentials: 'include', // Important for NextAuth session handling
         });
         
         const result = await response.json();
         
         if (response.ok) {
-          console.log('Server-side move completed successfully:', result);
+          console.log('GalleryPage/DirectMove: Server-side move completed successfully:', result);
           return;
         } else {
-          console.error('Server-side move failed:', result);
+          console.error('GalleryPage/DirectMove: Server-side move failed:', result);
           throw new Error(result.error || 'Server move operation failed');
         }
       } catch (serverError) {
-        console.error('Error with server-side move operation:', serverError);
+        console.error('GalleryPage/DirectMove: Error with server-side move operation:', serverError);
         console.log('Falling back to client-side method');
       }
     
       if (itemType === 'file') {
         // For files, we need to:
         // 1. Download the file from the source
-        console.log(`Downloading from: ${userIdToUse}/${sourcePath}`);
+        console.log(`GalleryPage/DirectMove: Downloading from: ${userIdToUse}/${sourcePath}`);
         const { data: fileData, error: downloadError } = await supabase.storage
           .from('gallery-uploads')
           .download(`${userIdToUse}/${sourcePath}`);
           
         if (downloadError || !fileData) {
-          console.error('Download error:', downloadError);
+          console.error('GalleryPage/DirectMove: Download error:', downloadError);
           throw downloadError || new Error('Failed to download the file');
         }
         
         // 2. Upload to new location with explicit content type
         const contentType = itemToMoveDirectly.metadata?.mimetype || 'application/octet-stream';
-        console.log(`Uploading to: ${userIdToUse}/${destinationFullPath} with content type: ${contentType}`);
+        console.log(`GalleryPage/DirectMove: Uploading to: ${userIdToUse}/${destinationFullPath} with content type: ${contentType}`);
         
         const { error: uploadError } = await supabase.storage
           .from('gallery-uploads')
@@ -1455,12 +1399,12 @@ export default function GalleryPage() {
           });
           
         if (uploadError) {
-          console.error('Upload error:', uploadError);
+          console.error('GalleryPage/DirectMove: Upload error:', uploadError);
           throw uploadError;
         }
         
         // 3. Delete the original
-        console.log(`Deleting original at: ${userIdToUse}/${sourcePath}`);
+        console.log(`GalleryPage/DirectMove: Deleting original at: ${userIdToUse}/${sourcePath}`);
         const { error: deleteError } = await supabase.storage
           .from('gallery-uploads')
           .remove([`${userIdToUse}/${sourcePath}`]);
@@ -1469,8 +1413,10 @@ export default function GalleryPage() {
           console.warn('GalleryPage/DirectMove: Failed to delete original file:', deleteError);
           // Continue anyway, as we've successfully copied the file
         }
+        
+        console.log('GalleryPage/DirectMove: File moved successfully');
       } else if (itemType === 'folder') {
-        // Full folder move implementation would go here
+        // Simplified folder move for now
         toast.error("Folder moving via drag and drop is not fully implemented yet");
         return;
       }
@@ -1480,7 +1426,7 @@ export default function GalleryPage() {
     } finally {
       setIsMovingItem(false);
     }
-  };
+};
 
   // Add a helper function to get the parent folder path
   const getParentPath = (path: string): string => {
@@ -1589,15 +1535,25 @@ export default function GalleryPage() {
                   <React.Fragment key={crumb.path}>
                     {index > 0 && <ChevronRight className="h-4 w-4 flex-shrink-0" />}
                     {index === breadcrumbs.length - 1 ? (
-                      <span className="font-medium text-gray-700 dark:text-gray-200" aria-current="page">
-                        {index === 0 ? <Home className="h-4 w-4 inline-block align-middle" /> : crumb.name}
+                      <span className="font-medium text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 py-1 px-2 rounded" aria-current="page">
+                        {index === 0 ? (
+                          <div className="flex items-center">
+                            <Home className="h-4 w-4 mr-1" />
+                            <span>Gallery Home</span>
+                          </div>
+                        ) : crumb.name}
                       </span>
                     ) : (
                       <button 
                         onClick={() => handleBreadcrumbClick(crumb.path)}
-                        className="hover:underline hover:text-gray-700 dark:hover:text-gray-200 p-1 rounded focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                        className="hover:underline hover:text-gray-700 dark:hover:text-gray-200 p-1 rounded focus:outline-none focus:ring-1 focus:ring-indigo-300 flex items-center"
                       >
-                        {index === 0 ? <Home className="h-4 w-4 inline-block align-middle" /> : crumb.name}
+                        {index === 0 ? (
+                          <div className="flex items-center">
+                            <Home className="h-4 w-4 mr-1" />
+                            <span>Gallery Home</span>
+                          </div>
+                        ) : crumb.name}
                       </button>
                     )}
                   </React.Fragment>
@@ -1806,6 +1762,32 @@ export default function GalleryPage() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
                           <span className="text-white text-xs font-medium line-clamp-2 mb-1">{item.title || item.name}</span>
                           <div className="flex gap-1 justify-end">
+                            {/* Only show direct-to-root button when inside a folder */}
+                            {currentPathPrefix && (
+                              <Button 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  // Move directly to root without opening modal
+                                  const toastId = toast.loading(`Moving ${item.name} to Gallery Home...`);
+                                  handleDirectMove(item, '')
+                                    .then(() => {
+                                      toast.success(`Moved ${item.name} to Gallery Home`, { id: toastId });
+                                      fetchItems(currentPathPrefix);
+                                    })
+                                    .catch((error) => {
+                                      console.error('Error moving to Gallery Home:', error);
+                                      toast.error(`Failed to move file: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: toastId });
+                                    });
+                                }} 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 bg-white/80 hover:bg-white text-blue-600 rounded-full"
+                                title="Move to Gallery Home"
+                              >
+                                <Home className="h-3 w-3" />
+                                <span className="sr-only">Move to Gallery Home</span>
+                              </Button>
+                            )}
                             <Button onClick={(e) => { e.stopPropagation(); handleOpenMoveModal(item); }} variant="ghost" size="icon" className="h-6 w-6 bg-white/80 hover:bg-white text-gray-700 rounded-full">
                               <Move className="h-3 w-3" />
                               <span className="sr-only">Move image {item.name}</span>
@@ -1895,7 +1877,7 @@ export default function GalleryPage() {
 
         {isMoveModalOpen && itemToMove && (
           <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Move Item</DialogTitle>
                 <DialogDescription>
@@ -1907,24 +1889,64 @@ export default function GalleryPage() {
                   <div className="flex items-center justify-center h-20">
                     <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
                   </div>
-                ) : moveDestinationFolders.length === 0 ? (
-                  <p className="text-center text-gray-500">No other folders available to move to.</p>
                 ) : (
-                  <Select 
-                    onValueChange={setSelectedMoveDestination} 
-                    defaultValue={selectedMoveDestination || undefined}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select destination folder..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {moveDestinationFolders.map(folder => (
-                        <SelectItem key={folder.path} value={folder.path}>
-                          {folder.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Label htmlFor="move-destination">Destination folder</Label>
+                    <Select 
+                      onValueChange={(value) => {
+                        console.log("Selected destination:", value);
+                        setSelectedMoveDestination(value);
+                      }}
+                      value={selectedMoveDestination || undefined}
+                    >
+                      <SelectTrigger id="move-destination" className="w-full">
+                        <SelectValue placeholder="Select destination folder..." />
+                      </SelectTrigger>
+                      <SelectContent 
+                        position="popper" 
+                        className="w-full max-h-[200px] overflow-auto z-50" 
+                        side="bottom" 
+                        align="center"
+                        sideOffset={5}
+                      >
+                        {moveDestinationFolders.length > 0 ? (
+                          moveDestinationFolders.map(folder => (
+                            <SelectItem 
+                              key={folder.path} 
+                              value={folder.path}
+                              className="cursor-pointer py-2 px-4 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            >
+                              {folder.path === 'root' ? (
+                                <div className="flex items-center">
+                                  <Home className="h-4 w-4 mr-2 text-blue-500" />
+                                  <span>{folder.name}</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center">
+                                  <FolderIcon className="h-4 w-4 mr-2 text-purple-500" />
+                                  <span>{folder.name}</span>
+                                </div>
+                              )}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="p-2 text-center text-muted-foreground">
+                            <SelectItem value="root">
+                              <div className="flex items-center">
+                                <Home className="h-4 w-4 mr-2 text-blue-500" />
+                                <span>Gallery Home</span>
+                              </div>
+                            </SelectItem>
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {moveDestinationFolders.length <= 1 && !isLoadingMoveFolders && (
+                      <p className="text-sm text-amber-600 mt-1">
+                        Tip: You can create more folders for better organization.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
               <DialogFooter>
@@ -1933,7 +1955,7 @@ export default function GalleryPage() {
                 </DialogClose>
                 <Button 
                   onClick={handleConfirmMove} 
-                  disabled={isMovingItem || isLoadingMoveFolders || !selectedMoveDestination || moveDestinationFolders.length === 0}
+                  disabled={isMovingItem || isLoadingMoveFolders || !selectedMoveDestination}
                 >
                   {isMovingItem ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   {isMovingItem ? 'Moving...' : 'Confirm Move'}
@@ -1978,6 +2000,9 @@ export default function GalleryPage() {
         {isPreviewOpen && selectedImage && (
           <Dialog open={isPreviewOpen} onOpenChange={handleClosePreview}>
             <DialogContent className="max-w-4xl p-0 border-0">
+              <DialogHeader className="sr-only">
+                <DialogTitle>Image Preview: {selectedImage.title || selectedImage.name}</DialogTitle>
+              </DialogHeader>
               <Image 
                 src={selectedImage.imageUrl || ''} 
                 alt={selectedImage.title || selectedImage.name} 
