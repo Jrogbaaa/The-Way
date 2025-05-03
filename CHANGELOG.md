@@ -26,6 +26,13 @@ All notable changes to this project will be documented in this file.
 - Gated feature access: Redirects logged-out users to signup when attempting to access core features.
 - Drag and drop functionality for moving images between folders in gallery
 - Enhanced folder view with prominent folder titles and improved navigation
+- Fixed Modal integration for custom model training:
+  - Fixed LoRA target modules detection for Stable Diffusion fine-tuning
+  - Implemented dynamic module detection for different model architectures
+  - Resolved NextJS API route issues with dynamic parameters
+  - Improved error handling in Modal Python scripts
+  - Enhanced TypeScript type safety in API routes
+  - Added detailed documentation for Modal setup and troubleshooting
 
 ### Changed
 - Updated navigation menu to replace standalone GenFill page with consolidated Photo Editor functionality
