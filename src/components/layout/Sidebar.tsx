@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUIStore } from '@/lib/store';
-import { ROUTES } from '@/lib/config';
+import { ROUTES, APP_NAME } from '@/lib/config';
 import Logo from '@/components/ui/Logo';
 import { 
     LayoutGrid, Sparkles, Clapperboard, Image, BarChart, 
@@ -213,7 +213,7 @@ const Sidebar = () => {
           <div className="flex items-center gap-2">
             <Link href={ROUTES.home} className="flex items-center gap-2 hover:opacity-90 transition-opacity">
               <Logo />
-              <span className="text-lg font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer">Content AI Agent</span>
+              <span className="text-lg font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent cursor-pointer">{APP_NAME}</span>
             </Link>
           </div>
           

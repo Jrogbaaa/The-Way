@@ -15,9 +15,44 @@ export default auth((req) => {
   
   // Redirect unauthenticated users to login
   const isApiRoute = nextUrl.pathname.startsWith("/api");
-  const isPublicRoute = ["/", "/about"].includes(nextUrl.pathname);
   
-  if (!isLoggedIn && !isAuthRoute && !isPublicRoute && !isApiRoute) {
+  // List of public API routes that should be accessible without authentication
+  const publicApiRoutes = [
+    "/api/analyze-social-post",
+    "/api/replicate",
+    "/api/image"
+  ];
+  
+  // Check if the current API route is public
+  const isPublicApiRoute = isApiRoute && publicApiRoutes.some(route => 
+    nextUrl.pathname.startsWith(route)
+  );
+  
+  // List of public routes that don't require authentication
+  const publicRoutes = [
+    "/",
+    "/about",
+    // Allow access to key tools without login
+    "/generate/image",
+    "/social-analyzer",
+    "/social-trends",
+    "/upload-post",
+    "/models",
+    "/models/cristina",
+    "/models/jaime",
+    "/models/bea",
+    // Add any other tool pages you want users to try before login
+  ];
+  
+  // Check if the current path or its parent path is in publicRoutes
+  const isPublicRoute = publicRoutes.some(route => 
+    nextUrl.pathname === route || 
+    nextUrl.pathname.startsWith(`${route}/`) ||
+    // Special case for models directory
+    (route === "/models" && nextUrl.pathname.startsWith("/models/"))
+  );
+  
+  if (!isLoggedIn && !isAuthRoute && !isPublicRoute && !isPublicApiRoute && !isApiRoute) {
     return NextResponse.redirect(new URL("/auth/login", nextUrl));
   }
   

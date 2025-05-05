@@ -43,6 +43,8 @@ export default function SignupPage() {
 
   const handleOnboardingClosed = () => {
     // Redirect to dashboard after onboarding is closed
+    // This also marks the user as onboarded in localStorage to prevent welcome modal from showing again
+    localStorage.setItem('userOnboarded', 'true');
     window.location.href = ROUTES.dashboard;
   };
   

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,28 +14,49 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from '@/components/AuthProvider';
 import { ROUTES } from '@/lib/config';
-import { Image as ImageIcon, Bot, Wand2, ArrowRight } from 'lucide-react';
+import { Image as ImageIcon, Bot, Wand2, ArrowRight, TrendingUp, BarChart2 } from 'lucide-react';
 
 export function WelcomeModal() {
   const { showWelcomeModal, markUserOnboarded, user } = useAuth();
+  const [canDismiss, setCanDismiss] = useState(false);
+  
+  // Make the modal non-dismissable for 5 seconds
+  useEffect(() => {
+    if (showWelcomeModal) {
+      setCanDismiss(false);
+      const timer = setTimeout(() => {
+        setCanDismiss(true);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showWelcomeModal]);
 
   const features = [
     {
-      title: 'Create Content',
-      description: 'Leverage pre-trained models for quick, high-quality content generation.',
+      title: 'Create Custom Model',
+      description: 'Create AI-generated images of yourself in various styles and scenarios.',
       icon: <ImageIcon className="h-6 w-6 text-blue-600" />,
       link: ROUTES.models,
-      cta: 'Browse Models',
+      cta: 'Get Started',
       iconBg: 'bg-blue-100',
     },
     {
-      title: 'Chat with AI Assistant',
-      description: 'Get expert advice on social media strategy and content.',
-      icon: <Bot className="h-6 w-6 text-purple-600" />,
-      link: ROUTES.chat,
-      cta: 'Start Chatting',
+      title: 'Analyze Your Post',
+      description: 'Get insights and optimization tips to improve your social media content.',
+      icon: <BarChart2 className="h-6 w-6 text-purple-600" />,
+      link: ROUTES.uploadPost,
+      cta: 'Analyze Content',
       iconBg: 'bg-purple-100',
     },
+    {
+      title: 'Track Social Trends',
+      description: 'Monitor what\'s performing well and stay ahead of trending topics.',
+      icon: <TrendingUp className="h-6 w-6 text-green-600" />,
+      link: ROUTES.dashboard,
+      cta: 'View Trends',
+      iconBg: 'bg-green-100',
+    }
   ];
 
   const handleClose = () => {
@@ -46,16 +67,28 @@ export function WelcomeModal() {
   const displayName = user?.user_metadata?.full_name || user?.email || 'there';
 
   return (
-    <Dialog open={showWelcomeModal} onOpenChange={(open) => !open && handleClose()}> 
-      <DialogContent className="sm:max-w-2xl p-8 md:p-10" onInteractOutside={(e) => e.preventDefault()}> 
+    <Dialog open={showWelcomeModal} onOpenChange={(open) => !open && canDismiss && handleClose()}> 
+      <DialogContent 
+        className="sm:max-w-2xl p-8 md:p-10" 
+        onInteractOutside={(e) => {
+          if (!canDismiss) {
+            e.preventDefault();
+          }
+        }}
+        onEscapeKeyDown={(e) => {
+          if (!canDismiss) {
+            e.preventDefault();
+          }
+        }}
+      > 
         <DialogHeader className="text-center mb-6">
           <DialogTitle className="text-3xl font-bold">Welcome to Your Content AI Agent, {displayName}!</DialogTitle>
           <DialogDescription className="text-lg text-gray-500 mt-1">
-            You're all set up! Choose where you'd like to start.
+            You're all set up! Here's what creators are doing on The Way:
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
           {features.map((feature, index) => (
             <div 
               key={index} 
@@ -80,15 +113,21 @@ export function WelcomeModal() {
           ))}
         </div>
 
-        <DialogFooter className="mt-6 justify-center">
-          <Button 
-            variant="link" 
-            onClick={handleClose}
-            className="text-sm text-gray-500 hover:text-gray-700 hover:underline px-4 py-2"
-          >
-            Skip for now & Go to Dashboard
-          </Button>
-        </DialogFooter>
+        {canDismiss ? (
+          <DialogFooter className="mt-6 justify-center">
+            <Button 
+              variant="link" 
+              onClick={handleClose}
+              className="text-sm text-gray-500 hover:text-gray-700 hover:underline px-4 py-2"
+            >
+              Skip for now & Go to Dashboard
+            </Button>
+          </DialogFooter>
+        ) : (
+          <div className="mt-6 text-center text-sm text-gray-500">
+            Please take a moment to explore your options...
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

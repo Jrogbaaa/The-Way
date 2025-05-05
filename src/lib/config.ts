@@ -3,7 +3,7 @@
  * Centralizes all configuration variables and provides defaults
  */
 
-export const APP_NAME = "Content AI Agent";
+export const APP_NAME = "optimalpost.ai";
 
 // Detect if we're in development or production
 let defaultAppUrl = "http://localhost:3000";
@@ -61,6 +61,8 @@ export const ROUTES = {
   cristinaModel: "/models/cristina",
   jaimeModel: "/models/jaime",
   beaModel: "/models/bea",
+  generateImage: "/generate/image",
+  socialTrends: "/social-trends",
   imageToVideo: "/models/image-to-video",
   longformVideo: "/quick-video-test",
   chat: "/chat",

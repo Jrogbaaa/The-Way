@@ -10,6 +10,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import TrainingDataUpload from '@/components/TrainingDataUpload';
+import ModalModelCreation from '@/components/ModalModelCreation';
 
 // Tooltip component for displaying helpful information
 const Tooltip = ({ children, content }: { children: React.ReactNode; content: string }) => {
@@ -161,6 +162,7 @@ export default function CreateModelPage() {
   const [showTrainingGuide, setShowTrainingGuide] = useState(true);
   const [selectedPreset, setSelectedPreset] = useState<'beginner' | 'standard' | 'expert'>('beginner');
   const [animateIn, setAnimateIn] = useState(false);
+  const [showModalCreation, setShowModalCreation] = useState(false);
   
   useEffect(() => {
     // Trigger animations after initial render
@@ -288,6 +290,14 @@ export default function CreateModelPage() {
     }
   };
 
+  // Handler for Modal model creation success
+  const handleModalModelCreated = (modelInfo: any) => {
+    setSuccess(`Model "${modelInfo.model_name}" was successfully created using Modal.`);
+    setTimeout(() => {
+      router.push(ROUTES.models);
+    }, 5000);
+  };
+
   return (
     <MainLayout>
       <div 
@@ -318,9 +328,33 @@ export default function CreateModelPage() {
             <h1 className="text-3xl font-bold">Create Custom Model</h1>
             <p className="text-gray-600 mt-1">Train your own AI model with your images</p>
           </div>
+          
+          {/* Add Modal Creation Option */}
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => setShowModalCreation(true)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Zap className="h-4 w-4" />
+              Use Modal Backend
+            </Button>
+          </div>
         </div>
         
         {showTrainingGuide && <TrainingTipsGuide onClose={() => setShowTrainingGuide(false)} />}
+        
+        {/* Modal creation overlay */}
+        {showModalCreation && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="max-w-xl w-full mx-4">
+              <ModalModelCreation 
+                onModelCreated={handleModalModelCreated}
+                onClose={() => setShowModalCreation(false)}
+              />
+            </div>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Form Column */}

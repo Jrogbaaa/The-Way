@@ -15,7 +15,11 @@ import {
     CheckCircle, // Added for Recommendation (and fixing linter error)
     X, // Added for potential dismiss buttons in future
     Crop, // Added for Optimize button
-    Download // Added for Download button
+    Download, // Added for Download button
+    ZoomIn,
+    ZoomOut,
+    Check,
+    LogIn
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -24,6 +28,13 @@ import { ScrollArea } from "@/components/ui/scroll-area"; // Reverted import pat
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "./ui/skeleton"; 
 import { useAuth } from "@/components/AuthProvider"; // <-- Correct path
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader, DialogFooter } from "@/components/ui/dialog";
+import { Slider } from "@/components/ui/slider";
+import Cropper from 'react-easy-crop';
+import type { Area, Point } from 'react-easy-crop';
+import { toast } from "sonner";
+import Link from "next/link";
+import { ROUTES } from "@/lib/config";
 
 // Define example images for different content categories
 const getSimilarExampleImages = (caption: string) => {
@@ -221,6 +232,96 @@ interface AnalysisResult {
     categoryTips: string[];
 }
 
+// Helper function to create a crop preview
+const createCropPreview = async (
+    imageSrc: string,
+    pixelCrop: Area,
+    rotation = 0,
+    flip = { horizontal: false, vertical: false }
+): Promise<string> => {
+    const image = new Image();
+    image.src = imageSrc;
+    
+    // Get image dimensions
+    const imageWidth = image.naturalWidth;
+    const imageHeight = image.naturalHeight;
+    
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+        throw new Error('No 2d context');
+    }
+    
+    // Set canvas size to the cropped size
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+    
+    // Draw the cropped image onto the canvas
+    ctx.drawImage(
+        image,
+        pixelCrop.x,
+        pixelCrop.y,
+        pixelCrop.width,
+        pixelCrop.height,
+        0,
+        0,
+        pixelCrop.width,
+        pixelCrop.height
+    );
+    
+    // Return the canvas as a data URL
+    return canvas.toDataURL('image/png');
+};
+
+// Demo analysis result for unauthenticated users
+const DEMO_ANALYSIS_RESULT: AnalysisResult = {
+  caption: "Beach sunset with palm trees. Perfect end to a summer day! #vacation #sunset #beachvibes",
+  engagement: {
+    score: 78,
+    level: "Above Average",
+    prediction: "This post is likely to perform well, with engagement 30% above your average."
+  },
+  pros: [
+    "Good lighting with golden hour tones",
+    "Clear subject with good composition",
+    "Effective use of colors that create visual interest",
+    "Content aligns well with popular #sunset hashtag"
+  ],
+  cons: [
+    "Similar to many other sunset photos in the feed",
+    "Could use more unique perspective to stand out",
+    "Text placement could be improved for readability"
+  ],
+  suggestions: [
+    "Try capturing sunset from a unique angle or perspective",
+    "Include a human element to create more emotional connection",
+    "Experiment with different horizon placements using rule of thirds"
+  ],
+  recommendation: "This image would perform best on Instagram as a regular post. The colors and composition are optimized for feed viewing.",
+  technical: {
+    width: 1080,
+    height: 1350,
+    aspectRatio: "4:5",
+    resolutionRating: "Excellent",
+    fileSizeMB: 1.2,
+    sizeRating: "Optimal"
+  },
+  platformRecommendations: {
+    instagramPost: "Good fit for Instagram feed (4:5 ratio recommended)",
+    instagramStory: "Consider cropping to 9:16 for optimal Story presentation"
+  },
+  category: "nature",
+  categoryTips: [
+    "Golden hour lighting increases engagement by 48% for outdoor scenes",
+    "Including a human element/silhouette boosts relatability by 35%",
+    "Rule of thirds composition improves visual flow and interest"
+  ]
+};
+
+// Also add this demo image URL for unauthenticated users
+const DEMO_IMAGE_URL = "/examples/beach-sunset.jpg";
 
 const SocialMediaAnalyzer: React.FC = () => {
     // Get Supabase client from Auth context
@@ -240,22 +341,40 @@ const SocialMediaAnalyzer: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const resultsRef = useRef<HTMLDivElement>(null); // Ref for the results container
 
-    // ... handleImageUpload, handleAnalyzeClick, triggerFileInput functions (unchanged logic) ...
+    // New state variables for interactive cropping
+    const [cropModalOpen, setCropModalOpen] = useState<boolean>(false);
+    const [cropAspectRatio, setCropAspectRatio] = useState<number>(9/16); // Default to 9:16
+    const [cropRatioString, setCropRatioString] = useState<'9:16' | '1:1' | '4:5'>('9:16');
+    const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState<number>(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+    const [croppedImage, setCroppedImage] = useState<string | null>(null);
+
+    // Get auth state
+    const { user } = useAuth();
+    const isAuthenticated = !!user;
+    
+    // Add a state to show login prompt
+    const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+    
+    // Modify handleImageUpload function to work with demo image for unauthenticated users
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-            if (!validTypes.includes(file.type)) {
-                setError("Invalid file type. Please upload a JPG, PNG, WEBP, or GIF image.");
+        setError(null);
+        
+        if (event.target.files && event.target.files.length > 0) {
+            const file = event.target.files[0];
+            
+            // Basic file validation
+            if (!file.type.startsWith('image/')) {
+                setError("Please upload an image file.");
                 return;
             }
-
-            const maxSizeMB = 15;
-            if (file.size > maxSizeMB * 1024 * 1024) {
-                setError(`File size exceeds the ${maxSizeMB}MB limit.`);
+            
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                setError("Image file size must be less than 10MB.");
                 return;
             }
-
+            
             setFileName(file.name);
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -296,59 +415,66 @@ const SocialMediaAnalyzer: React.FC = () => {
         }
     }, [imageSrc]);
 
+    // Modify handleAnalyzeClick to use demo for unauthenticated users
     const handleAnalyzeClick = async () => {
-        if (!imageSrc || !technicalData || !fileInputRef.current?.files?.[0]) {
+        setError(null);
+        
+        if (!imageSrc) {
             setError("Please upload an image first.");
             return;
         }
-
+        
         setIsLoading(true);
-        setError(null);
         setAnalysisResult(null);
 
         try {
-            const formData = new FormData();
-            const file = fileInputRef.current.files[0];
-            formData.append('image', file);
-            formData.append('width', technicalData.width.toString());
-            formData.append('height', technicalData.height.toString());
-            formData.append('fileSizeMB', technicalData.fileSizeMB.toString());
+            // For unauthenticated users, simulate analysis with demo content
+            if (!isAuthenticated) {
+                await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
+                setAnalysisResult(DEMO_ANALYSIS_RESULT);
+                setShowLoginPrompt(true);
+            } else {
+                // For authenticated users, use the real API
+                const formData = new FormData();
+                formData.append('image', fileInputRef.current?.files?.[0] || new Blob());
+                formData.append('width', technicalData?.width.toString() || '');
+                formData.append('height', technicalData?.height.toString() || '');
+                formData.append('fileSizeMB', technicalData?.fileSizeMB.toString() || '');
 
-            console.log("Sending data to API:", {
-                fileName: file.name,
-                width: technicalData.width,
-                height: technicalData.height,
-                fileSizeMB: technicalData.fileSizeMB
-            });
+                console.log("Sending data to API:", {
+                    fileName: fileInputRef.current?.files?.[0]?.name,
+                    width: technicalData?.width,
+                    height: technicalData?.height,
+                    fileSizeMB: technicalData?.fileSizeMB
+                });
 
-            // NOTE: Using standard fetch here because analyze-social-post doesn't require auth
-            const response = await fetch('/api/analyze-social-post', {
-                method: 'POST',
-                body: formData, // Send as FormData
-            });
+                // NOTE: Using standard fetch here because analyze-social-post doesn't require auth
+                const response = await fetch('/api/analyze-social-post', {
+                    method: 'POST',
+                    body: formData, // Send as FormData
+                });
 
-            console.log("API Response Status:", response.status);
+                console.log("API Response Status:", response.status);
 
-            const result = await response.json();
-            console.log("API Response Body:", result);
+                const result = await response.json();
+                console.log("API Response Body:", result);
 
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP error! status: ${response.status}`);
+                }
 
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
+                if (!result.analysis) {
+                     console.error("API response missing 'analysis' key:", result);
+                    throw new Error("Received an invalid response from the analysis server.");
+                }
+                 // Add basic validation for nested structures if needed
+                if (!result.analysis.technical || !result.analysis.engagement || !result.analysis.platformRecommendations) {
+                    console.warn("API response analysis object missing some expected keys (technical, engagement, platformRecommendations):", result.analysis);
+                    // Potentially set a specific error or handle gracefully
+                }
+
+                setAnalysisResult(result.analysis);
             }
-
-            if (!result.analysis) {
-                 console.error("API response missing 'analysis' key:", result);
-                throw new Error("Received an invalid response from the analysis server.");
-            }
-             // Add basic validation for nested structures if needed
-            if (!result.analysis.technical || !result.analysis.engagement || !result.analysis.platformRecommendations) {
-                console.warn("API response analysis object missing some expected keys (technical, engagement, platformRecommendations):", result.analysis);
-                // Potentially set a specific error or handle gracefully
-            }
-
-            setAnalysisResult(result.analysis);
-
         } catch (err: any) {
             console.error("Analysis failed:", err);
             setError(err.message || "An unexpected error occurred during analysis.");
@@ -358,38 +484,77 @@ const SocialMediaAnalyzer: React.FC = () => {
         }
     };
 
-    // Handler for Optimize Button Click
-    const handleOptimizeClick = async (targetAspectRatio: '9:16' | '1:1' | '4:5') => {
-        if (!imageSrc) {
-            setOptimizationError("Cannot optimize without an original image source.");
-            return;
+    // Function to open crop modal with specific aspect ratio
+    const openCropModal = (aspectRatio: '9:16' | '1:1' | '4:5') => {
+        // Reset crop state
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setCroppedAreaPixels(null);
+        setCroppedImage(null);
+        
+        // Set aspect ratio
+        setCropRatioString(aspectRatio);
+        switch (aspectRatio) {
+            case '9:16':
+                setCropAspectRatio(9/16);
+                break;
+            case '1:1':
+                setCropAspectRatio(1);
+                break;
+            case '4:5':
+                setCropAspectRatio(4/5);
+                break;
         }
+        
+        // Open modal
+        setCropModalOpen(true);
+    };
 
-        setIsOptimizing(true);
-        setOptimizationError(null);
-        setOptimizedImageUrl(null); // Clear previous optimized image
-        setOptimizedDimensions(null);
+    // Handle crop complete
+    const onCropComplete = (croppedArea: Area, croppedAreaPixels: Area) => {
+        setCroppedAreaPixels(croppedAreaPixels);
+    };
 
+    // Apply the crop
+    const handleApplyCrop = async () => {
+        if (!imageSrc || !croppedAreaPixels) return;
+        
         try {
-            console.log(`Optimizing to ${targetAspectRatio}...`);
+            setIsOptimizing(true);
             
-            // *** Revert back to using the standard global fetch ***
-            // The createBrowserClient setup handles auth cookies automatically for this.
+            // Create a cropped image preview
+            const croppedImage = await createCropPreview(
+                imageSrc,
+                croppedAreaPixels
+            );
+            setCroppedImage(croppedImage);
+            
+            // Close the crop modal
+            setCropModalOpen(false);
+            
+            // Upload the cropped image to optimize with custom crop
             const response = await fetch('/api/image/optimize', { 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include', // This ensures the session cookies are sent
                 body: JSON.stringify({
-                    imageUrl: imageSrc, // Send the base64 data URL
-                    targetAspectRatio: targetAspectRatio,
+                    imageUrl: croppedImage, // Send the cropped image
+                    targetAspectRatio: cropRatioString,
+                    applyCrop: false, // Tell the API the crop is already applied
                 }),
             });
 
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.error || `Optimization failed with status: ${response.status}`);
+                console.error("Error optimizing image:", response.status, result);
+                if (response.status === 401) {
+                    throw new Error("Authentication required. Please sign in to optimize images.");
+                } else {
+                    throw new Error(result.error || `Optimization failed with status: ${response.status}`);
+                }
             }
 
             if (result.success && result.optimizedImageUrl) {
@@ -399,15 +564,25 @@ const SocialMediaAnalyzer: React.FC = () => {
             } else {
                 throw new Error(result.error || "Optimization API call succeeded but returned no URL or indicated failure.");
             }
-
         } catch (err: any) {
-            console.error("Optimization failed:", err);
+            console.error("Crop and optimization failed:", err);
             setOptimizationError(err.message || "An unexpected error occurred during optimization.");
             setOptimizedImageUrl(null);
             setOptimizedDimensions(null);
         } finally {
             setIsOptimizing(false);
         }
+    };
+
+    // Modify existing handleOptimizeClick to open the crop modal instead
+    const handleOptimizeClick = async (targetAspectRatio: '9:16' | '1:1' | '4:5') => {
+        if (!imageSrc) {
+            setOptimizationError("Cannot optimize without an original image source.");
+            return;
+        }
+        
+        // Open the crop modal instead of directly optimizing
+        openCropModal(targetAspectRatio);
     };
 
      const triggerFileInput = () => {
@@ -428,6 +603,13 @@ const SocialMediaAnalyzer: React.FC = () => {
             resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }, [analysisResult, isLoading]); // Re-run when analysisResult or isLoading changes
+
+    // Add this function to load demo image for unauthenticated users
+    const loadDemoImage = () => {
+        setImageSrc(DEMO_IMAGE_URL);
+        setAnalysisResult(DEMO_ANALYSIS_RESULT);
+        setShowLoginPrompt(true);
+    };
 
     // ... JSX return statement ...
     return (
@@ -733,7 +915,53 @@ const SocialMediaAnalyzer: React.FC = () => {
                                 {/* Optimized Image Result */} 
                                 {optimizedImageUrl && !isOptimizing && (
                                     <div className="mt-4 p-4 border rounded-lg bg-white">
-                                       {/* ... Optimized Image Display ... */} 
+                                        <div className="flex flex-col items-center">
+                                            <h4 className="text-sm font-medium mb-2 text-gray-700">Optimized Image ({optimizedDimensions?.width}x{optimizedDimensions?.height}px)</h4>
+                                            <div className="relative">
+                                                <img 
+                                                    src={optimizedImageUrl} 
+                                                    alt="Optimized preview" 
+                                                    className="max-w-full max-h-64 object-contain rounded"
+                                                />
+                                            </div>
+                                            <div className="mt-3 flex space-x-2">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        // Force download by creating a temporary download link
+                                                        fetch(optimizedImageUrl)
+                                                            .then(response => response.blob())
+                                                            .then(blob => {
+                                                                // Create a blob URL
+                                                                const blobUrl = URL.createObjectURL(blob);
+                                                                
+                                                                // Create a temporary link element
+                                                                const link = document.createElement('a');
+                                                                link.href = blobUrl;
+                                                                link.download = `optimized-${cropRatioString.replace(':', 'x')}.webp`;
+                                                                
+                                                                // Append to the document, click and cleanup
+                                                                document.body.appendChild(link);
+                                                                link.click();
+                                                                
+                                                                // Cleanup
+                                                                setTimeout(() => {
+                                                                    document.body.removeChild(link);
+                                                                    URL.revokeObjectURL(blobUrl);
+                                                                }, 100);
+                                                            })
+                                                            .catch(err => {
+                                                                console.error('Download failed:', err);
+                                                                toast?.error?.('Download failed. Please try again.');
+                                                            });
+                                                    }}
+                                                >
+                                                    <Download className="mr-2 h-4 w-4" /> 
+                                                    Download
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </CardContent>
@@ -741,6 +969,94 @@ const SocialMediaAnalyzer: React.FC = () => {
                         {/* --- End Optimization Section --- */}
 
                     </div> {/* End of the grid div */}
+                </div>
+            )}
+
+            {/* Add Crop Dialog Modal */}
+            <Dialog open={cropModalOpen} onOpenChange={setCropModalOpen}>
+                <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Adjust Crop ({cropRatioString})</DialogTitle>
+                        <DialogDescription>
+                            Drag to position and use the slider to zoom
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="relative h-[350px] w-full my-4 bg-gray-100 rounded-md overflow-hidden">
+                        {imageSrc && (
+                            <Cropper
+                                image={imageSrc}
+                                crop={crop}
+                                zoom={zoom}
+                                aspect={cropAspectRatio}
+                                onCropChange={setCrop}
+                                onCropComplete={onCropComplete}
+                                onZoomChange={setZoom}
+                                objectFit="horizontal-cover"
+                            />
+                        )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mt-2">
+                        <ZoomOut className="h-4 w-4 text-gray-500" />
+                        <Slider
+                            value={[zoom]}
+                            min={1}
+                            max={3}
+                            step={0.1}
+                            onValueChange={(value) => setZoom(value[0])}
+                            className="flex-1"
+                        />
+                        <ZoomIn className="h-4 w-4 text-gray-500" />
+                    </div>
+                    
+                    <DialogFooter className="mt-4">
+                        <Button
+                            variant="outline" 
+                            onClick={() => setCropModalOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleApplyCrop}
+                            disabled={isOptimizing}
+                        >
+                            {isOptimizing ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+                                </>
+                            ) : (
+                                <>
+                                    <Check className="mr-2 h-4 w-4" /> Apply Crop
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Add the login prompt for unauthenticated users after analysis */}
+            {!isAuthenticated && showLoginPrompt && analysisResult && analysisResult.recommendation && (
+                <div className="mt-6 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                    <h4 className="text-lg font-medium text-indigo-900 dark:text-indigo-200 mb-2">
+                        Ready to analyze your own content?
+                    </h4>
+                    <p className="text-sm text-indigo-700 dark:text-indigo-300 mb-4">
+                        Sign in to analyze unlimited posts, get personalized recommendations, and track your improvement over time.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <Button asChild className="bg-gradient-to-r from-indigo-600 to-purple-600">
+                            <Link href={ROUTES.signup}>
+                                <LogIn className="mr-2 h-4 w-4" />
+                                Sign Up Free
+                            </Link>
+                        </Button>
+                        <Button asChild variant="outline">
+                            <Link href={ROUTES.login}>
+                                Already have an account? Sign In
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>

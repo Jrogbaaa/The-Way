@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/config';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
+import ModalModelCreation from '@/components/ModalModelCreation';
 
 // Define a model type for type safety
 interface Model {
@@ -58,6 +59,14 @@ export default function ImageCreatorPage() {
 
   useEffect(() => {
     console.log(`MODELS PAGE Mounted. Loading: ${loading}, User: ${!!user}`);
+
+    // Check if we should automatically open the model creation modal
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('create') === 'true') {
+        setShowModelCreation(true);
+      }
+    }
   }, [loading, user, router]);
 
   // Sample data for models
@@ -133,6 +142,7 @@ export default function ImageCreatorPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [showTip, setShowTip] = useState(true);
   const [animateIn, setAnimateIn] = useState(false);
+  const [showModelCreation, setShowModelCreation] = useState(false);
   
   // Animation effect
   useEffect(() => {
@@ -167,8 +177,8 @@ export default function ImageCreatorPage() {
       <div className="bg-gray-50 min-h-screen">
         <div className={`container max-w-screen-xl mx-auto px-4 py-8 bg-white rounded-2xl shadow-sm ${animateIn ? 'opacity-100 transition-opacity duration-500' : 'opacity-0'}`}>
           
-          {/* Header with title and filters */}
-          <div className="flex justify-between items-center mb-10 flex-col sm:flex-row gap-6 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100">
+          {/* Header with title and filters - Reduced bottom margin */}
+          <div className="flex justify-between items-center mb-6 flex-col sm:flex-row gap-6 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Creator Gallery</h1>
               <p className="text-gray-600">Create amazing content with our state-of-the-art AI models</p>
@@ -182,16 +192,16 @@ export default function ImageCreatorPage() {
             </div>
           </div>
           
-          {/* Category filters */}
-          <div className="mb-8 overflow-x-auto pb-2">
-            <div className="flex gap-2">
+          {/* Category filters & Create Button */}
+          <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="overflow-x-auto pb-2 flex gap-2">
               {categories.map(category => (
                 <Button 
                   key={category}
                   variant={selectedCategory === category ? "default" : "outline"}
                   onClick={() => setSelectedCategory(category)}
                   className={`
-                    transition-all duration-300 px-4 py-2
+                    whitespace-nowrap transition-all duration-300 px-4 py-2
                     ${selectedCategory === category 
                       ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md' 
                       : 'bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 shadow-sm'
@@ -202,13 +212,27 @@ export default function ImageCreatorPage() {
                 </Button>
               ))}
             </div>
+            <Button 
+              variant="default" 
+              className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm flex-shrink-0"
+              aria-label="Create a new model"
+              onClick={() => setShowModelCreation(true)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4">
+                <path d="M5 12h14"></path>
+                <path d="M12 5v14"></path>
+              </svg>
+              Create Model
+            </Button>
           </div>
 
-          {/* Models count */}
+          {/* Models count - REMOVED */}
+          {/* 
           <div className="mb-6 text-sm text-gray-500">
             Showing {filteredModels.length} {filteredModels.length === 1 ? 'model' : 'models'} 
             {selectedCategory !== 'All' && ` in ${selectedCategory}`}
           </div>
+          */}
           
           {/* --- MODIFIED: Render sections --- */}
           <div className="space-y-12"> 
@@ -335,6 +359,30 @@ export default function ImageCreatorPage() {
                       </div>
                     </Link>
                   ))}
+                  {/* Placeholder Create Model Card */}
+                  <div 
+                    className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md hover:border-indigo-400 hover:-translate-y-1 cursor-pointer h-full flex flex-col justify-center items-center group min-h-[300px]"
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Create a new model"
+                    onClick={() => setShowModelCreation(true)}
+                    onKeyDown={(e) => e.key === 'Enter' && setShowModelCreation(true)}
+                  >
+                    <div className="flex flex-col items-center justify-center text-center p-8">
+                      <div className="mb-4 p-3 rounded-full bg-indigo-100 dark:bg-indigo-900 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8 text-indigo-600 dark:text-indigo-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors">
+                          <path d="M5 12h14"></path>
+                          <path d="M12 5v14"></path>
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        Create a Model
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        Train your own AI model
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </section>
             )}
@@ -342,6 +390,22 @@ export default function ImageCreatorPage() {
           {/* --- END MODIFIED SECTION --- */} 
         </div>
       </div>
+      
+      {/* Modal for model creation */}
+      {showModelCreation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <ModalModelCreation 
+              onClose={() => setShowModelCreation(false)}
+              onModelCreated={(modelInfo) => {
+                // Refresh models or redirect to model page
+                router.push(`/models/${modelInfo.model_name}`);
+              }}
+            />
+          </div>
+        </div>
+      )}
+      
     </MainLayout>
   );
 } 

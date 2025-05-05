@@ -36,11 +36,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <WelcomeModal />
-          <div className="min-h-screen w-full bg-gray-50 dark:bg-gray-900">
-            <ClientErrorBoundary>
-              {children}
-            </ClientErrorBoundary>
-          </div>
+          <ClientErrorBoundary>
+            {children}
+          </ClientErrorBoundary>
         </AuthProvider>
       </body>
     </html>

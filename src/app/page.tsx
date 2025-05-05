@@ -11,12 +11,14 @@ import { useAuth } from '@/components/AuthProvider';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FirstTimeVisitorModal } from '@/components/FirstTimeVisitorModal';
 
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, loading, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -113,7 +115,7 @@ export default function Home() {
                 aria-label="Go to home page"
               >
                 <Logo size="md" />
-                <span>Content AI Agent</span>
+                <span>optimalpost.ai</span>
               </Link>
             </div>
             
@@ -329,18 +331,18 @@ export default function Home() {
                 </div>
                 
                 <div className="space-y-4">
-                  <LinkButton 
-                    href={ROUTES.dashboard}
+                  <Button 
                     size="lg" 
+                    onClick={() => setWelcomeModalOpen(true)}
                     className={`bg-white text-indigo-600 hover:bg-gray-100 w-full sm:w-auto text-center py-4 px-8 text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}
-                    aria-label="Create Posts"
+                    aria-label="Try our tools"
                   >
                     Create Posts
                     <ArrowRight className="ml-2 h-5 w-5" />
-                  </LinkButton>
+                  </Button>
                   
                   <p className="text-sm text-violet-200 font-medium">
-                    No credit card required • Free 14-day trial
+                    No login required • Try instantly
                   </p>
                 </div>
                 
@@ -429,7 +431,14 @@ export default function Home() {
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold mb-2">1. AI-Powered Ideas</h3>
-                <p className="text-gray-600 dark:text-gray-400">Tell us your goal and audience, and our AI generates tailored content ideas</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Tell us your goal and audience, and our AI generates tailored content ideas</p>
+                <Button 
+                  variant="link" 
+                  className="text-indigo-600 hover:text-indigo-800"
+                  onClick={() => setWelcomeModalOpen(true)}
+                >
+                  Try Now
+                </Button>
               </div>
               
               {/* Step 2: Content Generation */}
@@ -442,7 +451,14 @@ export default function Home() {
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold mb-2">2. Create & Refine</h3>
-                <p className="text-gray-600 dark:text-gray-400">Instantly transform ideas into visuals, captions, and engaging content</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Instantly transform ideas into visuals, captions, and engaging content</p>
+                <Button 
+                  variant="link" 
+                  className="text-indigo-600 hover:text-indigo-800"
+                  onClick={() => setWelcomeModalOpen(true)}
+                >
+                  Try Now
+                </Button>
               </div>
               
               {/* Step 3: Targeting & Optimization */}
@@ -454,7 +470,14 @@ export default function Home() {
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold mb-2">3. Target & Optimize</h3>
-                <p className="text-gray-600 dark:text-gray-400">Get AI-suggested @mentions and optimize content for maximum engagement</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Get AI-suggested @mentions and optimize content for maximum engagement</p>
+                <Button 
+                  variant="link" 
+                  className="text-indigo-600 hover:text-indigo-800"
+                  onClick={() => setWelcomeModalOpen(true)}
+                >
+                  Try Now
+                </Button>
               </div>
             </div>
           </div>
@@ -473,26 +496,26 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 pt-6">
+                <Button 
+                  onClick={() => setWelcomeModalOpen(true)}
+                  size="lg" 
+                  className="bg-white text-indigo-600 hover:bg-gray-100 min-w-[200px] py-6 text-lg font-medium"
+                  aria-label="Try our tools without login"
+                >
+                  Try Without Login
+                </Button>
                 <LinkButton 
                   href={ROUTES.signup}
                   size="lg" 
-                  className="bg-white text-indigo-600 hover:bg-gray-100 min-w-[200px] py-6 text-lg font-medium"
+                  variant="outline" 
+                  className="border-white text-white hover:bg-white/10 min-w-[200px] py-6 text-lg font-medium"
                   aria-label="Sign up for a free trial"
                 >
                   Start Free Trial
                 </LinkButton>
-                <LinkButton 
-                  href="#features"
-                  size="lg" 
-                  variant="outline" 
-                  className="border-white text-white hover:bg-white/10 min-w-[200px] py-6 text-lg font-medium"
-                  aria-label="Learn more about our features"
-                >
-                  See How It Works
-                </LinkButton>
               </div>
               <p className="text-sm text-white/80 pt-4">
-                No credit card required • Free 14-day trial • Cancel anytime
+                Experience the value first • No login required
               </p>
             </div>
           </div>
@@ -545,6 +568,10 @@ export default function Home() {
           </div>
         </div>
       </footer>
+      <FirstTimeVisitorModal 
+        isOpen={welcomeModalOpen} 
+        onOpenChange={setWelcomeModalOpen} 
+      />
     </div>
   );
 }

@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sharp from 'sharp';
-import { createClient, createAdminClient } from '@/lib/supabase/server'; // Import both client creators
+import { createAdminClient } from '@/lib/supabase/server'; // Only need admin client for storage
 import { v4 as uuidv4 } from 'uuid';
+import { auth } from '@/auth'; // Import NextAuth's auth function
 
 interface OptimizeRequestBody {
   imageUrl: string;
   targetAspectRatio: '9:16' | '1:1' | '4:5'; // Extend as needed
   outputFormat?: 'jpeg' | 'png' | 'webp';
   outputQuality?: number;
+  applyCrop?: boolean; // Whether to apply aspect ratio crop or use as-is
 }
 
 // Helper to parse aspect ratio string
@@ -46,15 +48,21 @@ const calculateTargetDimensions = (
 
 
 export async function POST(req: NextRequest) {
-  // Create a client instance scoped to this request to read cookies
-  const supabase = await createClient();
+  // Get user session from NextAuth
+  const session = await auth();
   
-  // Get user session from the request cookies
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    console.error('Optimize API: Auth error or no user', authError);
+  // Check if user is authenticated
+  if (!session || !session.user) {
+    console.error('Optimize API: Auth error or no user - NextAuth session missing');
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  // Get the user ID from the session
+  const userId = session.user.id;
+  
+  if (!userId) {
+    console.error('Optimize API: User ID missing in session');
+    return NextResponse.json({ success: false, error: 'User ID missing' }, { status: 401 });
   }
 
   // Create an admin client specifically for storage operations (bypasses RLS)
@@ -65,16 +73,15 @@ export async function POST(req: NextRequest) {
         imageUrl, 
         targetAspectRatio: targetRatioString, 
         outputFormat = 'webp', // Default to webp
-        outputQuality = 80 // Default quality
+        outputQuality = 80, // Default quality
+        applyCrop = true // Whether to apply crop or use as is
     } = await req.json() as OptimizeRequestBody;
 
     if (!imageUrl || !targetRatioString) {
       return NextResponse.json({ success: false, error: 'Missing imageUrl or targetAspectRatio' }, { status: 400 });
     }
 
-    console.log(`Optimizing image: ${imageUrl} for user ${user.id} to aspect ratio ${targetRatioString}`);
-
-    const targetAspectRatio = parseAspectRatio(targetRatioString);
+    console.log(`Optimizing image: ${imageUrl.substring(0, 50)}... for user ${userId} to aspect ratio ${targetRatioString}`);
 
     // 1. Fetch the image data
     const imageResponse = await fetch(imageUrl);
@@ -91,32 +98,54 @@ export async function POST(req: NextRequest) {
          throw new Error('Could not read image dimensions.');
     }
     
-    // 3. Calculate target dimensions for center crop
-    const { width: targetWidth, height: targetHeight } = calculateTargetDimensions(
-        originalWidth, 
-        originalHeight, 
-        targetAspectRatio
-    );
+    let processedImageBuffer;
+    let targetWidth = originalWidth;
+    let targetHeight = originalHeight;
     
-    console.log(`Original: ${originalWidth}x${originalHeight}, Target Crop: ${targetWidth}x${targetHeight}`);
+    // Apply auto-crop if requested
+    if (applyCrop) {
+      // Calculate target dimensions for center crop
+      const targetAspectRatio = parseAspectRatio(targetRatioString);
+      const cropDimensions = calculateTargetDimensions(
+          originalWidth, 
+          originalHeight, 
+          targetAspectRatio
+      );
+      
+      targetWidth = cropDimensions.width;
+      targetHeight = cropDimensions.height;
+      
+      console.log(`Original: ${originalWidth}x${originalHeight}, Target Crop: ${targetWidth}x${targetHeight}`);
 
-    // 4. Perform center crop and resize (optional resize step removed for now, just cropping)
-    const processedImageBuffer = await sharp(imageBuffer)
-      .extract({
-          left: Math.floor((originalWidth - targetWidth) / 2),
-          top: Math.floor((originalHeight - targetHeight) / 2),
-          width: targetWidth,
-          height: targetHeight
-      })
-      .toFormat(outputFormat, { quality: outputQuality })
-      .toBuffer();
+      // Perform center crop
+      processedImageBuffer = await sharp(imageBuffer)
+        .extract({
+            left: Math.floor((originalWidth - targetWidth) / 2),
+            top: Math.floor((originalHeight - targetHeight) / 2),
+            width: targetWidth,
+            height: targetHeight
+        })
+        .toFormat(outputFormat, { quality: outputQuality })
+        .toBuffer();
+    } else {
+      // Skip cropping, just convert to proper format
+      console.log(`Using pre-cropped image with dimensions: ${originalWidth}x${originalHeight}`);
+      processedImageBuffer = await sharp(imageBuffer)
+        .toFormat(outputFormat, { quality: outputQuality })
+        .toBuffer();
+      
+      // Use the original dimensions
+      targetWidth = originalWidth;
+      targetHeight = originalHeight;
+    }
       
     console.log(`Image processed to ${targetWidth}x${targetHeight}`);
 
     // 5. Upload the processed image to Supabase Storage (use admin client)
     const fileExtension = outputFormat;
     const newFileName = `optimized-${uuidv4()}.${fileExtension}`;
-    const storagePath = `${user.id}/optimized/${newFileName}`; 
+    // Place optimized images at the root level instead of in an "optimized" folder
+    const storagePath = `${userId}/${newFileName}`; 
     
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage // Use admin client here
       .from('gallery-uploads') 

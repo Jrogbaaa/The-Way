@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useUIStore } from '@/lib/store';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
-import { ROUTES } from '@/lib/config';
+import { ROUTES, APP_NAME } from '@/lib/config';
 import Logo from '@/components/ui/Logo';
 import ButtonLink from '@/components/ui/button-link';
 import { useState } from 'react';
@@ -217,7 +217,7 @@ const Navbar = () => {
             aria-label="Go to home page"
           >
             <Logo size="md" />
-            <span style={{ border: 'none', outline: 'none' }}>Content AI Agent</span>
+            <span style={{ border: 'none', outline: 'none' }}>{APP_NAME}</span>
           </Link>
         </div>
           
