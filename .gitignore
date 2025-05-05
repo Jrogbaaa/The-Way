@@ -62,3 +62,10 @@ next-env.d.ts
 
 # npm logs
 .npm/
+
+# python virtual environments
+/modal-env/
+/venv/
+/.venv/
+__pycache__/
+*.py[cod]
