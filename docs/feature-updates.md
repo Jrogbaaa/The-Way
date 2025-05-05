@@ -1,6 +1,30 @@
 # Feature Updates
 
-## Backend System Improvements (Latest Update)
+## First-Time User Experience Improvements (Latest Update)
+
+We've implemented a "try-before-you-sign-up" approach to improve the first-time visitor experience:
+
+1. **Welcome Modal for New Visitors**
+   - Added FirstTimeVisitorModal component with three main features:
+     - **Create AI Images of You**: Direct access to the model creation page
+     - **See What Works on Instagram**: Analytics for improving engagement
+     - **Track Social Trends**: View trending content across platforms
+   - Professional design with purple gradient background and improved text contrast
+   - Clear call-to-action buttons for each feature
+
+2. **Authentication Flow Improvements**
+   - Modified middleware to allow unauthenticated access to key tool pages
+   - Enabled relevant API routes for non-authenticated users
+   - Trigger login prompts only after users experience value
+
+3. **Implementation Details**
+   - Homepage CTAs now open the welcome modal instead of redirecting to login
+   - Created fully functional social-trends page accessible without login
+   - Added query parameter handling to automatically open the model creation modal when accessed from the welcome screen
+
+This "try-before-you-sign-up" approach follows best practices from services like Notion and Figma, allowing users to experience the product's value before creating an account.
+
+## Backend System Improvements
 
 We've made significant improvements to the AI model integration and styling system:
 
