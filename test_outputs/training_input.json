@@ -1,0 +1,26 @@
+{
+  "modelId": "test_lora_1747385856",
+  "instancePrompt": "a photo of sks person",
+  "imageDataList": [
+    {
+      "imageUrl": "https://images.unsplash.com/photo-1594751543129-6701ad444259",
+      "caption": "a photo of sks person smiling"
+    },
+    {
+      "imageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2",
+      "caption": "a photo of sks person looking sideways"
+    }
+  ],
+  "modelName": "Test LoRA Model",
+  "callbackUrl": "https://example.com/api/modal/training-progress",
+  "supabaseUrl": "",
+  "supabaseKey": "",
+  "trainingParams": {
+    "resolution": 512,
+    "batchSize": 1,
+    "maxTrainSteps": 500,
+    "learningRate": 1e-4,
+    "lrScheduler": "constant",
+    "loraRank": 4
+  }
+}

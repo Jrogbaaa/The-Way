@@ -1,0 +1,9 @@
+{
+  "modelId": "test_lora_1747385856",
+  "prompt": "a photo of sks person in a field of flowers",
+  "numInferenceSteps": 30,
+  "guidanceScale": 7.5,
+  "negativePrompt": "ugly, blurry, low quality, distorted",
+  "seed": 12345,
+  "outputPath": "test_outputs/generation_result.json"
+}

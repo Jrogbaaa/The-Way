@@ -114,15 +114,15 @@ export function WelcomeModal() {
         </div>
 
         {canDismiss ? (
-          <DialogFooter className="mt-6 justify-center">
-            <Button 
-              variant="link" 
-              onClick={handleClose}
-              className="text-sm text-gray-500 hover:text-gray-700 hover:underline px-4 py-2"
-            >
-              Skip for now & Go to Dashboard
-            </Button>
-          </DialogFooter>
+        <DialogFooter className="mt-6 justify-center">
+          <Button 
+            variant="link" 
+            onClick={handleClose}
+            className="text-sm text-gray-500 hover:text-gray-700 hover:underline px-4 py-2"
+          >
+            Skip for now & Go to Dashboard
+          </Button>
+        </DialogFooter>
         ) : (
           <div className="mt-6 text-center text-sm text-gray-500">
             Please take a moment to explore your options...

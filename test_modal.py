@@ -1,13 +1,12 @@
 import modal
 
-app = modal.App("test-app")
+app = modal.App("hello-world")
 
 @app.function()
-def hello(name):
-    print(f"Hello, {name}!")
-    return f"Hello, {name}!"
+def hello():
+    return "Hello, Modal is working!"
 
-if __name__ == "__main__":
-    with app.run():
-        result = hello.remote("Modal")
-        print(f"Result from remote function: {result}") 
+@app.local_entrypoint()
+def main():
+    message = hello.remote()
+    print(message) 

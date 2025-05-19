@@ -530,6 +530,56 @@ To access the storyboard creator, navigate to:
 
 For more detailed documentation on the storyboard system, see the [Storyboard Documentation](./the-way/docs/storyboard.md).
 
+## Custom Model Training
+
+### LoRA Training Flow
+
+The application now supports training personalized LoRA models using the Kohya_ss training backend hosted on Modal:
+
+1. **Image Collection**: Upload 10-15 high-quality images for training
+2. **Model Configuration**: Specify a unique model name and class prompt (e.g., "a photo of sks person")
+3. **Training**: Images are processed and a LoRA model is trained on Modal using the Kohya_ss backend
+4. **Inference**: Use the trained model to generate new images with custom prompts
+
+#### Architecture Overview
+
+The LoRA training and inference flow involves the following components:
+
+- **Frontend**: Next.js UI for uploading images and configuring training
+- **Backend**: API endpoints for initiating training and running inference
+- **Modal**: Cloud platform running the Kohya_ss training system and inference pipeline
+- **Storage**: Supabase for storing metadata and trained models (or local filesystem)
+
+#### Technical Implementation
+
+The implementation includes:
+
+- `/train-model` - Frontend page for training new models
+- `/models/[modelId]` - Model detail and inference page
+- `/api/model/train` - API endpoint to start training
+- `/api/modal/generate-image` - API endpoint for running inference
+- `modal_scripts/train_kohya.py` - Modal backend for Kohya_ss training
+- `modal_scripts/generate_image.py` - Modal backend for inference
+
+#### Training Parameters
+
+The LoRA training uses the following parameters:
+
+- Base model: `runwayml/stable-diffusion-v1-5`
+- Training steps: 1000
+- LoRA rank: 32 (network dimension)
+- Resolution: 512x512
+
+#### Usage
+
+To train a custom model:
+
+1. Navigate to `/train-model`
+2. Upload 5-15 high-quality images
+3. Set a model name and class prompt
+4. Start training and wait for completion (~15-30 minutes)
+5. Once trained, use the model to generate custom images
+
 ## Getting Started
 
 ### Prerequisites

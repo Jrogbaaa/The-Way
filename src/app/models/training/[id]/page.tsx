@@ -222,115 +222,97 @@ export default function TrainingStatusPage({ params }: TrainingPageParams) {
         </div>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Training Progress</h2>
-              <div className="flex items-center text-sm">
-                <Clock className="h-4 w-4 mr-1 text-amber-500" />
-                <span>
-                  Estimated time remaining: ~{getRemainingTime()} minutes
-                </span>
-              </div>
+      {/* Progress Tracker Card */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+        {/* Progress Header with Status */}
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-gray-100">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium text-gray-800">Training Progress</h3>
+            <div className={`px-3 py-1 rounded-full text-sm font-medium 
+              ${status === 'succeeded' ? 'bg-green-100 text-green-800' : 
+               status === 'failed' ? 'bg-red-100 text-red-800' : 
+               'bg-blue-100 text-blue-800'}`}>
+              {status === 'succeeded' ? 'Completed' : 
+               status === 'failed' ? 'Failed' : 
+               status === 'training' ? 'In Progress' : 'Initializing'}
             </div>
-            
-            <div className="space-y-8">
-              {stages.map((stage, index) => (
-                <TrainingStage
-                  key={index}
-                  title={stage.title}
-                  description={stage.description}
-                  stage={index + 1}
-                  currentStage={currentStage}
-                />
-              ))}
-              
-              {/* Final Stage - Completed */}
-              {currentStage === 5 && (
-                <div className="flex items-start">
-                  <div className="mr-4 flex-shrink-0">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-green-800">Training Complete!</h3>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Your model is ready to use. Redirecting to models page...
-                    </p>
-                  </div>
+          </div>
+          
+          {/* Progress bar */}
+          <div className="mt-4">
+            <div className="relative pt-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-indigo-600 bg-indigo-200">
+                    {modelData?.progress ? `${modelData.progress}%` : 'Starting...'}
+                  </span>
                 </div>
-              )}
-            </div>
-            
-            {/* Overall progress bar */}
-            <div className="mt-8">
-              <div className="flex justify-between text-xs text-gray-500 mb-1">
-                <span>Progress</span>
-                <span>{Math.min(100, Math.round((currentStage - 1) * 25))}%</span>
+                {modelData?.progress && modelData.progress > 0 && modelData.progress < 100 && (
+                  <div className="text-xs text-gray-500">
+                    Est. time remaining: ~{Math.ceil((100 - (modelData.progress || 0)) / 4)} minutes
+                  </div>
+                )}
               </div>
-              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-blue-600 rounded-full"
-                  style={{ width: `${Math.min(100, (currentStage - 1) * 25)}%` }}
-                ></div>
+              <div className="overflow-hidden h-2 mt-2 text-xs flex rounded bg-indigo-100">
+                <div style={{ width: `${modelData?.progress || 0}%` }} 
+                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-600 transition-all duration-500">
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Training Stages */}
+        <div className="px-6 py-5">
+          <h4 className="text-sm font-medium text-gray-700 mb-4">Training Stages</h4>
+          
+          <div className="space-y-4">
+            {stages.map((stage, index) => (
+              <div key={index} className="flex items-start">
+                <div className={`rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 mt-0.5
+                  ${index < currentStage ? 'bg-green-100 text-green-600' : 
+                  index === currentStage ? 'bg-blue-100 text-blue-600' : 
+                  'bg-gray-100 text-gray-400'}`}>
+                  {index < currentStage ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                  ) : (
+                    <span className="text-xs font-medium">{index + 1}</span>
+                  )}
+                </div>
+                <div className="ml-3">
+                  <h5 className={`text-sm font-medium ${
+                    index < currentStage ? 'text-green-600' : 
+                    index === currentStage ? 'text-blue-600' : 
+                    'text-gray-500'}`}>
+                    {stage.title}
+                    {index === currentStage && <span className="ml-2 animate-pulse">•••</span>}
+                  </h5>
+                  <p className="text-xs text-gray-500 mt-0.5">{stage.description}</p>
+                </div>
+              </div>
+            ))}
+            
+            {status === 'succeeded' && (
+              <div className="flex items-start">
+                <div className="rounded-full h-6 w-6 bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+                <div className="ml-3">
+                  <h5 className="text-sm font-medium text-green-600">Completed Successfully</h5>
+                  <p className="text-xs text-gray-500 mt-0.5">Your model is ready to use</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
         
-        <div className="md:col-span-1">
-          <div className="bg-white p-6 rounded-lg shadow-sm border space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Training Tips</h2>
-              <CircleHelp className="h-5 w-5 text-gray-400" />
-            </div>
-            
-            <div className="bg-blue-50 p-4 rounded-md">
-              <h3 className="text-sm font-medium text-blue-800 mb-2">While You Wait</h3>
-              <ul className="text-xs text-blue-700 space-y-2">
-                {getTrainingTips(currentStage).map((tip, index) => (
-                  <li key={index} className="flex items-start">
-                    <span className="mr-2">•</span>
-                    <span>{tip}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Training Details</h3>
-              <dl className="text-xs space-y-2">
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">Model ID:</dt>
-                  <dd className="font-mono text-gray-900">{id.substring(0, 8)}...</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">Status:</dt>
-                  <dd className="font-medium">
-                    {status === 'succeeded' && <span className="text-green-600">Completed</span>}
-                    {status === 'processing' && <span className="text-blue-600">Processing</span>}
-                    {status === 'failed' && <span className="text-red-600">Failed</span>}
-                    {status === 'canceled' && <span className="text-gray-600">Canceled</span>}
-                  </dd>
-                </div>
-                {modelData?.created_at && (
-                  <div className="flex justify-between">
-                    <dt className="text-gray-500">Started:</dt>
-                    <dd className="text-gray-900">
-                      {new Date(modelData.created_at).toLocaleString()}
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            </div>
-            
-            <div className="pt-4 border-t border-gray-100">
-              <p className="text-xs text-gray-500">
-                You can close this page and return later. Your model will continue training and will be available in your Models dashboard when complete.
-              </p>
-            </div>
+        {/* Additional Info */}
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+          <div className="text-sm text-gray-600">
+            <p>You can safely close this page. The training will continue in the background.</p>
+            {status !== 'succeeded' && status !== 'failed' && (
+              <p className="mt-1">Check back later to see your completed model!</p>
+            )}
           </div>
         </div>
       </div>

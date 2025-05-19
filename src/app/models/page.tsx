@@ -8,7 +8,10 @@ import {
   Sparkles, 
   Star, 
   Award,
-  Filter
+  Filter,
+  CheckCircle,
+  Loader2,
+  Plus
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -18,21 +21,31 @@ import { ROUTES } from '@/lib/config';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import ModalModelCreation from '@/components/ModalModelCreation';
+import ModalTrainingRetry from '@/components/ModalTrainingRetry';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 // Define a model type for type safety
-interface Model {
+type Model = {
   id: string;
   name: string;
-  description: string;
-  category: string;
-  tags: string[];
-  stars: number;
-  lastUsed: string;
-  image: string;
-  status: 'ready' | 'training' | 'failed' | 'external';
+  description?: string;
+  imageUrl: string;
+  status: 'ready' | 'training' | 'failed' | 'error' | 'starting' | 'external' | 'completed';
+  routeParam?: string;
+  baseModel?: string;
+  lastUsed?: string;
   isNew: boolean;
   isFeatured: boolean;
-}
+  error?: string;
+  progress?: number;
+  created_at: string;
+  user_id: string;
+  model_info?: {
+    instance_prompt?: string;
+    image_count?: number;
+  };
+};
 
 // Helper function to get the correct route for each model
 const getModelRoute = (modelId: string) => {
@@ -56,6 +69,10 @@ const getModelRoute = (modelId: string) => {
 export default function ImageCreatorPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  // Add new state for user-created models
+  const [userModels, setUserModels] = useState<Model[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     console.log(`MODELS PAGE Mounted. Loading: ${loading}, User: ${!!user}`);
@@ -67,76 +84,57 @@ export default function ImageCreatorPage() {
         setShowModelCreation(true);
       }
     }
-  }, [loading, user, router]);
-
-  // Sample data for models
-  const [models, setModels] = useState<Model[]>([
-    {
-      id: 'image-to-video',
-      name: 'Image to Video',
-      description: 'Convert still images into high-quality 720p videos with realistic motion',
-      category: 'Video',
-      tags: ['Video', 'Animation', 'Motion'],
-      stars: 4.9,
-      lastUsed: 'New',
-      image: '/images/models/image-to-video.jpg',
-      status: 'ready',
-      isNew: true,
-      isFeatured: true
-    },
-    {
-      id: 'text-to-image',
-      name: 'Text to Image',
-      description: 'Generate images from text prompts using a standard diffusion model.',
-      category: 'Image',
-      tags: ['Generation', 'Text', 'General'],
-      stars: 4.5,
-      lastUsed: 'Ready',
-      image: '/images/models/image-to-video.jpg',
-      status: 'ready',
-      isNew: true,
-      isFeatured: true
-    },
-    {
-      id: 'cristina',
-      name: 'Cristina Model',
-      description: 'Generate realistic images of Cristina with customizable parameters',
-      category: 'Image',
-      tags: ['Generation', 'Photos', 'AI Model'],
-      stars: 4.8,
-      lastUsed: '1 day ago',
-      image: '/images/models/cristina-generator-preview.jpg',
-      status: 'ready',
-      isNew: false,
-      isFeatured: true
-    },
-    {
-      id: 'jaime',
-      name: 'Jaime Model',
-      description: 'Create customized images of Jaime for various contexts and styles',
-      category: 'Image',
-      tags: ['Generation', 'Photos', 'AI Model'],
-      stars: 4.7,
-      lastUsed: '3 days ago',
-      image: '/images/models/jaime-generator-preview.jpg',
-      status: 'ready',
-      isNew: false,
-      isFeatured: true
-    },
-    {
-      id: 'bea',
-      name: 'Bea Generator',
-      description: 'Generate realistic images of Bea in various settings and compositions',
-      category: 'Image',
-      tags: ['Generation', 'Photos', 'AI Model'],
-      stars: 4.9,
-      lastUsed: 'New',
-      image: '/images/models/bea-generator-preview.jpg',
-      status: 'ready',
-      isNew: true,
-      isFeatured: true
+    
+    // Fetch user-created models when component mounts
+    if (user && !loading) {
+      fetchUserModels();
     }
-  ]);
+  }, [loading, user, router]);
+  
+  // Add function to fetch user models from the database
+  const fetchUserModels = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoadingModels(true);
+      
+      // Fetch models from the Supabase database
+      const response = await fetch('/api/modal/user-models');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch models: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Fetched user models:', data);
+      
+      // Map database models to our Model interface
+      const mappedModels = data.models.map((model: any) => ({
+        id: model.id,
+        name: model.model_name || 'Unnamed Model',
+        description: model.input_data?.instancePrompt || 'Custom trained model',
+        imageUrl: model.sample_image || '/placeholder-model.jpg',
+        status: model.status === 'completed' ? 'ready' : model.status,
+        lastUsed: model.last_update ? new Date(model.last_update).toLocaleDateString() : 'New',
+        isNew: true,
+        isFeatured: false,
+        progress: model.progress || 0,
+        error: model.error_message,
+        baseModel: 'SDXL',
+        routeParam: model.id,
+        created_at: model.created_at,
+        user_id: model.user_id,
+        model_info: model.input_data
+      }));
+      
+      setUserModels(mappedModels);
+    } catch (error) {
+      console.error('Error fetching user models:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error occurred');
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
 
   // State management
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -155,13 +153,11 @@ export default function ImageCreatorPage() {
     };
   }, []);
   
-  // Get categories for filter
-  const categories = ['All', ...Array.from(new Set(models.map(model => model.category)))];
+  // Get categories for filter - replace with simple array 
+  const categories = ['All']; // Simplified filter options
   
   // Filter models based on selected category
-  const filteredModels = selectedCategory === 'All' 
-    ? models 
-    : models.filter(model => model.category === selectedCategory);
+  const filteredModels = userModels; // Show all models, filtering removed
 
   // --- ADDED: Split models into standard and custom --- 
   const standardModels = filteredModels.filter(model => 
@@ -171,6 +167,72 @@ export default function ImageCreatorPage() {
     ['cristina', 'jaime', 'bea'].includes(model.id)
   );
   // --- END ADDED SECTION ---
+
+  // Add this function to the component to handle showing error details
+  const renderModelStatus = (model: Model) => {
+    // Check for error state
+    if (model.status === 'error' || model.error) {
+      return (
+        <div className="mt-4">
+          <ModalTrainingRetry 
+            modelId={model.id} 
+            errorMessage={model.error || "An error occurred during model training"}
+          />
+        </div>
+      );
+    }
+    
+    // Check for in-progress training
+    if (model.status === 'training' || model.status === 'starting') {
+      const progress = model.progress || 0;
+      
+      return (
+        <div className="mt-4">
+          <div className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+            Training in progress: {progress}%
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div 
+              className="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            {progress === 0 ? (
+              'Initializing...'
+            ) : progress < 50 ? (
+              'Training model...'
+            ) : progress < 90 ? (
+              'Fine-tuning parameters...'
+            ) : (
+              'Almost complete...'
+            )}
+          </p>
+        </div>
+      );
+    }
+    
+    // Default complete state
+    return (
+      <div className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center">
+        <CheckCircle className="h-4 w-4 mr-1" />
+        Ready to use
+      </div>
+    );
+  };
+
+  const handleModelClick = (modelId: string) => {
+    router.push(`/models/${modelId}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-lg">Loading your models...</p>
+      </div>
+    );
+  }
 
   return (
     <MainLayout>
@@ -185,9 +247,13 @@ export default function ImageCreatorPage() {
             </div>
             
             <div className="flex gap-3">
-              <Button variant="outline" className="flex items-center gap-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 transition-colors shadow-sm">
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 transition-colors shadow-sm"
+                onClick={fetchUserModels}
+              >
                 <Filter className="h-4 w-4" />
-                Filter
+                Refresh Models
               </Button>
             </div>
           </div>
@@ -218,11 +284,8 @@ export default function ImageCreatorPage() {
               aria-label="Create a new model"
               onClick={() => setShowModelCreation(true)}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4">
-                <path d="M5 12h14"></path>
-                <path d="M12 5v14"></path>
-              </svg>
-              Create Model
+              <Plus className="h-4 w-4 mr-2" />
+              Train New Model
             </Button>
           </div>
 
@@ -236,6 +299,84 @@ export default function ImageCreatorPage() {
           
           {/* --- MODIFIED: Render sections --- */}
           <div className="space-y-12"> 
+            {/* Add User-Created Models Section */}
+            {userModels.length > 0 && (
+              <section>
+                <h2 className="text-xl font-semibold mb-6 border-b pb-2 border-gray-200 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                  Your Custom Models
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {userModels.map((model) => (
+                    <Card
+                      key={model.id}
+                      className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => handleModelClick(model.id)}
+                    >
+                      <div className="relative aspect-square bg-muted">
+                        {model.imageUrl ? (
+                          <Image
+                            src={model.imageUrl}
+                            alt={model.name}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <p className="text-sm text-muted-foreground">No sample image</p>
+                          </div>
+                        )}
+                        <Badge
+                          className={
+                            model.status === 'completed'
+                              ? 'bg-green-500 absolute top-2 right-2'
+                              : model.status === 'failed'
+                              ? 'bg-red-500 absolute top-2 right-2'
+                              : 'absolute top-2 right-2'
+                          }
+                        >
+                          {model.status}
+                        </Badge>
+                      </div>
+                      <CardContent className="pt-4">
+                        <h3 className="font-medium truncate">{model.name}</h3>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {model.model_info?.instance_prompt || 'No prompt specified'}
+                        </p>
+                      </CardContent>
+                      <CardFooter className="pt-0 pb-4">
+                        <p className="text-xs text-muted-foreground">
+                          Created {new Date(model.created_at).toLocaleDateString()}
+                        </p>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
+            
+            {isLoadingModels && (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <span className="ml-3 text-indigo-600">Loading your models...</span>
+              </div>
+            )}
+
+            {!isLoadingModels && userModels.length === 0 && user && (
+              <section className="bg-gray-50 p-6 rounded-xl border border-dashed border-gray-300">
+                <div className="text-center">
+                  <h3 className="text-lg font-medium text-gray-700 mb-2">No Custom Models Yet</h3>
+                  <p className="text-gray-500 mb-4">You haven't created any custom models yet. Start by training your first model.</p>
+                  <Button
+                    onClick={() => setShowModelCreation(true)}
+                    className="bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Train Your First Model
+                  </Button>
+                </div>
+              </section>
+            )}
+
             {/* Standard Models Section */}  
             {standardModels.length > 0 && (
               <section>
@@ -253,7 +394,7 @@ export default function ImageCreatorPage() {
                         <div className="w-full aspect-[4/3] bg-gray-100 relative overflow-hidden">
                           <div className="absolute inset-0 flex items-center justify-center">
                             <Image
-                              src={model.image}
+                              src={model.imageUrl}
                               alt={model.name}
                               width={300}
                               height={200}
@@ -271,29 +412,23 @@ export default function ImageCreatorPage() {
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 shadow-sm border border-green-200">New</span>
                             </div>
                           )}
-                          <div className="absolute bottom-3 right-3 z-10">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 shadow-sm border border-blue-200">{model.category}</span>
-                          </div>
                         </div>
                         <div className="p-5 flex-1 flex flex-col">
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{model.name}</h3>
                             <p className="mt-1 text-sm text-gray-500 line-clamp-2">{model.description}</p>
-                            <div className="flex flex-wrap gap-1 mt-3">
-                              {model.tags?.slice(0, 3).map((tag) => (
-                                <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors">{tag}</span>
-                              ))}
-                            </div>
                           </div>
                           <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
                             <div className="flex items-center">
-                              <div className="flex">
-                                {[...Array(5)].map((_, i) => (<Star key={i} className={`h-4 w-4 ${ i < Math.floor(model.stars) ? 'text-yellow-400 fill-yellow-400' : i < model.stars ? 'text-yellow-400 fill-yellow-200' : 'text-gray-300 fill-gray-100' }`} />))}
+                              <div className="text-xs text-gray-600 py-1 px-2 bg-gray-100 rounded-full">
+                                {model.status}
                               </div>
-                              <span className="ml-1 text-xs text-gray-600">{model.stars.toFixed(1)}</span>
                             </div>
-                            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-full">{model.lastUsed}</span>
+                            {model.lastUsed && (
+                              <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-full">{model.lastUsed}</span>
+                            )}
                           </div>
+                          {renderModelStatus(model)}
                         </div>
                       </div>
                     </Link>
@@ -319,7 +454,7 @@ export default function ImageCreatorPage() {
                         <div className="w-full aspect-[4/3] bg-gray-100 relative overflow-hidden">
                           <div className="absolute inset-0 flex items-center justify-center">
                             <Image
-                              src={model.image}
+                              src={model.imageUrl}
                               alt={model.name}
                               width={300}
                               height={200}
@@ -332,29 +467,23 @@ export default function ImageCreatorPage() {
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70"></div>
                           </div>
-                          <div className="absolute bottom-3 right-3 z-10">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 shadow-sm border border-blue-200">{model.category}</span>
-                          </div>
                         </div>
                         <div className="p-5 flex-1 flex flex-col">
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{model.name}</h3>
                             <p className="mt-1 text-sm text-gray-500 line-clamp-2">{model.description}</p>
-                            <div className="flex flex-wrap gap-1 mt-3">
-                              {model.tags?.slice(0, 3).map((tag) => (
-                                <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors">{tag}</span>
-                              ))}
-                            </div>
                           </div>
                           <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
                             <div className="flex items-center">
-                              <div className="flex">
-                                {[...Array(5)].map((_, i) => (<Star key={i} className={`h-4 w-4 ${ i < Math.floor(model.stars) ? 'text-yellow-400 fill-yellow-400' : i < model.stars ? 'text-yellow-400 fill-yellow-200' : 'text-gray-300 fill-gray-100' }`} />))}
+                              <div className="text-xs text-gray-600 py-1 px-2 bg-gray-100 rounded-full">
+                                {model.status}
                               </div>
-                              <span className="ml-1 text-xs text-gray-600">{model.stars.toFixed(1)}</span>
                             </div>
-                            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-full">{model.lastUsed}</span>
+                            {model.lastUsed && (
+                              <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-full">{model.lastUsed}</span>
+                            )}
                           </div>
+                          {renderModelStatus(model)}
                         </div>
                       </div>
                     </Link>
@@ -376,7 +505,7 @@ export default function ImageCreatorPage() {
                         </svg>
                       </div>
                       <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                        Create a Model
+                        Train New Model
                       </h3>
                       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         Train your own AI model
@@ -399,7 +528,8 @@ export default function ImageCreatorPage() {
               onClose={() => setShowModelCreation(false)}
               onModelCreated={(modelInfo) => {
                 // Refresh models or redirect to model page
-                router.push(`/models/${modelInfo.model_name}`);
+                fetchUserModels(); // Add this to refresh the list after creation
+                router.push(`/models/custom/${modelInfo.id || modelInfo.model_id}`);
               }}
             />
           </div>

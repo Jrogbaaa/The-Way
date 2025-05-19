@@ -153,38 +153,71 @@ export const chatWithSocialMediaExpert = async (
     // Add the new user message
     prompt += `Human: ${message}\nAssistant:`;
     
-    // Call the Replicate API to generate a response
-    const response = await fetch("/api/replicate/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prompt: prompt,
-        max_tokens: 1024,
-        temperature: 0.7
-      }),
-    });
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
     
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to get chat response");
+    try {
+      // Call the Replicate API to generate a response
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: message,
+          chatHistory: { messages }
+        }),
+        signal: controller.signal
+      });
+      
+      // Clear the timeout
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        // Try to get detailed error information
+        let errorDetail = '';
+        try {
+          const errorData = await response.json();
+          errorDetail = errorData.error || errorData.message || '';
+        } catch (e) {
+          // Unable to parse JSON error
+        }
+        
+        // Throw appropriate error based on status code
+        if (response.status === 504) {
+          throw new Error("Request timed out. The AI service may be busy.");
+        } else if (response.status === 429) {
+          throw new Error("Rate limit exceeded. Please try again later.");
+        } else {
+          throw new Error(errorDetail || `API responded with status ${response.status}`);
+        }
+      }
+      
+      const data = await response.json();
+      const generatedText = data.response || "I'm sorry, I couldn't generate a response at this time.";
+      
+      // Update the chat history
+      const updatedMessages = [
+        ...messages,
+        { role: 'user', content: message },
+        { role: 'assistant', content: generatedText }
+      ];
+      
+      return {
+        response: generatedText,
+        chatSession: { messages: updatedMessages },
+      };
+    } catch (abortError) {
+      // Clear the timeout if we're handling the abort error
+      clearTimeout(timeoutId);
+      
+      // Handle timeout or other fetch errors
+      if (abortError instanceof DOMException && abortError.name === 'AbortError') {
+        throw new Error("Request timed out. Please try again later.");
+      }
+      throw abortError;
     }
-    
-    const data = await response.json();
-    const generatedText = data.output || "I'm sorry, I couldn't generate a response at this time.";
-    
-    // Update the chat history
-    const updatedMessages = [
-      ...messages,
-      { role: 'user', content: message },
-      { role: 'assistant', content: generatedText }
-    ];
-    
-    return {
-      response: generatedText,
-      chatSession: { messages: updatedMessages },
-    };
   } catch (error) {
     console.error("Error chatting with social media expert:", error);
     throw error;

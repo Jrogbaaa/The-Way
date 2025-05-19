@@ -1,0 +1,18 @@
+{
+  "modelId": "testmodel123",
+  "instancePrompt": "a photo of sks person",
+  "imageDataList": [
+    {
+      "imageUrl": "https://images.unsplash.com/photo-1594751543129-6701ad444259",
+      "caption": "a photo of sks person smiling"
+    },
+    {
+      "imageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2",
+      "caption": "a photo of sks person looking sideways"
+    }
+  ],
+  "modelName": "Test Model with LoRA structure",
+  "callbackUrl": "https://example.com/api/modal/training-progress",
+  "supabaseUrl": "https://fuchqlpunfxtugvgxyfw.supabase.co",
+  "supabaseKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1Y2hxbHB1bmZ4dHVndmd4eWZ3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MjkxMzcyOCwiZXhwIjoyMDU4NDg5NzI4fQ.VFaAdh_5P-xoE-wT2pdIFMNN0IVgNNA7U7pLQ2lZmeo"
+} 

@@ -1,0 +1,51 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Existing models...
+
+// Analytics tables for model training and usage
+model ModelAnalytics {
+  id          String   @id @default(uuid())
+  user_id     String
+  model_id    String
+  prompt      String
+  parameters  Json?
+  success     Boolean  @default(true)
+  duration_ms Int
+  timestamp   DateTime @default(now())
+
+  @@map("model_analytics")
+}
+
+model PromptAnalytics {
+  id           String   @id @default(uuid())
+  model_id     String
+  keywords     String[]
+  prompt_length Int
+  timestamp    DateTime @default(now())
+
+  @@map("prompt_analytics")
+}
+
+model TrainingAnalytics {
+  id             String   @id @default(uuid())
+  user_id        String
+  model_id       String
+  image_count    Int
+  training_time  Int      // in seconds
+  completed      Boolean  @default(false)
+  error_message  String?
+  started_at     DateTime @default(now())
+  completed_at   DateTime?
+
+  @@map("training_analytics")
+} 

@@ -1,0 +1,8 @@
+/Users/JackEllis/THE WAY /modal_scripts/generate_image.py:42: DeprecationError: 2025-02-03: Modal will stop implicitly adding local Python modules to the Image ("automounting") in a future update. The following modules need to be explicitly added for future compatibility:
+* _remote_module_non_scriptable
+
+e.g.:
+image_with_source = my_image.add_local_python_source("_remote_module_non_scriptable")
+
+For more information, see https://modal.com/docs/guide/modal-1-0-migration
+  @app.function(

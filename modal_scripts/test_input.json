@@ -1,0 +1,7 @@
+{
+  "modelId": "testmodel123",
+  "prompt": "a beautiful portrait photo of sks person with professional lighting, high detail",
+  "numInferenceSteps": 30,
+  "guidanceScale": 7.5,
+  "negativePrompt": "ugly, blurry, low quality, distorted"
+} 

@@ -359,51 +359,69 @@ const SocialMediaAnalyzer: React.FC = () => {
     
     // Modify handleImageUpload function to work with demo image for unauthenticated users
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setError(null);
-        
-        if (event.target.files && event.target.files.length > 0) {
-            const file = event.target.files[0];
-            
-            // Basic file validation
-            if (!file.type.startsWith('image/')) {
-                setError("Please upload an image file.");
-                return;
-            }
-            
-            if (file.size > 10 * 1024 * 1024) { // 10MB limit
-                setError("Image file size must be less than 10MB.");
-                return;
-            }
-            
-            setFileName(file.name);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const imgSrc = e.target?.result as string;
-                setImageSrc(imgSrc);
-                setAnalysisResult(null);
-                setError(null);
-
-                const img = new Image();
-                img.onload = () => {
-                    setTechnicalData({
-                        width: img.naturalWidth,
-                        height: img.naturalHeight,
-                        fileSizeMB: file.size / (1024 * 1024)
-                    });
-                };
-                img.onerror = () => {
-                    setError("Could not load image details.");
-                    setTechnicalData(null);
-                }
-                img.src = imgSrc;
-            };
-            reader.onerror = () => {
-                setError("Failed to read the image file.");
-                setImageSrc(null);
-                setTechnicalData(null);
-            }
-            reader.readAsDataURL(file);
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
         }
+
+        // Reset previous results and errors
+        setImageSrc(null);
+        setAnalysisResult(null);
+        setError(null);
+        setTechnicalData(null);
+        setOptimizedImageUrl(null);
+        setOptimizedDimensions(null);
+        setShowLoginPrompt(false);
+        
+        // Check file type
+        const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validImageTypes.includes(file.type)) {
+            setError(`Unsupported file type: ${file.type}. Please upload a JPEG, PNG, GIF, or WebP image.`);
+            return;
+        }
+
+        // Check file size (limit to 15MB)
+        const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB in bytes
+        if (file.size > MAX_FILE_SIZE) {
+            setError(`File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds the maximum allowed size of 15MB.`);
+            return;
+        }
+
+        // Proceed with file reading
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const imgSrc = e.target?.result as string;
+            setImageSrc(imgSrc);
+            setAnalysisResult(null);
+            setError(null);
+
+            const img = new Image();
+            img.onload = () => {
+                // Check image dimensions (must be at least 300x300px)
+                if (img.naturalWidth < 300 || img.naturalHeight < 300) {
+                    setError(`Image dimensions (${img.naturalWidth}x${img.naturalHeight}) are too small. Please use an image at least 300x300 pixels.`);
+                    return;
+                }
+                
+                setTechnicalData({
+                    width: img.naturalWidth,
+                    height: img.naturalHeight,
+                    fileSizeMB: file.size / (1024 * 1024)
+                });
+            };
+            img.onerror = () => {
+                setError("Could not load image details. The image may be corrupted or in an unsupported format.");
+                setTechnicalData(null);
+                setImageSrc(null);
+            }
+            img.src = imgSrc;
+        };
+        reader.onerror = () => {
+            setError("Failed to read the image file. Please try again or use a different image.");
+            setImageSrc(null);
+            setTechnicalData(null);
+        }
+        reader.readAsDataURL(file);
     };
 
     // Reset optimization state when a new image is uploaded
@@ -436,13 +454,22 @@ const SocialMediaAnalyzer: React.FC = () => {
             } else {
                 // For authenticated users, use the real API
                 const formData = new FormData();
-                formData.append('image', fileInputRef.current?.files?.[0] || new Blob());
+                
+                // Check if file is available
+                const file = fileInputRef.current?.files?.[0];
+                if (!file) {
+                    throw new Error("Image file not available. Please try uploading again.");
+                }
+                
+                formData.append('image', file);
                 formData.append('width', technicalData?.width.toString() || '');
                 formData.append('height', technicalData?.height.toString() || '');
                 formData.append('fileSizeMB', technicalData?.fileSizeMB.toString() || '');
 
                 console.log("Sending data to API:", {
-                    fileName: fileInputRef.current?.files?.[0]?.name,
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileSize: file.size,
                     width: technicalData?.width,
                     height: technicalData?.height,
                     fileSizeMB: technicalData?.fileSizeMB
@@ -477,7 +504,27 @@ const SocialMediaAnalyzer: React.FC = () => {
             }
         } catch (err: any) {
             console.error("Analysis failed:", err);
-            setError(err.message || "An unexpected error occurred during analysis.");
+            
+            // Format error message for user
+            let errorMessage = "An unexpected error occurred during analysis.";
+            
+            if (err.message) {
+                // Remove technical details if present
+                const cleanMessage = err.message
+                    .replace(/\(Captioning Error\)/g, '')
+                    .replace('Error:', '')
+                    .trim();
+                    
+                errorMessage = cleanMessage;
+            }
+            
+            // Show toast for a better user experience
+            toast.error(errorMessage, {
+                duration: 5000,
+                position: "top-center"
+            });
+            
+            setError(errorMessage);
             setAnalysisResult(null); 
         } finally {
             setIsLoading(false);
@@ -611,6 +658,49 @@ const SocialMediaAnalyzer: React.FC = () => {
         setShowLoginPrompt(true);
     };
 
+    // Add this near the other error rendering
+    const renderErrorWithRetry = () => {
+        if (!error) return null;
+        
+        return (
+            <Alert variant="destructive" className="mt-4 animate-in fade-in">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Analysis Error</AlertTitle>
+                <AlertDescription className="text-sm">{error}</AlertDescription>
+                <div className="mt-3 flex space-x-2">
+                    <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={handleAnalyzeClick}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Retrying...
+                            </>
+                        ) : (
+                            <>Retry Analysis</>
+                        )}
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                            setError(null);
+                            fileInputRef.current!.value = '';
+                            setImageSrc(null);
+                            setTechnicalData(null);
+                            setAnalysisResult(null);
+                        }}
+                    >
+                        Clear
+                    </Button>
+                </div>
+            </Alert>
+        );
+    };
+
     // ... JSX return statement ...
     return (
         <div className="container mx-auto p-4 md:p-8 max-w-6xl">
@@ -701,13 +791,7 @@ const SocialMediaAnalyzer: React.FC = () => {
             )}
 
             {/* Error Display (unchanged) */} 
-            {error && (
-                <Alert variant="destructive" className="mt-6">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Analysis Error</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                </Alert>
-            )}
+            {renderErrorWithRetry()}
 
             {/* Analysis Results (shows ONLY when results exist and not loading) */}
             {analysisResult && !isLoading && (

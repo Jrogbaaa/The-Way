@@ -222,6 +222,10 @@ export default function ChatPage() {
     setIsLoading(true);
     
     try {
+      // Create an AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds timeout
+      
       // Call the API to get a response from the social media expert
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -232,10 +236,23 @@ export default function ChatPage() {
           message: userMessage.content,
           chatHistory: chatSession
         }),
+        signal: controller.signal
       });
       
+      // Clear the timeout
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
-        throw new Error('Failed to get response from the chatbot API');
+        // Get specific error details when possible
+        let errorDetail = 'Unknown error';
+        try {
+          const errorData = await response.json();
+          errorDetail = errorData.error || errorData.message || 'Unknown error';
+        } catch (e) {
+          errorDetail = `Server responded with status: ${response.status}`;
+        }
+        
+        throw new Error(`Failed to get response from the chatbot API: ${errorDetail}`);
       }
       
       const data = await response.json();
@@ -254,11 +271,25 @@ export default function ChatPage() {
     } catch (error) {
       console.error('Error getting chat response:', error);
       
+      // Handle specific error types
+      let errorContent = "I'm sorry, I encountered an error processing your request. Please try again later.";
+      
+      // Add more specific error messages based on the error
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        errorContent = "The request took too long to complete. The server might be busy or experiencing issues.";
+      } else if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch')) {
+          errorContent = "I couldn't connect to the AI service. Please check your internet connection and try again.";
+        } else if (error.message.includes('timed out') || error.message.includes('timeout')) {
+          errorContent = "The AI service is taking longer than expected to respond. Please try again in a moment.";
+        }
+      }
+      
       // Add error message
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "I'm sorry, I encountered an error processing your request. Please try again later.",
+        content: errorContent,
         timestamp: new Date(),
       };
       

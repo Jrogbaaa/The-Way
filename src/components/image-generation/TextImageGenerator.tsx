@@ -55,43 +55,43 @@ export const TextImageGenerator: React.FC = () => {
         toast.success('Demo image generated! Sign in to save and create more.', { id: 'generation-toast' });
       } else {
         // For authenticated users, use the actual API
-        const response = await fetch('/api/replicate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            modelId: DEFAULT_MODEL_ID,
-            input: {
-              prompt: prompt,
-              width: 1024,
-              height: 1024,
-              num_outputs: 1,
-              // Add other relevant default parameters for the chosen model if needed
-              // e.g., guidance_scale: 7.5, num_inference_steps: 25
-            },
-          }),
-        });
+      const response = await fetch('/api/replicate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modelId: DEFAULT_MODEL_ID,
+          input: {
+            prompt: prompt,
+            width: 1024,
+            height: 1024,
+            num_outputs: 1,
+            // Add other relevant default parameters for the chosen model if needed
+            // e.g., guidance_scale: 7.5, num_inference_steps: 25
+          },
+        }),
+      });
 
-        const responseData = await response.json();
+      const responseData = await response.json();
 
-        if (!response.ok) {
-          console.error('API Error Response:', responseData);
-          throw new Error(responseData.error || `Request failed with status ${response.status}`);
-        }
+      if (!response.ok) {
+        console.error('API Error Response:', responseData);
+        throw new Error(responseData.error || `Request failed with status ${response.status}`);
+      }
 
-        // Handle direct output vs. polling needed
-        if (response.status === 201 && responseData.id) {
-          // Basic Polling Implementation (can be improved with backoff, max retries)
-          console.log(`Polling needed for prediction ID: ${responseData.id}`);
-          toast.info('Image generation started. This may take a moment...', { id: 'generation-toast' });
-          const pollResult = await pollForResult(responseData.id);
-          setGeneratedImageUrl(pollResult);
-        } else if (response.status === 200 && responseData.output && Array.isArray(responseData.output) && responseData.output.length > 0) {
-          setGeneratedImageUrl(responseData.output[0]);
-          toast.success('Image generated successfully!', { id: 'generation-toast' });
-        } else {
-          console.error('Unexpected API Response:', responseData);
-          throw new Error('Unexpected response from image generation service.');
-        }
+      // Handle direct output vs. polling needed
+      if (response.status === 201 && responseData.id) {
+         // Basic Polling Implementation (can be improved with backoff, max retries)
+         console.log(`Polling needed for prediction ID: ${responseData.id}`);
+         toast.info('Image generation started. This may take a moment...', { id: 'generation-toast' });
+         const pollResult = await pollForResult(responseData.id);
+         setGeneratedImageUrl(pollResult);
+      } else if (response.status === 200 && responseData.output && Array.isArray(responseData.output) && responseData.output.length > 0) {
+         setGeneratedImageUrl(responseData.output[0]);
+         toast.success('Image generated successfully!', { id: 'generation-toast' });
+      } else {
+         console.error('Unexpected API Response:', responseData);
+         throw new Error('Unexpected response from image generation service.');
+      }
       }
     } catch (err: any) {
       console.error('Image Generation Failed:', err);

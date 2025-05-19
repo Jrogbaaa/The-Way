@@ -189,7 +189,12 @@ export async function POST(request: Request) {
       prompt += `Human: ${message}\nAssistant:`;
 
       // Call the Replicate API with Llama 2 model
-      const output = await replicate.run(LLAMA_MODEL, {
+      // Add timeout handling with Promise.race
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('API request timed out after 30 seconds')), 30000)
+      );
+      
+      const apiCallPromise = replicate.run(LLAMA_MODEL, {
         input: {
           prompt: prompt,
           max_new_tokens: 1024,
@@ -198,6 +203,8 @@ export async function POST(request: Request) {
           repetition_penalty: 1.0
         }
       });
+      
+      const output = await Promise.race([apiCallPromise, timeoutPromise]);
       
       // Extract the generated text from the output
       let generatedText = '';
@@ -226,6 +233,7 @@ export async function POST(request: Request) {
       console.error('Replicate API error:', error);
       const errorMsg = error instanceof Error ? error.message : String(error);
       
+      // Handle specific error types with appropriate status codes
       if (errorMsg.includes('Invalid API key')) {
         return NextResponse.json({ 
           error: 'Invalid Replicate API key. Please check your REPLICATE_API_TOKEN.',
@@ -238,6 +246,12 @@ export async function POST(request: Request) {
           message: "Failed to generate chat response due to rate limiting",
           status: 'failed'
         }, { status: 429 });
+      } else if (errorMsg.includes('timed out')) {
+        return NextResponse.json({ 
+          error: 'The request timed out. The AI model may be busy.',
+          message: "Failed to generate chat response due to timeout",
+          status: 'failed'
+        }, { status: 504 });
       }
       
       return NextResponse.json({ 
@@ -248,12 +262,12 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     console.error('Chat API error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to process chat request',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
+    return NextResponse.json({ 
+      status: 'error', 
+      error: 'Server error',
+      message: `Failed to process chat request: ${errorMessage}`,
+    }, { status: 500 });
   }
 } 

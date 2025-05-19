@@ -44,6 +44,9 @@ const MIN_RESOLUTION_FAIR = 600;
 const MAX_FILE_SIZE_GOOD = 5; // MB
 const MAX_FILE_SIZE_FAIR = 10; // MB
 
+// Add a fallback captioning mechanism
+const FALLBACK_HF_CAPTION_API_URL = 'https://api-inference.huggingface.co/models/nlpconnect/vit-gpt2-image-captioning';
+
 // --- Helper Functions ---
 
 /**
@@ -125,6 +128,13 @@ function generatePlatformRecommendations(width: number, height: number): Platfor
  */
 async function getImageCaption(imageBuffer: Buffer, apiKey: string): Promise<string> {
   console.log(`[API] Calling HF Caption API: ${HF_CAPTION_API_URL}`);
+  
+  // Validate input buffer
+  if (!imageBuffer || imageBuffer.length === 0) {
+    console.error('[API] Error: Empty image buffer received');
+    throw new Error('Invalid image data received. Please try another image.');
+  }
+  
   try {
     const response = await axios.post(
       HF_CAPTION_API_URL,
@@ -135,7 +145,7 @@ async function getImageCaption(imageBuffer: Buffer, apiKey: string): Promise<str
           'Content-Type': 'application/octet-stream'
         },
         responseType: 'json',
-        timeout: 15000 // 15 second timeout
+        timeout: 20000 // Increased timeout to 20 seconds
       }
     );
     console.log('[API] HF Caption API Response Status:', response.status);
@@ -149,14 +159,66 @@ async function getImageCaption(imageBuffer: Buffer, apiKey: string): Promise<str
     }
     
     console.warn('[API] Unexpected caption response format:', response.data);
-    return 'Unable to generate caption for this image.';
+    throw new Error('Unable to process image response. Please try again or use a different image.');
   } catch (error: any) {
-    console.error('[API] Error getting image caption from Hugging Face:', error.response?.data || error.message);
+    console.error('[API] Error getting image caption from Hugging Face:', error.response?.status, error.response?.data || error.message);
+    
+    // Handle specific error cases
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      throw new Error('The image analysis service timed out. Please try a different image or try again later.');
+    }
+    
+    if (error.response?.status === 413) {
+      throw new Error('Image file is too large. Please use a smaller image (under 10MB).');
+    }
+    
     // Check for specific Hugging Face errors (e.g., model loading)
     if (error.response?.data?.error?.includes('currently loading')) {
         throw new Error('Analysis model is starting up, please try again in a moment.');
     }
-    throw new Error('Failed to analyze image content (Captioning Error).');
+    
+    // Check if there might be an issue with the image format
+    if (error.response?.status === 400) {
+      throw new Error('The image format may not be supported. Please try a JPG or PNG image.');
+    }
+    
+    throw new Error('Failed to analyze image. Please try a different image or check your connection.');
+  }
+}
+
+/**
+ * Fallback image captioning function
+ */
+async function getFallbackImageCaption(imageBuffer: Buffer, apiKey: string): Promise<string> {
+  console.log(`[API] Calling Fallback Caption API: ${FALLBACK_HF_CAPTION_API_URL}`);
+  try {
+    const response = await axios.post(
+      FALLBACK_HF_CAPTION_API_URL,
+      imageBuffer,
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/octet-stream'
+        },
+        responseType: 'json',
+        timeout: 15000 // 15 second timeout
+      }
+    );
+    
+    console.log('[API] Fallback Caption API Response Status:', response.status);
+    
+    // Extract the generated caption
+    if (Array.isArray(response.data) && response.data.length > 0 && response.data[0].generated_text) {
+      return response.data[0].generated_text;
+    }
+    if (response.data && response.data.generated_text) {
+      return response.data.generated_text;
+    }
+    
+    return 'Image containing visual content.'; // Very basic fallback
+  } catch (error) {
+    console.error('[API] Error in fallback captioning:', error);
+    return 'Image with unidentified content.'; // Ultimate fallback
   }
 }
 
@@ -544,8 +606,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Hugging Face API key not configured' }, { status: 500 });
     }
 
-    // Perform analyses
-    const caption = await getImageCaption(buffer, hfApiKey); // Caption first
+    // Try primary caption first, then fallback to alternative model if it fails
+    let caption;
+    try {
+      caption = await getImageCaption(buffer, hfApiKey);
+    } catch (error) {
+      console.warn('[API] Primary captioning failed, trying fallback:', error);
+      // Try fallback captioning
+      caption = await getFallbackImageCaption(buffer, hfApiKey);
+      // If we still don't have a useful caption, we can construct a very basic one
+      if (!caption || caption.includes('unidentified content')) {
+        caption = `Image with dimensions ${width}x${height}px showing visual content.`;
+      }
+    }
+    
     const finalEngagementAnalysis = await analyzeEngagement(caption, hfApiKey); // Then engagement based on caption
     const technical = evaluateTechnicalAspects(width, height, fileSizeMB);
     const platformRecommendations = generatePlatformRecommendations(width, height);
