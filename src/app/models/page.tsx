@@ -31,7 +31,7 @@ type Model = {
   name: string;
   description?: string;
   imageUrl: string;
-  status: 'ready' | 'training' | 'failed' | 'error' | 'starting' | 'external' | 'completed';
+  status: 'ready' | 'training' | 'failed' | 'error' | 'starting' | 'external';
   routeParam?: string;
   baseModel?: string;
   lastUsed?: string;
@@ -327,7 +327,7 @@ export default function ImageCreatorPage() {
                         )}
                         <Badge
                           className={
-                            model.status === 'completed'
+                            model.status === 'ready'
                               ? 'bg-green-500 absolute top-2 right-2'
                               : model.status === 'failed'
                               ? 'bg-red-500 absolute top-2 right-2'

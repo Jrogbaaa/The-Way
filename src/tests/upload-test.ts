@@ -17,13 +17,6 @@ const TEST_IMAGE_PATH = path.join(__dirname, 'test-image.jpg'); // Add a test im
 // Test with authentication token (replace with an actual token)
 const AUTH_TOKEN = 'YOUR_SUPABASE_AUTH_TOKEN';
 
-// Define the expected response type
-interface UploadResponse {
-  success: boolean;
-  error?: string;
-  url?: string;
-}
-
 async function testUpload() {
   console.log('Starting upload test...');
 
@@ -48,19 +41,18 @@ async function testUpload() {
       }
     });
 
-    const data = await response.json() as UploadResponse;
+    const data = await response.json();
     console.log('Response status:', response.status);
     console.log('Response body:', data);
 
     if (response.ok) {
       console.log('Upload test successful!');
     } else {
-      console.error('Upload test failed:', data.error || 'Unknown error');
+      console.error('Upload test failed:', (data as any).error || 'Unknown error');
     }
   } catch (error) {
     console.error('Error during test:', error);
   }
 }
 
-// Run the test
 testUpload(); 

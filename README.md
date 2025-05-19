@@ -1080,3 +1080,82 @@ This structure works with the RLS policies to ensure users can only upload to th
 - Improved folder view UI with larger, more prominent folder titles
 - Fixed Supabase storage authentication issues
 - Implemented proper error handling for storage operations
+
+## Development Workflows
+
+### Testing Infrastructure
+
+We've implemented a comprehensive testing infrastructure using both Jest and Playwright:
+
+#### Jest (Unit/Component Testing)
+
+Jest is configured for unit and component testing, allowing us to validate individual React components, utility functions, and API handlers.
+
+**Features:**
+- Component rendering tests
+- Event handling validation
+- State management verification
+- API handler tests
+- Utility function tests
+
+**Usage:**
+```bash
+# Run all tests
+npm run test
+
+# Run tests in watch mode during development
+npm run test:watch
+
+# Generate test coverage report
+npm run test:coverage
+```
+
+#### Playwright (End-to-End Testing)
+
+Playwright is set up for end-to-end testing, enabling us to validate complete user flows across different browsers and devices.
+
+**Features:**
+- Full user journey validation
+- Cross-browser testing (Chrome, Firefox, Safari)
+- Mobile device simulation
+- Visual regression testing
+- Network request interception and mocking
+
+**Usage:**
+```bash
+# Run all E2E tests
+npm run test:e2e
+
+# Run E2E tests with UI mode
+npm run test:e2e:ui
+
+# Run E2E tests in debug mode
+npm run test:e2e:debug
+```
+
+### Pre-Push Validation
+
+Before pushing code to GitHub, run the following checks to ensure code quality:
+
+1. Run the validation script that checks for route definitions, TypeScript errors, and Git conflicts:
+   ```bash
+   node scripts/pre-push-check.js
+   ```
+
+2. Run Jest tests to verify component and utility function behavior:
+   ```bash
+   npm run test
+   ```
+
+3. (Optional for critical changes) Run Playwright E2E tests to verify complete user journeys:
+   ```bash
+   npm run test:e2e
+   ```
+
+4. Update documentation to reflect any changes made to the codebase.
+
+5. Sync with the main branch before pushing:
+   ```bash
+   git fetch origin
+   git rebase origin/main
+   ```
