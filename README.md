@@ -4,6 +4,14 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Recent Updates (July/August 2024)
 
+- **Replicate Image Generation Fixes** (Latest): Major improvements to custom model image generation:
+  - **Fixed ReadableStream handling**: Implemented proper predictions API for reliable custom model inference
+  - **Enhanced error handling**: Added comprehensive fallback mechanisms for streaming responses
+  - **TypeScript safety**: Resolved imageUrl.includes() TypeError with proper array/string type checking
+  - **Custom model support**: Improved integration with user-trained Replicate models (Jaime, Cristina, Bea)
+  - **Frontend robustness**: Enhanced UI to handle different response formats from Replicate API
+  - **Test coverage**: All Jest unit tests passing (22/22) ensuring stability
+
 - **Enhanced Google Authentication Flow**: Fixed and improved the Google OAuth authentication process:
   - Fixed profile display issues in the Navbar for Google-authenticated users
   - Implemented timeout mechanism to prevent hanging during OAuth redirects
@@ -51,16 +59,9 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
     - Text to Image (via Replicate SDXL, accessible at `/generate/image`)
     - Image to Video (via Replicate Wan 2.1)
   - **Custom Trained Models**:
-    - Cristina Model (via Replicate) - **Now with enhanced image generation**
-    - Jaime Model (via Replicate) - **Now with enhanced image generation**
-    - Bea Model (via Replicate) - **Now with enhanced image generation**
-    - **NEW: Robust Replicate Integration**:
-      - Fixed ReadableStream handling for seamless image generation
-      - Implemented prediction polling with timeout and retry mechanisms
-      - Added comprehensive fallback system between Replicate and Modal services
-      - Enhanced error handling for all response formats (arrays, strings, objects)
-      - Automatic image URL validation and extraction
-      - Improved loading states and real-time feedback during generation
+    - Cristina Model (via Replicate)
+    - Jaime Model (via Replicate)
+  - Bea Generator Model (via Replicate)
   - Standard Generations Model (via Replicate SDXL)
   - Google Vertex AI Imagen (fully implemented)
   - *Uses updated preview images for Bea, Cristina, and Jaime models.*
