@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Fixed Replicate image generation pipeline for custom models:
+  - Implemented proper ReadableStream handling for Replicate API responses
+  - Added prediction polling mechanism with timeout and retry logic
+  - Created comprehensive fallback system between Replicate and Modal services
+  - Enhanced error handling for different response formats (arrays, strings, objects)
+  - Added proper image URL validation and extraction from various response types
+- Updated Next.js 15 compatibility:
+  - Fixed dynamic route parameter types to use Promise-based params
+  - Resolved TypeScript compilation errors in API routes
+  - Enhanced type safety across route handlers
+- Improved custom model image generation:
+  - Fixed TypeError issues with imageUrl array/string handling in frontend
+  - Added robust client-side error handling and debugging
+  - Enhanced image display logic with proper fallbacks
+  - Implemented better loading states and user feedback
 - Enhanced Model Gallery UI with custom model previews, animations, and improved styling
 - Added responsive card layout with hover effects to the models page
 - Added visual category tags and status indicators to model cards

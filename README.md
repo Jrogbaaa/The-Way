@@ -51,9 +51,16 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
     - Text to Image (via Replicate SDXL, accessible at `/generate/image`)
     - Image to Video (via Replicate Wan 2.1)
   - **Custom Trained Models**:
-    - Cristina Model (via Replicate)
-    - Jaime Model (via Replicate)
-  - Bea Generator Model (via Replicate)
+    - Cristina Model (via Replicate) - **Now with enhanced image generation**
+    - Jaime Model (via Replicate) - **Now with enhanced image generation**
+    - Bea Model (via Replicate) - **Now with enhanced image generation**
+    - **NEW: Robust Replicate Integration**:
+      - Fixed ReadableStream handling for seamless image generation
+      - Implemented prediction polling with timeout and retry mechanisms
+      - Added comprehensive fallback system between Replicate and Modal services
+      - Enhanced error handling for all response formats (arrays, strings, objects)
+      - Automatic image URL validation and extraction
+      - Improved loading states and real-time feedback during generation
   - Standard Generations Model (via Replicate SDXL)
   - Google Vertex AI Imagen (fully implemented)
   - *Uses updated preview images for Bea, Cristina, and Jaime models.*

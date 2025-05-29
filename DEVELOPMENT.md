@@ -188,6 +188,131 @@ The model training system is implemented with a client-server architecture:
 #### Database Schema
 Models are stored in a Supabase `trained_models` table with RLS policies.
 
+### Replicate Integration & Image Generation Pipeline
+
+The application implements a sophisticated Replicate integration for custom model image generation with robust error handling and fallback mechanisms.
+
+#### Architecture Overview
+
+The image generation system supports both custom trained models (via Replicate) and fallback generation (via Modal) with the following components:
+
+##### Client-Side Components
+- `src/app/models/custom/[id]/page.tsx` - Custom model detail page with image generation UI
+- `src/lib/services/modalService.ts` - Centralized service for both Replicate and Modal API calls
+- Error handling for different response formats (arrays, strings, objects)
+
+##### Server-Side API Routes
+- `/api/replicate/generate/route.ts` - Primary Replicate image generation endpoint
+- `/api/modal/generate-image/route.ts` - Fallback Modal generation endpoint
+- `/api/modal/model-status/[id]/route.ts` - Model status checking with Next.js 15 compatibility
+
+#### Replicate API Integration Details
+
+##### Primary Generation Flow (Replicate)
+1. **Model Detection**: Check if model has `model_url` field (Replicate URL)
+2. **Prediction Creation**: Use `replicate.predictions.create()` for better control
+3. **Polling Mechanism**: Implement timeout-based polling (max 60 attempts × 2s = 120s)
+4. **Response Handling**: Handle multiple response formats from Replicate API
+
+##### ReadableStream Handling
+The Replicate API sometimes returns ReadableStream objects instead of direct results. Our implementation:
+
+```typescript
+// Handle ReadableStream response
+if (output && Array.isArray(output) && output.length > 0 && 
+    output[0] && typeof output[0] === 'object' && 'readable' in output[0]) {
+  const stream = output[0] as ReadableStream;
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let result = '';
+  
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    
+    if (value) {
+      const chunk = decoder.decode(value, { stream: true });
+      result += chunk;
+    }
+  }
+  // Parse result and extract URL
+}
+```
+
+##### Response Format Normalization
+The system handles various Replicate response formats:
+
+- **Array format**: `["https://image-url.com/image.webp"]`
+- **String format**: `"https://image-url.com/image.webp"`
+- **Object format**: `{ url: "https://image-url.com/image.webp" }`
+- **Nested object**: `{ images: ["https://image-url.com/image.webp"] }`
+
+##### Error Handling & Fallbacks
+1. **Prediction API Failures**: Automatic fallback to `replicate.run()` method
+2. **Timeout Handling**: 120-second maximum with clear error messages
+3. **URL Validation**: Verify generated URLs are valid before returning
+4. **Modal Fallback**: If Replicate fails completely, fall back to Modal service
+
+#### Frontend Error Handling
+
+The client-side implementation includes robust error handling:
+
+##### Type Safety for Image URLs
+```typescript
+// Ensure imageUrl is a string (handle arrays from Replicate)
+let imageUrl: string | null = null;
+
+if (typeof result.imageUrl === 'string') {
+  imageUrl = result.imageUrl;
+} else if (Array.isArray(result.imageUrl)) {
+  imageUrl = result.imageUrl[0];
+} else if (result.imageUrl && typeof result.imageUrl === 'object') {
+  // Handle complex objects that might contain image URLs
+  imageUrl = extractImageUrlFromObject(result.imageUrl);
+}
+```
+
+##### Loading States & User Feedback
+- Real-time status updates during generation
+- Clear error messages for different failure types
+- Automatic retry mechanisms where appropriate
+- Progress indicators for long-running operations
+
+#### Next.js 15 Compatibility
+
+Updated all dynamic route handlers to use Promise-based params:
+
+```typescript
+// Before (Next.js 14)
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
+  const { id } = context.params;
+}
+
+// After (Next.js 15)
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+}
+```
+
+#### Debugging & Monitoring
+
+The system includes comprehensive logging:
+
+- **Request/Response Logging**: All API calls logged with timing
+- **Error Categorization**: Different error types logged separately
+- **Performance Monitoring**: Track prediction polling and response times
+- **User Action Tracking**: Log user interactions for debugging
+
+#### Best Practices for Extensions
+
+When extending the Replicate integration:
+
+1. **Always Handle Arrays**: Replicate often returns arrays even for single images
+2. **Implement Timeouts**: Never assume instant responses
+3. **Validate URLs**: Always verify generated image URLs are accessible
+4. **Provide Fallbacks**: Have backup generation methods for reliability
+5. **Log Extensively**: Include detailed logging for debugging production issues
+
 ## Authentication
 
 The application uses NextAuth.js for user authentication with the following features:
