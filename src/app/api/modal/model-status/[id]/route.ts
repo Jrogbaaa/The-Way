@@ -43,11 +43,12 @@ const checkModelInVolume = async (modelId: string): Promise<boolean> => {
 
 export async function GET(
   request: NextRequest, 
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: { id: string } } // Keep context for Next.js to correctly identify it as a dynamic route
 ) {
   try {
-    // Await the params as they are now a Promise in Next.js 15
-    const { id } = await params;
+    // Alternative way to get the dynamic path parameter `id`
+    const pathnameParts = request.nextUrl.pathname.split('/');
+    const id = pathnameParts[pathnameParts.length - 1];
     
     if (!id) {
       return createErrorResponse('Missing model ID from path', 400);
