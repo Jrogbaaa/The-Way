@@ -29,36 +29,31 @@ const createErrorResponse = (message: string, status: number = 500, details?: an
   );
 };
 
-// Create a function to check if the model actually exists in the Modal volume
-const checkModelInVolume = async (modelId: string) => {
+// Helper function to check if a model exists in the Modal volume
+const checkModelInVolume = async (modelId: string): Promise<boolean> => {
   try {
-    // Use the modal-env Python to run a check
-    const modalEnvBin = path.join(process.cwd(), 'modal-env', 'bin', 'python');
-    
-    // Run the script that checks if the model exists in Modal
-    const { stdout, stderr } = await execPromise(`${modalEnvBin} -m modal run modal_scripts/check_specific_model.py --model-id ${modelId}`);
-    
-    // Parse the output to see if the model exists
-    return !stdout.includes("Error: Model") && !stdout.includes("not found");
+    const { stdout } = await execPromise('python3 -m modal run modal_scripts/list_models.py');
+    const models = JSON.parse(stdout.trim());
+    return models.some((model: any) => model.id === modelId);
   } catch (error) {
-    console.error(`Error checking model in Modal volume: ${error}`);
+    console.error(`Error checking model in volume: ${error}`);
     return false;
   }
 };
 
 export async function GET(
-  request: NextRequest,
-  context: { params: { id: string } }
+  request: NextRequest, 
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Get model ID from the path
-    const id = context.params.id;
+    // Await the params as they are now a Promise in Next.js 15
+    const { id } = await params;
     
     if (!id) {
-      return createErrorResponse('Missing model ID', 400);
+      return createErrorResponse('Missing model ID from path', 400);
     }
     
-    console.log(`Fetching model status for: ${id}`);
+    console.log(`Fetching model status for (from pathname): ${id}`);
     
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -162,8 +157,6 @@ export async function GET(
     // Update the database if needed
     if (needsUpdate) {
       try {
-        updateData.last_update = new Date().toISOString();
-        
         const { error: updateError } = await supabase
           .from('trained_models')
           .update(updateData)
@@ -191,10 +184,11 @@ export async function GET(
       model_name: trainingData.model_name,
       model_info: trainingData.model_info,
       created_at: trainingData.created_at,
-      last_update: trainingData.last_update || new Date().toISOString(),
       error_message: trainingData.error_message,
       input_data: trainingData.input_data,
-      sample_image: trainingData.sample_image
+      sample_image: trainingData.sample_image,
+      model_url: trainingData.model_url,
+      last_update: trainingData.updated_at
     });
     
     // Set cache headers to prevent caching of status updates

@@ -263,9 +263,51 @@ export default function CustomModelDetailPage({ params }: { params: Promise<{ id
       // as the API might have returned a placeholder image
       if (result.imageUrl) {
         console.log('Image generated (or placeholder provided):', result);
-        setGeneratedImage(result.imageUrl || null);
+        console.log('imageUrl type:', typeof result.imageUrl);
+        console.log('imageUrl value:', result.imageUrl);
         
-        if (result.message?.includes('placeholder') || result.imageUrl?.includes('placeholder')) {
+        // Ensure imageUrl is a string (handle arrays from Replicate or objects)
+        let imageUrl: string | null = null;
+        
+        if (typeof result.imageUrl === 'string') {
+          imageUrl = result.imageUrl;
+        } else if (Array.isArray(result.imageUrl)) {
+          imageUrl = result.imageUrl[0];
+        } else if (result.imageUrl && typeof result.imageUrl === 'object') {
+          // Handle case where imageUrl is unexpectedly an object
+          console.warn('imageUrl is an object, attempting to extract URL:', result.imageUrl);
+          
+          // Try common properties that might contain the URL
+          const urlObj = result.imageUrl as any;
+          if (urlObj.url) {
+            imageUrl = urlObj.url;
+          } else if (urlObj.src) {
+            imageUrl = urlObj.src;
+          } else if (urlObj.href) {
+            imageUrl = urlObj.href;
+          } else if (Array.isArray(urlObj) && urlObj.length > 0) {
+            imageUrl = urlObj[0];
+          } else {
+            console.error('Unable to extract URL from imageUrl object:', result.imageUrl);
+            toast.error('Received invalid image URL format from server');
+            return;
+          }
+        } else {
+          console.error('imageUrl is not a string, array, or object:', result.imageUrl);
+          toast.error('Invalid image URL format received');
+          return;
+        }
+        
+        if (!imageUrl || typeof imageUrl !== 'string') {
+          console.error('Failed to extract valid imageUrl string:', imageUrl);
+          toast.error('Unable to process image URL');
+          return;
+        }
+        
+        console.log('Final processed imageUrl:', imageUrl);
+        setGeneratedImage(imageUrl);
+        
+        if (result.message?.includes('placeholder') || (typeof imageUrl === 'string' && imageUrl.includes('placeholder'))) {
           toast((t) => (
             <div>
               <p className="font-medium">Placeholder Image Displayed</p>
@@ -539,7 +581,7 @@ export default function CustomModelDetailPage({ params }: { params: Promise<{ id
                               toast.error("Failed to load generated image. Using fallback.");
                             }}
                           />
-                          {generatedImage.includes('placeholders/') && (
+                          {typeof generatedImage === 'string' && generatedImage.includes('placeholders/') && (
                             <div className="absolute bottom-0 left-0 right-0 bg-red-500 bg-opacity-80 text-white p-2 text-center">
                               <span className="text-sm font-medium">Placeholder Image</span>
                               <p className="text-xs">Real model generation is not active. This is a placeholder image.</p>

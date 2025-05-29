@@ -43,6 +43,7 @@ export interface ModelStatusResponse {
     [key: string]: any;
   };
   sample_image?: string;
+  model_url?: string;
 }
 
 /**
@@ -269,8 +270,18 @@ export const generateImage = async (request: ImageGenerationRequest): Promise<Im
   try {
     console.log(`Generating image with model ${request.modelId} and prompt "${request.prompt}"`);
     
-    // First try fetching the model status to make sure it's ready
+    // First try fetching the model status to get the model details
     const modelStatus = await getModelStatus(request.modelId);
+    
+    // If the model has a Replicate URL, use Replicate directly
+    if (modelStatus.model_url) {
+      console.log(`Model has Replicate URL: ${modelStatus.model_url}, using Replicate for generation`);
+      return await generateImageWithReplicate(request);
+    }
+    
+    // Otherwise, fall back to Modal (existing code)
+    console.log(`Model does not have Replicate URL, using Modal for generation`);
+    
     if (modelStatus.status !== 'completed' && modelStatus.status !== 'success') {
       console.warn(`Model ${request.modelId} is not ready (status: ${modelStatus.status}). Attempting force update.`);
       
@@ -471,8 +482,8 @@ export const generateImage = async (request: ImageGenerationRequest): Promise<Im
         // Successful response
         return {
           status: 'success',
-          imageUrl: data.imageUrl,
-          seed: data.seed,
+          imageUrl: Array.isArray(data.imageUrl) ? data.imageUrl[0] : (data.imageUrl || data.output?.[0] || data.output),
+          seed: data.seed || Date.now(),
           message: data.message
         };
       } catch (fetchError: any) {
@@ -547,6 +558,153 @@ export const generateImage = async (request: ImageGenerationRequest): Promise<Im
       status: 'error',
       error: error instanceof Error ? error.message : String(error),
       errorType: 'unknown'
+    };
+  }
+};
+
+/**
+ * Generates an image using a Replicate-trained model directly
+ */
+export const generateImageWithReplicate = async (request: ImageGenerationRequest): Promise<ImageGenerationResponse> => {
+  try {
+    console.log(`Generating image with Replicate model ${request.modelId} and prompt "${request.prompt}"`);
+    
+    // First get the model details from our database to find the Replicate model URL
+    const modelStatus = await getModelStatus(request.modelId);
+    
+    if (!modelStatus.model_url) {
+      return {
+        status: 'error',
+        error: 'Model does not have a Replicate URL. This model may not be ready for generation.',
+        errorType: 'model_not_ready'
+      };
+    }
+    
+    console.log(`Attempting to call Replicate model: ${modelStatus.model_url}`);
+    
+    // Call Replicate API directly using the model URL
+    const replicateResponse = await fetch('/api/replicate/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: modelStatus.model_url,
+        input: {
+          prompt: request.prompt
+        }
+      }),
+    });
+    
+    if (!replicateResponse.ok) {
+      const errorData = await replicateResponse.json();
+      console.error('Replicate API error:', errorData);
+      
+      // Check for specific 404 errors (model not found)
+      if (replicateResponse.status === 404) {
+        console.log(`Replicate model ${modelStatus.model_url} not found (404), falling back to Modal generation`);
+        
+        // Fall back to Modal generation for this model
+        return await generateImageWithModal(request);
+      }
+      
+      throw new Error(errorData.error || `Replicate API error: ${replicateResponse.status}`);
+    }
+    
+    const data = await replicateResponse.json();
+    
+    // Ensure imageUrl is always a string, handling array responses from Replicate
+    let imageUrl = data.imageUrl || data.output;
+    if (Array.isArray(imageUrl)) {
+      imageUrl = imageUrl[0];
+    }
+    
+    return {
+      status: 'success',
+      imageUrl: imageUrl,
+      seed: data.seed || Date.now()
+    };
+    
+  } catch (error) {
+    console.error('Error generating image with Replicate:', error);
+    
+    // Check if this is a 404 error (model not found)
+    if (error instanceof Error && error.message.includes('404')) {
+      console.log('Replicate model not found, falling back to Modal generation');
+      return await generateImageWithModal(request);
+    }
+    
+    return {
+      status: 'error',
+      error: error instanceof Error ? error.message : String(error),
+      errorType: 'replicate_error'
+    };
+  }
+};
+
+/**
+ * Generates an image using Modal (fallback method)
+ */
+const generateImageWithModal = async (request: ImageGenerationRequest): Promise<ImageGenerationResponse> => {
+  try {
+    console.log(`Falling back to Modal generation for model ${request.modelId}`);
+    
+    const response = await fetch('/api/modal/generate-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        modelId: request.modelId,
+        prompt: request.prompt
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Modal generation failed');
+    }
+    
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      return {
+        status: 'success',
+        imageUrl: data.imageUrl,
+        seed: data.seed,
+        message: data.message + ' (Generated using Modal fallback)'
+      };
+    } else {
+      return {
+        status: 'error',
+        error: data.error || 'Modal generation failed',
+        errorType: 'modal_fallback_error'
+      };
+    }
+    
+  } catch (error) {
+    console.error('Modal fallback generation failed:', error);
+    
+    // As a last resort, return a placeholder image
+    const placeholderImages = [
+      '/placeholders/ai-generated-1.jpg',
+      '/placeholders/ai-generated-2.jpg',
+      '/placeholders/ai-generated-3.jpg',
+      '/placeholders/ai-generated-4.jpg',
+      '/placeholders/ai-generated-5.jpg',
+    ];
+    
+    const combinedString = request.modelId + request.prompt;
+    const imageIndex = Math.abs(
+      combinedString.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0)
+    ) % placeholderImages.length;
+    
+    return {
+      status: 'success',
+      imageUrl: placeholderImages[imageIndex],
+      seed: Date.now(),
+      message: 'Both Replicate and Modal generation failed. Using placeholder image.',
+      errorType: 'fallback_placeholder'
     };
   }
 };
