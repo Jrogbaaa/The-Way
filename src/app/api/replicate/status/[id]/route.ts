@@ -76,9 +76,82 @@ export async function GET(
     
     console.log(`Replicate training ${training.id} status: ${training.status}`);
 
+    // Calculate more accurate progress based on status and logs
+    let calculatedProgress = 0;
+    let progressStage = 'initializing';
+
+    if (training.status === 'starting') {
+      calculatedProgress = 5;
+      progressStage = 'starting';
+    } else if (training.status === 'processing') {
+      // Parse logs for more accurate progress
+      if (training.logs) {
+        const logs = training.logs;
+        
+        // Look for specific training indicators in the logs
+        if (logs.includes('Loading images') || logs.includes('Preprocessing')) {
+          calculatedProgress = 15;
+          progressStage = 'preprocessing';
+        } else if (logs.includes('Starting training') || logs.includes('Training step')) {
+          // Count training steps if available
+          const stepMatches = logs.match(/(\d+)\/(\d+)/g);
+          if (stepMatches && stepMatches.length > 0) {
+            const lastMatch = stepMatches[stepMatches.length - 1];
+            const [current, total] = lastMatch.split('/').map(Number);
+            if (current && total) {
+              // Training is 15% (preprocessing) + 70% (training steps) + 15% (finalizing)
+              const trainingProgress = (current / total) * 70;
+              calculatedProgress = 15 + trainingProgress;
+              progressStage = `training (${current}/${total})`;
+            } else {
+              calculatedProgress = 45; // Mid-training estimate
+              progressStage = 'training';
+            }
+          } else if (logs.includes('flux_train_replicate:')) {
+            // Look for percentage indicators in flux training logs
+            const percentMatches = logs.match(/(\d+)%/g);
+            if (percentMatches && percentMatches.length > 0) {
+              const lastPercent = parseInt(percentMatches[percentMatches.length - 1]);
+              // Scale the percentage to our 70% training allocation
+              calculatedProgress = 15 + (lastPercent * 0.7);
+              progressStage = `training (${lastPercent}%)`;
+            } else {
+              calculatedProgress = 45;
+              progressStage = 'training';
+            }
+          } else {
+            calculatedProgress = 35;
+            progressStage = 'training';
+          }
+        } else if (logs.includes('Saving') || logs.includes('Uploading')) {
+          calculatedProgress = 90;
+          progressStage = 'finalizing';
+        } else {
+          calculatedProgress = 25;
+          progressStage = 'processing';
+        }
+      } else {
+        // No logs available, use time-based estimation
+        const now = new Date();
+        const createdAt = new Date(dbRecord.created_at);
+        const elapsed = now.getTime() - createdAt.getTime();
+        const estimatedDuration = 45 * 60 * 1000; // 45 minutes in milliseconds
+        
+        calculatedProgress = Math.min(85, (elapsed / estimatedDuration) * 100);
+        progressStage = 'processing';
+      }
+    } else if (training.status === 'succeeded') {
+      calculatedProgress = 100;
+      progressStage = 'completed';
+    } else if (training.status === 'failed' || training.status === 'canceled') {
+      calculatedProgress = 0;
+      progressStage = 'failed';
+    }
+
     // Update our database with the latest status
-    let updateData: any = {
+    const updateData: any = {
       status: training.status,
+      progress: Math.round(calculatedProgress),
       updated_at: new Date().toISOString()
     };
 
@@ -95,10 +168,6 @@ export async function GET(
     } else if (training.status === 'failed') {
       updateData.error_message = training.error || 'Training failed';
       updateData.progress = 0;
-    } else if (training.status === 'processing') {
-      // Estimate progress based on logs or other indicators
-      // This is a rough estimate - you might want to parse logs for more accurate progress
-      updateData.progress = 50;
     }
 
     // Update the database
@@ -115,11 +184,15 @@ export async function GET(
       id: trainingId,
       replicateId: training.id,
       status: training.status,
-      progress: updateData.progress || 0,
+      progress: Math.round(calculatedProgress),
+      progressStage,
       error: training.error,
       output: training.output,
       logs: training.logs,
-      modelVersion: training.output?.version
+      modelVersion: training.output?.version,
+      estimatedTimeRemaining: calculatedProgress > 0 && calculatedProgress < 100 
+        ? Math.max(1, Math.round((100 - calculatedProgress) / 2)) // Rough estimate: 2% per minute
+        : null
     });
 
   } catch (error: any) {

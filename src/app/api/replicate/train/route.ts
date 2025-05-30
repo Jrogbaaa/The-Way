@@ -64,7 +64,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { modelName, instancePrompt, trainingImagesZipUrl, triggerWord } = await request.json();
+    const requestBody = await request.json();
+    let { modelName, instancePrompt, trainingImagesZipUrl, triggerWord, tempId } = requestBody;
+    
+    // If tempId is provided, retrieve the configuration from temporary storage
+    if (tempId) {
+      try {
+        console.log(`Retrieving temporary training config for ID: ${tempId}`);
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const response = await fetch(`${baseUrl}/api/training/prepare/${tempId}`, {
+          method: 'GET'
+        });
+        
+        if (response.ok) {
+          const tempData = await response.json();
+          if (tempData.success && tempData.config) {
+            console.log('Successfully retrieved configuration from temporary storage');
+            modelName = tempData.config.modelName;
+            instancePrompt = tempData.config.instancePrompt;
+            trainingImagesZipUrl = tempData.config.trainingImagesZipUrl;
+            triggerWord = tempData.config.triggerWord;
+          } else {
+            console.warn('Temporary config response was not successful:', tempData);
+          }
+        } else {
+          console.warn(`Failed to retrieve temporary config: ${response.status} ${response.statusText}`);
+        }
+      } catch (error) {
+        console.warn('Error retrieving temporary config:', error);
+        // Don't fail the entire request, just log the warning
+      }
+    }
     
     // Validate required parameters
     if (!modelName || !instancePrompt || !trainingImagesZipUrl || !triggerWord) {
@@ -103,7 +133,9 @@ export async function POST(request: NextRequest) {
           trainingImagesZipUrl,
           originalModelName: modelName,
           sanitizedModelName: sanitizedModelName,
-          replicateModelName: `${REPLICATE_USERNAME}/${sanitizedModelName}`
+          replicateModelName: `${REPLICATE_USERNAME}/${sanitizedModelName}`,
+          // Store if this came from temporary storage
+          fromTempConfig: !!tempId
         }
       });
 
@@ -146,25 +178,35 @@ export async function POST(request: NextRequest) {
     }
     
     // Create training with individual destination model
+    const trainingInput: any = {
+      destination: `${REPLICATE_USERNAME}/${sanitizedModelName}`, // Individual model for this training
+      input: {
+        input_images: trainingImagesZipUrl,
+        trigger_word: triggerWord,
+        steps: 1000,
+        lora_rank: 16,
+        optimizer: "adamw8bit",
+        batch_size: 1,
+        resolution: "512,768,1024",
+        autocaption: true,
+        learning_rate: 0.0004
+      }
+    };
+    
+    // Only add webhook if we have a valid HTTPS URL (production)
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    if (baseUrl.startsWith('https://')) {
+      trainingInput.webhook = `${baseUrl}/api/webhooks/replicate`;
+      console.log('Adding webhook URL:', trainingInput.webhook);
+    } else {
+      console.log('Skipping webhook in development (localhost)');
+    }
+    
     const training = await replicate.trainings.create(
       "ostris", // owner of the trainer model
       "flux-dev-lora-trainer", // trainer model name
       latestVersion.id, // Latest version ID from API
-      {
-        destination: `${REPLICATE_USERNAME}/${sanitizedModelName}`, // Individual model for this training
-        input: {
-          input_images: trainingImagesZipUrl,
-          trigger_word: triggerWord,
-          steps: 1000,
-          lora_rank: 16,
-          optimizer: "adamw8bit",
-          batch_size: 1,
-          resolution: "512,768,1024",
-          autocaption: true,
-          learning_rate: 0.0004
-        },
-        webhook: process.env.REPLICATE_WEBHOOK_URL ? `${process.env.REPLICATE_WEBHOOK_URL}?training_id=${trainingId}` : undefined
-      }
+      trainingInput
     );
 
     console.log('Training started:', training.id);

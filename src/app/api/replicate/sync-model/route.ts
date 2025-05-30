@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const training = await replicate.trainings.get(replicateTrainingId);
     console.log('Training status from Replicate:', training.status);
 
-    let updateData: any = {
+    const updateData: any = {
       replicate_training_id: replicateTrainingId,
       updated_at: new Date().toISOString()
     };

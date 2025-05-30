@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       
       try {
         // Configure appropriate input parameters based on the model
-        let input: any = {
+        const input: any = {
           image: imageDataUrl,
         };
         
