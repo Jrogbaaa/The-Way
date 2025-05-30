@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [Unreleased]
 
 ### Added
@@ -166,26 +169,93 @@ All notable changes to this project will be documented in this file.
 - Enhanced modal positioning with proper margins from browser edges
 - Added automatic height adjustment for smaller viewports
 
-## [1.2.0] - 2024-04-05
+## [1.2.0] - 2025-01-30
 
 ### Added
-- Added "Analyze Post" feature to the onboarding welcome component after signup
-- New upload interface for quick post analysis in the onboarding process
+- **Comprehensive Testing Infrastructure**
+  - Pre-push validation script with route checking and TypeScript validation
+  - Jest unit tests for API routes and image generation workflows
+  - Playwright e2e tests for authentication and user flows
+  - Enhanced test coverage for model creation and training workflows
+  - Comprehensive error handling and validation tests
+
+- **Enhanced Authentication Flow**
+  - Triple-layer persistence strategy for training configurations through OAuth
+  - Automatic training resumption after authentication
+  - Comprehensive localStorage backup and recovery mechanisms
+  - Enhanced training flow with auto-redirect to models page after training start
+  - Smart welcome modal skipping during training flows
+
+- **Improved Replicate API Integration**
+  - Conditional webhook URL handling for development vs production environments
+  - Enhanced model sanitization and validation
+  - Better status tracking and model synchronization
+  - Improved error handling and response formatting
+
+- **New API Endpoints**
+  - `/api/training/prepare/[tempId]` - Temporary training configuration storage
+  - `/api/replicate/training-logs/[id]` - Training progress monitoring
+  - `/api/webhooks/replicate` - Webhook handling for training updates
+  - `/api/upload/training-images` - Direct image upload for training
+  - `/api/debug/*` - Debug endpoints for development
+
+### Fixed
+- **React Hook Errors**
+  - Fixed useReplicateTraining hook by updating toast import from 'react-hot-toast' to 'sonner'
+  - Resolved React Hook call order issues in training components
+
+- **TypeScript Compatibility**
+  - Updated route parameter types for Next.js 15 compatibility
+  - Fixed TypeScript errors in dynamic route handlers
+  - Made params async as required by Next.js 15
+
+- **Training Flow Issues**
+  - Fixed localStorage persistence through OAuth redirects
+  - Resolved training configuration loss during authentication
+  - Enhanced error handling for failed training attempts
+  - Fixed webhook validation errors (422 Unprocessable Entity)
+
+- **Authentication Issues**
+  - Fixed welcome modal interference with training flows
+  - Enhanced user onboarding detection
+  - Improved session management and state persistence
 
 ### Changed
-- Rebranded from "Social AI Agent" to "Content AI Agent" across the entire application
-- Updated all documentation to reflect the new branding
-- Improved UI consistency throughout the application
+- **Enhanced Components**
+  - `ModalModelCreation` - Added automatic training configuration detection and resumption
+  - `AuthProvider` - Enhanced with training flow detection and welcome modal logic
+  - `WelcomeModal` - Improved conditional rendering based on user state
 
-## [1.1.0] - 2024-04-03
+- **Improved API Routes**
+  - Enhanced error handling across all endpoints
+  - Better response formatting and status codes
+  - Improved validation and sanitization
+
+- **Development Experience**
+  - Enhanced debugging capabilities with comprehensive logging
+  - Improved error messages and user feedback
+  - Better development vs production environment handling
+
+### Security
+- Enhanced input validation and sanitization across all API endpoints
+- Improved error handling to prevent information leakage
+- Better authentication state management
+
+## [1.1.0] - 2025-01-29
 
 ### Added
-- Enhanced UI for all model interfaces
-- Consistent card-based layout for model interfaces
-- Improved form styling with clear section headers
-- Loading spinner animations during API requests
-- Comprehensive documentation for UI design patterns
+- Initial implementation of custom model training with Replicate API
+- User authentication with NextAuth.js
+- Image generation with multiple AI models
+- Basic testing infrastructure
 
-### Changed
-- Updated Cristina and Jaime model pages to match the professional UI of standard models
-- Improved documentation in README.md, DEVELOPMENT.md, and analyze-post-guide.md with current UI information
+### Fixed
+- Initial bug fixes and stability improvements
+
+## [1.0.0] - 2025-01-28
+
+### Added
+- Initial release
+- Basic image generation functionality
+- User interface with React and Next.js
+- Integration with AI image generation APIs

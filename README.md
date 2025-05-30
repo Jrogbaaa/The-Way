@@ -2,9 +2,50 @@
 
 A cutting-edge platform that empowers content creators with AI-powered tools to optimize their social media content.
 
-## Recent Updates (July/August 2024)
+## Recent Updates (January 2025)
 
-- **Replicate Image Generation Fixes** (Latest): Major improvements to custom model image generation:
+- **Enhanced Authentication & Training Flow** (Latest): Major improvements to user authentication and model training workflows:
+  - **Fixed React Hook errors**: Resolved useReplicateTraining hook issues by updating toast import from 'react-hot-toast' to 'sonner'
+  - **Enhanced authentication flow**: Added smart welcome modal skipping during training flows to prevent interruption
+  - **Triple-layer persistence**: Implemented comprehensive training configuration backup through OAuth redirects
+  - **Automatic training resumption**: Users can now seamlessly continue training after authentication
+  - **Auto-redirect functionality**: Training flows now automatically redirect to models page after successful start
+  - **Improved error handling**: Enhanced error messages and user feedback throughout the training process
+
+- **TypeScript & Next.js 15 Compatibility**: Updated codebase for Next.js 15 compatibility:
+  - **Fixed route parameter types**: Updated dynamic route handlers to use async params as required by Next.js 15
+  - **Resolved TypeScript errors**: Fixed type compatibility issues in API routes
+  - **Enhanced type safety**: Improved TypeScript definitions across the application
+
+- **Comprehensive Testing Infrastructure**: Added robust testing and validation systems:
+  - **Pre-push validation**: Automated script checking routes, TypeScript, and code quality
+  - **Jest unit tests**: Comprehensive test coverage for API routes and image generation workflows
+  - **Playwright e2e tests**: End-to-end testing for authentication and complete user flows
+  - **Enhanced test coverage**: Tests for model creation, training workflows, and error handling
+  - **Validation scripts**: Automated checks ensuring code quality before deployment
+
+- **Improved Replicate API Integration**: Enhanced reliability and error handling:
+  - **Conditional webhook URLs**: Fixed 422 errors by making webhooks conditional for development vs production
+  - **Enhanced model validation**: Improved sanitization and validation of model parameters
+  - **Better status tracking**: Enhanced model synchronization and progress monitoring
+  - **Improved error responses**: Better formatted error messages and status codes
+
+- **New API Endpoints & Features**: Added comprehensive backend functionality:
+  - **Training preparation**: `/api/training/prepare/[tempId]` for temporary configuration storage
+  - **Training logs**: `/api/replicate/training-logs/[id]` for real-time progress monitoring
+  - **Webhook handling**: `/api/webhooks/replicate` for training status updates
+  - **Direct uploads**: `/api/upload/training-images` for seamless image uploading
+  - **Debug endpoints**: `/api/debug/*` for enhanced development debugging
+
+- **Enhanced Development Experience**: Improved debugging and development tools:
+  - **Comprehensive logging**: Enhanced debugging capabilities with detailed logging
+  - **Better error messages**: Improved user feedback and error handling
+  - **Environment handling**: Better separation of development vs production configurations
+  - **Validation tools**: Pre-commit hooks and validation scripts for code quality
+
+## Previous Updates (July/August 2024)
+
+- **Replicate Image Generation Fixes**: Major improvements to custom model image generation:
   - **Fixed ReadableStream handling**: Implemented proper predictions API for reliable custom model inference
   - **Enhanced error handling**: Added comprehensive fallback mechanisms for streaming responses
   - **TypeScript safety**: Resolved imageUrl.includes() TypeError with proper array/string type checking

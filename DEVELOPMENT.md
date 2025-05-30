@@ -572,3 +572,212 @@ To ensure the application scales effectively as more features are added, follow 
    - Example: Test the complete user journey through the content calendar
 
 By following these scalability best practices, you can ensure The Way platform continues to perform well and remains maintainable as new features are added.
+
+## Testing
+
+The application includes comprehensive testing infrastructure to ensure code quality and reliability.
+
+### Testing Stack
+
+- **Jest** - Unit testing framework
+- **Playwright** - End-to-end testing
+- **@testing-library/react** - React component testing utilities
+- **Pre-push validation** - Automated code quality checks
+
+### Test Structure
+
+```
+tests/
+├── api-routes.test.js              # API endpoint tests
+├── model-creation-workflow.test.js # Model training workflow tests
+└── README.md                       # Testing documentation
+
+src/tests/
+└── api-image-generation.test.ts    # Image generation API tests
+
+e2e/
+├── auth.setup.ts                   # Authentication setup for e2e tests
+├── complete-user-flow.spec.ts      # Complete user journey tests
+├── custom-model-training.spec.ts   # Model training e2e tests
+├── image-generation.spec.ts        # Image generation e2e tests
+└── unauthenticated/               # Tests for public pages
+    ├── basic-functionality.spec.ts
+    ├── detailed-login-debug.spec.ts
+    └── simple-login-test.spec.ts
+
+scripts/
+└── pre-push-check.js              # Pre-push validation script
+```
+
+### Running Tests
+
+#### Unit Tests (Jest)
+```bash
+# Run all unit tests
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run specific test workflow
+npm run test:workflow
+```
+
+#### End-to-End Tests (Playwright)
+```bash
+# Run all e2e tests
+npm run test:e2e
+
+# Run e2e tests with UI
+npm run test:e2e:ui
+
+# Run e2e tests in debug mode
+npm run test:e2e:debug
+```
+
+#### Pre-Push Validation
+```bash
+# Run comprehensive validation checks
+node scripts/pre-push-check.js
+```
+
+### Test Categories
+
+#### 1. Unit Tests
+- **API Routes**: Test all API endpoints for correct responses and error handling
+- **Image Generation**: Test image generation workflows with different models
+- **Model Creation**: Test the complete model training workflow
+- **Error Handling**: Test graceful error handling and fallbacks
+
+#### 2. End-to-End Tests
+- **Authentication Flow**: Test login, signup, and OAuth flows
+- **Complete User Journey**: Test full user workflows from login to model creation
+- **Image Generation**: Test image generation with different models and parameters
+- **Model Training**: Test custom model training end-to-end
+- **Mobile Responsiveness**: Test functionality across different viewport sizes
+
+#### 3. Pre-Push Validation
+- **Route Validation**: Ensure all defined routes exist and are accessible
+- **TypeScript Check**: Validate TypeScript compilation without errors
+- **Git Conflict Detection**: Check for unresolved merge conflicts
+- **Code Quality**: Ensure code meets quality standards
+
+### Writing Tests
+
+#### Unit Test Example
+```javascript
+// tests/api-routes.test.js
+describe('Model Status API Route', () => {
+  test('Model status route handles dynamic params correctly', async () => {
+    const mockRequest = {
+      nextUrl: { pathname: '/api/modal/model-status/test-id' }
+    };
+    
+    const response = await GET(mockRequest, { params: Promise.resolve({ id: 'test-id' }) });
+    const data = await response.json();
+    
+    expect(response.status).toBe(200);
+    expect(data.id).toBe('test-id');
+  });
+});
+```
+
+#### E2E Test Example
+```typescript
+// e2e/image-generation.spec.ts
+test('should generate image with Jaime model', async ({ page }) => {
+  await page.goto('/models/jaime');
+  await page.fill('[data-testid="prompt-input"]', 'a portrait of a person');
+  await page.click('[data-testid="generate-button"]');
+  
+  await expect(page.locator('[data-testid="generated-image"]')).toBeVisible({ timeout: 30000 });
+});
+```
+
+### Test Configuration
+
+#### Jest Configuration (`jest.config.js`)
+```javascript
+module.exports = {
+  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  moduleNameMapping: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
+  testMatch: [
+    '<rootDir>/tests/**/*.test.js',
+    '<rootDir>/src/tests/**/*.test.ts'
+  ]
+};
+```
+
+#### Playwright Configuration (`playwright.config.ts`)
+```typescript
+export default defineConfig({
+  testDir: './e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'html',
+  use: {
+    baseURL: 'http://localhost:3000',
+    trace: 'on-first-retry',
+  },
+  projects: [
+    { name: 'setup', testMatch: /.*\.setup\.ts/ },
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+    },
+  ],
+});
+```
+
+### Continuous Integration
+
+The testing infrastructure is designed to work with CI/CD pipelines:
+
+1. **Pre-Push Validation**: Run before every push to catch issues early
+2. **Automated Testing**: All tests run automatically on pull requests
+3. **Coverage Reports**: Generate and track test coverage metrics
+4. **E2E Testing**: Run comprehensive user flow tests in multiple browsers
+
+### Best Practices
+
+1. **Test Isolation**: Each test should be independent and not rely on others
+2. **Realistic Data**: Use realistic test data that matches production scenarios
+3. **Error Testing**: Always test error conditions and edge cases
+4. **Performance**: Keep tests fast and efficient
+5. **Maintenance**: Regularly update tests when features change
+6. **Documentation**: Document complex test scenarios and setup requirements
+
+### Debugging Tests
+
+#### Jest Debugging
+```bash
+# Run specific test file
+npm test -- tests/api-routes.test.js
+
+# Run tests with verbose output
+npm test -- --verbose
+
+# Debug with Node.js debugger
+node --inspect-brk node_modules/.bin/jest --runInBand
+```
+
+#### Playwright Debugging
+```bash
+# Run with headed browser
+npm run test:e2e -- --headed
+
+# Debug specific test
+npm run test:e2e -- --debug image-generation.spec.ts
+
+# Generate trace files
+npm run test:e2e -- --trace on
+```
