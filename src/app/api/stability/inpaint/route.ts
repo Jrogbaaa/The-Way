@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     if (!stabilityResponse.ok) {
       console.error(`Stability AI v2beta API Error: Status ${stabilityResponse.status}`);
-       let errorDetails = { message: `API Error (${stabilityResponse.status})` };
+       const errorDetails = { message: `API Error (${stabilityResponse.status})` };
        try {
           const errorBody = await stabilityResponse.json();
           console.error('Stability AI v2beta API Error (JSON parsed):', errorBody);

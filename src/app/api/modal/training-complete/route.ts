@@ -46,7 +46,6 @@ export async function POST(request: NextRequest) {
       status: data.status === 'success' ? 'completed' : 'error',
       progress: data.status === 'success' ? 100 : 0,
       error_message: data.error || null,
-      last_update: new Date().toISOString(),
       completed_at: new Date().toISOString(),
     };
     

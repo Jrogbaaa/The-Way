@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import util from 'util';
+
+import { execPromise } from "@/lib/server/utils";
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-const execPromise = util.promisify(exec);
 
 // Helper function to validate base64 image
 const validateBase64Image = (base64Data: string): boolean => {

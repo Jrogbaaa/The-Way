@@ -93,7 +93,7 @@ export const GET = async (request: NextRequest) => {
     if (recursive) {
         // --- Recursive Folder Listing Logic --- 
         let allObjects: StorageListItem[] = [];
-        let marker: string | undefined = undefined;
+        const marker: string | undefined = undefined;
         const userRootPrefix = `${userId}/`;
 
         console.log(`GalleryAPI/list: Starting recursive fetch for user root: ${userRootPrefix}`);

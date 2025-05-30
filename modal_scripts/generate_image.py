@@ -15,6 +15,7 @@ from typing import Dict, Any, Optional, List
 import modal
 from PIL import Image
 import torch
+# Important fix: Use explicitly pinned versions for diffusers
 from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
 from safetensors.torch import load_file
 
@@ -28,10 +29,11 @@ BASE_MODEL = "runwayml/stable-diffusion-v1-5"
 
 # Define a custom image with required dependencies
 image = modal.Image.debian_slim().pip_install(
-    "diffusers>=0.16.0",
+    "diffusers>=0.25.0",  # Updated to newer version
     "transformers>=4.30.0",
     "torch>=2.0.0",
     "accelerate>=0.20.0",
+    "huggingface_hub>=0.20.0",  # Updated to newer version with split_torch_state_dict_into_shards
     "peft>=0.4.0",
     "pillow",
     "numpy",
@@ -67,45 +69,38 @@ def generate_image(
     Returns:
         Dictionary with generation results and image data
     """
+    
     try:
-        print(f"Starting image generation for model: {model_id}")
-        print(f"Prompt: {prompt}")
-        print(f"Inference settings: steps={num_inference_steps}, cfg={guidance_scale}")
-        
-        # Set a seed for reproducibility
+        print(f"Starting image generation for model {model_id}")
+        # Create seed if none provided
         if seed is None:
-            seed = int(time.time())
-        generator = torch.Generator(device="cuda").manual_seed(seed)
+            seed = int(time.time()) % 1000000
+            print(f"No seed provided, using random seed: {seed}")
         
-        # Check if model exists
-        model_dir = f"{VOLUME_MOUNT_PATH}/{model_id}"
-        lora_dir = os.path.join(model_dir, "lora_weights")
+        # Set the random seed for reproducibility
+        generator = torch.Generator("cuda").manual_seed(seed)
         
+        # Ensure model directory exists
+        model_dir = os.path.join(VOLUME_MOUNT_PATH, model_id)
         if not os.path.exists(model_dir):
-            raise ValueError(f"Model directory not found: {model_dir}")
+            return {
+                "status": "error",
+                "error": f"Model directory not found for ID: {model_id}",
+                "model_id": model_id
+            }
         
-        if not os.path.exists(lora_dir):
-            raise ValueError(f"LoRA weights directory not found: {lora_dir}")
+        # Check for the adapter model
+        adapter_model_path = os.path.join(model_dir, "trained_model")
+        adapter_config_path = os.path.join(model_dir, "adapter_config.json")
         
-        # Find the adapter model file
-        adapter_model_path = os.path.join(lora_dir, "adapter_model.safetensors")
         if not os.path.exists(adapter_model_path):
-            # Try to find any safetensors file in the lora_weights directory
-            safetensors_files = [f for f in os.listdir(lora_dir) if f.endswith(".safetensors")]
-            if safetensors_files:
-                adapter_model_path = os.path.join(lora_dir, safetensors_files[0])
-            else:
-                raise ValueError(f"LoRA adapter model not found in {lora_dir}")
+            return {
+                "status": "error",
+                "error": f"Adapter model not found at {adapter_model_path}",
+                "model_id": model_id
+            }
         
-        # Check if the file is too small (likely invalid)
-        file_size = os.path.getsize(adapter_model_path)
-        if file_size < 10000:  # Less than 10KB is suspicious for a model file
-            raise ValueError(f"LoRA adapter file is too small ({file_size} bytes). The model may be corrupted or not properly trained.")
-        
-        print(f"Using LoRA adapter: {adapter_model_path} ({file_size} bytes)")
-        
-        # Load the adapter config if available
-        adapter_config_path = os.path.join(lora_dir, "adapter_config.json")
+        # Load adapter config if available
         adapter_config = None
         if os.path.exists(adapter_config_path):
             with open(adapter_config_path, "r") as f:

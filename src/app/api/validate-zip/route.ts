@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     // Track validation results
     let totalFiles = 0;
     let validImageFiles = 0;
-    let invalidFiles: string[] = [];
+    const invalidFiles: string[] = [];
 
     // Examine each file in the ZIP
     for (const [fileName, zipEntry] of Object.entries(zipContents.files)) {

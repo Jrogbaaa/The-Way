@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { exec } from 'child_process';
-import util from 'util';
+
+import { execPromise } from "@/lib/server/utils";
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { exec as childExec } from 'child_process';
 import { spawn } from 'child_process';
 import { auth } from '@/auth';
 
-const execPromise = util.promisify(exec);
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -261,10 +259,67 @@ export async function POST(req: NextRequest) {
     
     // Try to parse the result from stdout
     try {
+      console.log('Full stdout from Modal:', stdout);
+      console.log('Full stderr from Modal:', stderr);
+      
+      // First try to find JSON output
       const jsonMatch = stdout.match(/\{[\s\S]*\}/);
+      let result = null;
+      
       if (jsonMatch) {
-        const result = JSON.parse(jsonMatch[0]);
+        try {
+          result = JSON.parse(jsonMatch[0]);
+          console.log('Parsed JSON result:', result);
+        } catch (jsonParseError) {
+          console.log('Failed to parse JSON, trying alternative parsing');
+        }
+      }
+      
+      // If no JSON found or parsing failed, try to extract status from output
+      if (!result) {
+        console.log('No valid JSON found, attempting to parse status from output');
         
+        // Check for status messages in the output
+        if (stdout.includes('Generation completed with status: error')) {
+          // Try to extract the error details
+          let errorMessage = 'Unknown error occurred during generation';
+          
+          // Look for common error patterns
+          if (stdout.includes('Model directory not found') || stderr.includes('Model directory not found')) {
+            errorMessage = 'Model directory not found for ID: ' + modelId;
+          } else if (stdout.includes('Adapter model not found') || stderr.includes('Adapter model not found')) {
+            errorMessage = 'Adapter model not found. The model may have failed to train properly.';
+          } else if (stdout.includes('No module named') || stderr.includes('No module named')) {
+            const moduleMatch = (stdout + stderr).match(/No module named ['"]([^'"]+)['"]/);
+            const missingModule = moduleMatch ? moduleMatch[1] : 'unknown module';
+            errorMessage = `Missing Python dependency: ${missingModule}`;
+          }
+          
+          result = {
+            status: 'error',
+            error: errorMessage,
+            model_id: modelId
+          };
+        } else if (stdout.includes('Generation completed with status: success')) {
+          // This shouldn't happen since successful results should have JSON, but handle it
+          result = {
+            status: 'error',
+            error: 'Generation completed but no image data was returned',
+            model_id: modelId
+          };
+        } else {
+          // Completely unknown state
+          result = {
+            status: 'error',
+            error: 'Modal process completed but returned no recognizable output',
+            details: 'stdout: ' + stdout.substring(0, 500),
+            model_id: modelId
+          };
+        }
+      }
+      
+      // Now handle the result (whether parsed from JSON or constructed)
+      if (result) {
         // Check for model validation errors
         if (result.status === 'error') {
           // Check for invalid model file error
@@ -280,7 +335,8 @@ export async function POST(req: NextRequest) {
           if (result.error && (
               result.error.includes('Model directory not found') || 
               result.error.includes('Model not found') ||
-              result.error.includes('not found in Modal volume')
+              result.error.includes('not found in Modal volume') ||
+              result.error.includes('Adapter model not found')
           )) {
             return handleInvalidModel(modelId, prompt, "Model files not found in storage. The model may have been deleted or failed to train properly.");
           }
@@ -291,6 +347,9 @@ export async function POST(req: NextRequest) {
             const missingModule = moduleMatch ? moduleMatch[1] : 'unknown module';
             return handleMissingModule(modelId, prompt, missingModule);
           }
+          
+          // For other errors, return the error directly
+          return NextResponse.json(result, { status: 500 });
         }
         
         // Record analytics
@@ -343,8 +402,6 @@ export async function POST(req: NextRequest) {
         
         // Return the result
         return NextResponse.json(result);
-      } else {
-        throw new Error('Could not find JSON output from Modal inference process');
       }
     } catch (parseError) {
       console.error('Error parsing Modal inference output:', parseError);

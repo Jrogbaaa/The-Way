@@ -86,36 +86,122 @@ export default function ImageCreatorPage() {
     }
     
     // Fetch user-created models when component mounts
-    if (user && !loading) {
+    // In development, fetch models even if user is not authenticated to show legacy anonymous models
+    if (!loading) {
       fetchUserModels();
+      
+      // Set up auto-refresh every 30 seconds to catch status updates
+      const interval = setInterval(() => {
+        console.log('🔄 Auto-refreshing models...');
+        fetchUserModels();
+      }, 30000);
+      
+      return () => clearInterval(interval);
     }
   }, [loading, user, router]);
   
   // Add function to fetch user models from the database
   const fetchUserModels = async () => {
-    if (!user) return;
-    
     try {
-      setIsLoadingModels(true);
+      console.log('🔍 Starting fetchUserModels...');
+      console.log('📱 Browser info:', {
+        userAgent: navigator.userAgent,
+        browserName: navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Other',
+        cookiesEnabled: navigator.cookieEnabled,
+        fetchAvailable: typeof fetch !== 'undefined',
+        abortControllerAvailable: typeof AbortController !== 'undefined'
+      });
       
-      // Fetch models from the Supabase database
-      const response = await fetch('/api/modal/user-models');
+      setIsLoadingModels(true);
+      setError(null); // Clear any previous errors
+      
+      // Browser-specific fetch handling
+      let fetchOptions: RequestInit = {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      // Add credentials for cross-origin requests, but handle Firefox differently
+      if (navigator.userAgent.includes('Firefox')) {
+        // Firefox can be more strict about credentials
+        fetchOptions.credentials = 'same-origin';
+        console.log('🦊 Using Firefox-compatible credentials: same-origin');
+      } else {
+        fetchOptions.credentials = 'include';
+        console.log('🌐 Using standard credentials: include');
+      }
+      
+      // Only use AbortController if available
+      let controller: AbortController | undefined;
+      let timeoutId: NodeJS.Timeout | undefined;
+      
+      if (typeof AbortController !== 'undefined') {
+        controller = new AbortController();
+        fetchOptions.signal = controller.signal;
+        timeoutId = setTimeout(() => controller!.abort(), 15000); // Increased timeout for Firefox
+        console.log('⏱️ AbortController configured with 15s timeout');
+      } else {
+        console.log('⚠️ AbortController not available');
+      }
+      
+      console.log('📡 Making fetch request with options:', fetchOptions);
+      
+      const response = await fetch('/api/modal/user-models', fetchOptions);
+      
+      if (timeoutId) clearTimeout(timeoutId);
+      
+      console.log('📋 API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch models: ${response.statusText}`);
+        throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
-      console.log('Fetched user models:', data);
+      console.log('📋 Fetched user models:', data);
       
       // Map database models to our Model interface
-      const mappedModels = data.models.map((model: any) => ({
+      let modelsToMap = data.models || [];
+      console.log('🗺️ Models to map:', modelsToMap.length);
+      
+      // In development, if user is authenticated but has no models, also show anonymous models
+      if (user && modelsToMap.length === 0 && data.debug?.totalModelsInDb > 0) {
+        console.log('🔍 User has no models but anonymous models exist, fetching all models...');
+        // Fetch all models for debugging
+        const allResponse = await fetch('/api/debug/models', {
+          credentials: navigator.userAgent.includes('Firefox') ? 'same-origin' : 'include'
+        });
+        const allData = await allResponse.json();
+        
+        // Show anonymous models in development
+        const anonymousModels = allData.database?.modelsByUser?.find((group: any) => group.userId === 'anonymous')?.models || [];
+        if (anonymousModels.length > 0) {
+          modelsToMap = anonymousModels.map((model: any) => ({
+            id: model.id,
+            model_name: model.name,
+            status: model.status,
+            created_at: model.created_at,
+            user_id: 'anonymous',
+            input_data: { instancePrompt: 'Legacy model' }
+          }));
+        }
+      }
+      
+      const mappedModels = modelsToMap.map((model: any) => ({
         id: model.id,
-        name: model.model_name || 'Unnamed Model',
-        description: model.input_data?.instancePrompt || 'Custom trained model',
-        imageUrl: model.sample_image || '/placeholder-model.jpg',
+        name: model.model_name || model.name || `Model ${model.id.slice(-8)}`,
+        description: model.input_data?.instancePrompt || model.description || 'Custom trained model',
+        imageUrl: model.sample_image || model.thumbnail_url || '/placeholder-model.jpg',
         status: model.status === 'completed' ? 'ready' : model.status,
-        lastUsed: model.last_update ? new Date(model.last_update).toLocaleDateString() : 'New',
+        lastUsed: model.last_used ? new Date(model.last_used).toLocaleDateString() : 
+                  model.updated_at ? new Date(model.updated_at).toLocaleDateString() : 'New',
         isNew: true,
         isFeatured: false,
         progress: model.progress || 0,
@@ -127,11 +213,38 @@ export default function ImageCreatorPage() {
         model_info: model.input_data
       }));
       
+      console.log('✅ Mapped models for UI:', mappedModels);
       setUserModels(mappedModels);
+      
     } catch (error) {
-      console.error('Error fetching user models:', error);
-      setError(error instanceof Error ? error.message : 'Unknown error occurred');
+      console.error('❌ Error fetching user models:', error);
+      
+      // Enhanced error logging for debugging
+      const errorDetails = {
+        message: error instanceof Error ? error.message : String(error),
+        name: error instanceof Error ? error.name : 'Unknown',
+        stack: error instanceof Error ? error.stack : undefined,
+        browser: navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Other',
+        isNetworkError: error instanceof Error && error.message.includes('Failed to fetch'),
+        isAbortError: error instanceof Error && error.name === 'AbortError',
+        timestamp: new Date().toISOString()
+      };
+      
+      console.error('🔍 Detailed error info:', errorDetails);
+      
+      // Set user-friendly error message
+      let errorMessage = 'Failed to load models';
+      if (errorDetails.isNetworkError) {
+        errorMessage = 'Network error - please check your connection';
+      } else if (errorDetails.isAbortError) {
+        errorMessage = 'Request timed out - please try again';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
     } finally {
+      console.log('🏁 fetchUserModels complete');
       setIsLoadingModels(false);
     }
   };
@@ -222,7 +335,8 @@ export default function ImageCreatorPage() {
   };
 
   const handleModelClick = (modelId: string) => {
-    router.push(`/models/${modelId}`);
+    // Route to custom model detail page for user-created models
+    router.push(`/models/custom/${modelId}`);
   };
 
   if (loading) {
@@ -242,7 +356,7 @@ export default function ImageCreatorPage() {
           {/* Header with title and filters - Reduced bottom margin */}
           <div className="flex justify-between items-center mb-6 flex-col sm:flex-row gap-6 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Creator Gallery</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600" data-testid="page-title">Choose Your Model</h1>
               <p className="text-gray-600">Create amazing content with our state-of-the-art AI models</p>
             </div>
             
@@ -283,6 +397,7 @@ export default function ImageCreatorPage() {
               className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm flex-shrink-0"
               aria-label="Create a new model"
               onClick={() => setShowModelCreation(true)}
+              data-testid="create-model-button"
             >
               <Plus className="h-4 w-4 mr-2" />
               Train New Model
@@ -311,6 +426,7 @@ export default function ImageCreatorPage() {
                       key={model.id}
                       className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
                       onClick={() => handleModelClick(model.id)}
+                      data-testid="model-card"
                     >
                       <div className="relative aspect-square bg-muted">
                         {model.imageUrl ? (
@@ -355,9 +471,21 @@ export default function ImageCreatorPage() {
             )}
             
             {isLoadingModels && (
-              <div className="flex justify-center items-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                <span className="ml-3 text-indigo-600">Loading your models...</span>
+              <div className="flex flex-col justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-3"></div>
+                <span className="ml-3 text-indigo-600 mb-2">Loading your models...</span>
+                <p className="text-sm text-gray-500 mb-4">This may take a few seconds</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    console.log('🔄 Manual refresh triggered');
+                    fetchUserModels();
+                  }}
+                  className="text-sm"
+                >
+                  Refresh Now
+                </Button>
               </div>
             )}
 
@@ -389,6 +517,7 @@ export default function ImageCreatorPage() {
                       href={getModelRoute(model.id)}
                       key={model.id}
                       className="no-underline"
+                      data-testid="model-card"
                     >
                       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all duration-300 hover:-translate-y-2 h-full flex flex-col relative group">
                         <div className="w-full aspect-[4/3] bg-gray-100 relative overflow-hidden">
@@ -513,6 +642,41 @@ export default function ImageCreatorPage() {
                     </div>
                   </div>
                 </div>
+              </section>
+            )}
+
+            {/* Debug Section - Remove after fixing */}
+            {process.env.NODE_ENV === 'development' && (
+              <section className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-6">
+                <h3 className="font-semibold text-yellow-800 mb-2">Debug Info</h3>
+                <p className="text-sm text-yellow-700">
+                  Models fetched: {userModels.length} | 
+                  Loading: {isLoadingModels ? 'Yes' : 'No'} | 
+                  Error: {error || 'None'} |
+                  User authenticated: {user ? 'Yes' : 'No'} |
+                  Browser: {navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Other'}
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <Link href="/debug/models" className="text-sm bg-yellow-200 hover:bg-yellow-300 px-2 py-1 rounded transition-colors">
+                    🔧 Open Debug Tool
+                  </Link>
+                  <button 
+                    onClick={() => fetchUserModels()} 
+                    className="text-sm bg-yellow-200 hover:bg-yellow-300 px-2 py-1 rounded transition-colors"
+                  >
+                    🔄 Retry Fetch
+                  </button>
+                </div>
+                {userModels.length > 0 && (
+                  <details className="mt-2">
+                    <summary className="text-sm font-medium text-yellow-800 cursor-pointer">
+                      View Raw Model Data
+                    </summary>
+                    <pre className="text-xs bg-yellow-100 p-2 rounded mt-1 overflow-auto max-h-40">
+                      {JSON.stringify(userModels, null, 2)}
+                    </pre>
+                  </details>
+                )}
               </section>
             )}
           </div>

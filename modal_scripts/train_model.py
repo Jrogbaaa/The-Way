@@ -859,9 +859,16 @@ def main(input: str = None, dry_run: bool = False):
         )
         
         print(f"Training completed with status: {result.get('status', 'unknown')}")
+        
+        # Print the result as JSON so the API endpoint can parse it
+        print("TRAINING_RESULT_JSON:", json.dumps(result))
         return result
     
     except Exception as e:
         error_msg = f"Error processing training request: {str(e)}"
         print(error_msg)
-        return {"status": "error", "error": error_msg} 
+        error_result = {"status": "error", "error": error_msg}
+        
+        # Print the error result as JSON so the API endpoint can parse it
+        print("TRAINING_RESULT_JSON:", json.dumps(error_result))
+        return error_result 

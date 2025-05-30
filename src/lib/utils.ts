@@ -110,3 +110,7 @@ export async function getPersistentImageUrl(url: string, options?: {
  * Check if the code is running in a browser environment
  */
 export const isBrowser = () => typeof window !== 'undefined';
+
+/**
+ * Promisified version of child_process.exec
+ */

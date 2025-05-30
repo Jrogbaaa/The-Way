@@ -1,0 +1,14 @@
+# Modal and image generation
+modal>=0.56.3867
+torch>=2.0.0
+diffusers==0.19.3  # Pin to specific version
+transformers>=4.30.0
+accelerate>=0.20.0
+huggingface_hub==0.16.4  # Pin to version compatible with diffusers 0.19.3
+safetensors>=0.3.1
+pillow>=9.5.0
+
+# Other utilities
+python-dotenv>=1.0.0
+requests>=2.31.0
+numpy>=1.24.0 

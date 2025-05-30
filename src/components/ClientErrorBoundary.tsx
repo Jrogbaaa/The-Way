@@ -1,12 +1,7 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import React from 'react';
-
-// Dynamically import ErrorBoundary with no SSR
-const ErrorBoundary = dynamic(() => import('@/components/ErrorBoundary'), { 
-  ssr: false 
-});
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 export default function ClientErrorBoundary({ 
   children 

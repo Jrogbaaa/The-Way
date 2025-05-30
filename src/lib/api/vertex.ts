@@ -199,7 +199,7 @@ const processVertexAIResponse = (response: any) => {
     console.log("Raw Vertex AI response:", responseText.substring(0, 200) + "...");
     
     // Try to find and parse JSON in the response
-    let jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) || 
+    const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) || 
                    responseText.match(/\{[\s\S]*\}/);
     
     if (jsonMatch) {
@@ -235,7 +235,7 @@ const processVertexAIResponse = (response: any) => {
                          analysisResult.approvalStatus.toLowerCase() === 'approved');
         
         // Handle enhanced engagement potential (can be string or object)
-        let engagementPotential = analysisResult.engagementPotential || 'moderate';
+        const engagementPotential = analysisResult.engagementPotential || 'moderate';
         
         // Structure the response in the expected format
         return {

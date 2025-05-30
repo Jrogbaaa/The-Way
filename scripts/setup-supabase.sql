@@ -19,8 +19,10 @@ CREATE TABLE IF NOT EXISTS trained_models (
   category TEXT,
   is_public BOOLEAN DEFAULT FALSE,
   replicate_id TEXT,
+  replicate_training_id TEXT,
   last_used TIMESTAMP WITH TIME ZONE,
-  thumbnail_url TEXT
+  thumbnail_url TEXT,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create indexes

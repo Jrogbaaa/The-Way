@@ -41,6 +41,32 @@ const getCookieDomain = () => {
   return hostname;
 };
 
+// Helper to detect Firefox and apply compatible settings
+const getFirefoxCompatibleSettings = () => {
+  if (!isBrowser()) return {};
+  
+  const isFirefox = navigator.userAgent.includes('Firefox');
+  if (!isFirefox) return {};
+  
+  console.log('🦊 Firefox detected - applying compatible settings');
+  
+  return {
+    cookieSettings: {
+      sameSite: 'lax' as const,
+      secure: window.location.protocol === 'https:',
+      // Don't set domain for localhost in Firefox
+      domain: isLocalDevelopment() ? undefined : getCookieDomain()
+    },
+    authSettings: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce' as const,
+      storageKey: 'the-way-auth'
+    }
+  };
+};
+
 // Initialize client
 function initializeClient() {
   if (!isBrowser()) return null;
@@ -58,8 +84,10 @@ function initializeClient() {
       // Set up proper cookie options based on environment
       const hostname = window.location.hostname;
       const isVercel = hostname.includes('.vercel.app');
+      const isFirefox = navigator.userAgent.includes('Firefox');
+      const firefoxSettings = getFirefoxCompatibleSettings();
       
-      const cookieOptions = {
+      const cookieOptions = firefoxSettings.cookieSettings || {
         domain: getCookieDomain(),
         path: '/',
         sameSite: 'lax' as const,
@@ -67,11 +95,21 @@ function initializeClient() {
         maxAge: 30 * 24 * 60 * 60 // 30 days
       };
       
+      const authOptions = firefoxSettings.authSettings || {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce' as const, // Explicit PKCE for OAuth security
+        storageKey: 'the-way-auth', // Custom storage key to avoid conflicts
+      };
+      
       // Log cookie settings for debugging
       console.log('Cookie options:', JSON.stringify(cookieOptions, null, 2));
+      console.log('Auth options:', JSON.stringify(authOptions, null, 2));
       console.log('Environment details:', {
         hostname,
         isVercel,
+        isFirefox,
         protocol: window.location.protocol
       });
       
@@ -80,13 +118,7 @@ function initializeClient() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         {
           cookieOptions,
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true,
-            flowType: 'pkce', // Explicit PKCE for OAuth security
-            storageKey: 'the-way-auth', // Custom storage key to avoid conflicts
-          }
+          auth: authOptions
         }
       );
       

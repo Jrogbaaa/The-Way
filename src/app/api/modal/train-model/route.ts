@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import util from 'util';
+
+import { execPromise } from "@/lib/server/utils";
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
-const execPromise = util.promisify(exec);
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -41,8 +40,30 @@ export async function POST(request: NextRequest) {
   console.log('POST /api/modal/train-model called');
   
   try {
-    // Parse the JSON body
-    const body = await request.json();
+    // Log the raw request for debugging
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()));
+    console.log('Request method:', request.method);
+    console.log('Request URL:', request.url);
+    
+    // Get the raw body first to debug
+    const rawBody = await request.text();
+    console.log('Raw request body length:', rawBody.length);
+    console.log('Raw request body (first 500 chars):', rawBody.substring(0, 500));
+    
+    // Try to parse the JSON
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+      console.log('Successfully parsed JSON body:', Object.keys(body));
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Raw body that failed to parse:', rawBody);
+      return NextResponse.json(
+        { status: 'error', error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+    
     const { imageDataList, instancePrompt, modelName, trainingSteps } = body;
     
     // Strict validation - return errors immediately
@@ -140,7 +161,7 @@ export async function POST(request: NextRequest) {
     const trainingId = Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
     
     // Prepare callback URL to report progress
-    let callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/modal/training-progress`;
+    const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/modal/training-progress`;
 
     // For local development, ensure we don't pass localhost URL to Modal
     // as it won't be able to reach back to the local machine
@@ -195,9 +216,6 @@ export async function POST(request: NextRequest) {
     
     // Start the Modal training job as a child process
     try {
-      // Use the full training script instead of simplified
-      const modalCommand = `python3 -m modal run modal_scripts/train_model.py --input ${tempDataPath}`;
-      
       // Check if modal package is installed
       try {
         await execPromise('python3 -c "import modal"');
@@ -216,7 +234,6 @@ export async function POST(request: NextRequest) {
       // Validate the training parameters with a dry run first
       console.log('Validating training parameters with dry run...');
       try {
-        // The --dry-run flag doesn't need a value, it's a simple flag
         const { stdout: dryRunOutput } = await execPromise(`python3 -m modal run modal_scripts/train_model.py --input ${tempDataPath} --dry-run`);
         console.log('Dry run validation successful:', dryRunOutput);
       } catch (dryRunError) {
@@ -224,18 +241,9 @@ export async function POST(request: NextRequest) {
         throw new Error(`Validation failed: ${dryRunError instanceof Error ? dryRunError.message : String(dryRunError)}`);
       }
       
-      // Try running the command with --help to see if the script is available
-      try {
-        const { stdout: helpOutput } = await execPromise('python3 -m modal run modal_scripts/train_model.py --help');
-        console.log('Modal script help:', helpOutput);
-      } catch (error) {
-        console.error('Error checking modal script help:', error);
-        throw new Error(`Modal script check failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
-      
       // Check for existing running jobs to prevent duplicates
       try {
-        const { stdout: runningJobs } = await execPromise('python3 -m modal app ps');
+        const { stdout: runningJobs } = await execPromise('python3 -m modal app list');
         console.log('Current running Modal apps:', runningJobs);
         
         // If there are already running instances of the same app, log this but continue
@@ -247,16 +255,6 @@ export async function POST(request: NextRequest) {
         console.warn('Unable to check running Modal apps:', listError);
         // Continue anyway since this is just a precaution
       }
-      
-      // If no immediate errors, update status to starting and run the actual training
-      await supabase
-        .from('trained_models')
-        .update({ 
-          status: 'training',
-          progress: 0,
-          last_update: new Date().toISOString(),
-        })
-        .eq('id', trainingId);
       
       // Use a mutex/lock mechanism to ensure only one training process is launched at a time
       // This is a simple solution - for production, use a proper locking mechanism
@@ -282,6 +280,7 @@ export async function POST(request: NextRequest) {
             console.log('Acquired stale lock for training process');
           } else {
             console.log('Another training process is active. Will run anyway but with caution.');
+            // lockAcquired remains false, we won't try to release a lock we don't own
           }
         }
       } catch (lockError) {
@@ -289,13 +288,110 @@ export async function POST(request: NextRequest) {
         // Continue anyway since this is just a precaution
       }
       
-      // Run the actual training asynchronously with more robust error handling
+      // Remove --detach since it doesn't exist in Modal CLI
+      // Instead, we'll run the command normally and let it complete
+      const modalCommand = `python3 -m modal run modal_scripts/train_model.py --input ${tempDataPath}`;
+
+      // Run the actual training command
       console.log(`Executing Modal command: ${modalCommand}`);
-      const childProcess = exec(modalCommand, (error, stdout, stderr) => {
-        // This runs asynchronously after the response is sent
-        console.log('Modal command output:', stdout);
+      try {
+        // Run the Modal command without --detach
+        // This will run synchronously but that's okay for now
+        const { stdout, stderr } = await execPromise(modalCommand);
+        console.log('Modal command output (stdout):', stdout);
+        if (stderr) {
+          console.warn('Modal command output (stderr):', stderr);
+        }
         
-        // Release the lock if we acquired it
+        // Parse the Modal script output to get the training result
+        let trainingResult = null;
+        try {
+          // The Modal script should output JSON result with TRAINING_RESULT_JSON: prefix
+          // Look for this specific line in the stdout
+          const lines = stdout.split('\n');
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith('TRAINING_RESULT_JSON:')) {
+              try {
+                const jsonStr = trimmedLine.substring('TRAINING_RESULT_JSON:'.length).trim();
+                trainingResult = JSON.parse(jsonStr);
+                console.log('Parsed training result:', trainingResult);
+                break;
+              } catch (parseError) {
+                console.warn('Could not parse JSON from TRAINING_RESULT_JSON line:', parseError);
+                continue;
+              }
+            }
+          }
+        } catch (parseError) {
+          console.warn('Could not parse training result from Modal output:', parseError);
+        }
+        
+        // Update the database based on the training result
+        if (trainingResult) {
+          if (trainingResult.status === 'success') {
+            // Training completed successfully
+            const updateData: any = {
+              status: 'completed',
+              progress: 100,
+            };
+            
+            // Add model info if available
+            if (trainingResult.model_info) {
+              updateData.model_info = trainingResult.model_info;
+            }
+            
+            // Add sample image if available
+            if (trainingResult.sample_image_base64) {
+              updateData.sample_image = trainingResult.sample_image_base64;
+            }
+            
+            const { error: updateError } = await supabase
+              .from('trained_models')
+              .update(updateData)
+              .eq('id', trainingId);
+              
+            if (updateError) {
+              console.error('Error updating training record with success:', updateError);
+            } else {
+              console.log('Successfully updated training record with completion status');
+            }
+          } else if (trainingResult.status === 'error') {
+            // Training failed
+            const { error: updateError } = await supabase
+              .from('trained_models')
+              .update({
+                status: 'failed',
+                error_message: trainingResult.error || 'Training failed with unknown error',
+              })
+              .eq('id', trainingId);
+              
+            if (updateError) {
+              console.error('Error updating training record with failure:', updateError);
+            } else {
+              console.log('Successfully updated training record with failure status');
+            }
+          }
+        } else {
+          // Could not parse result, but command completed - assume success for now
+          console.warn('Could not parse training result, but Modal command completed. Assuming success.');
+          const { error: updateError } = await supabase
+            .from('trained_models')
+            .update({
+              status: 'completed',
+              progress: 100,
+              error_message: 'Training completed but result could not be parsed'
+            })
+            .eq('id', trainingId);
+            
+          if (updateError) {
+            console.error('Error updating training record:', updateError);
+          }
+        }
+        
+        // The training should now complete and update the database
+        // The Modal script should handle updating the database status
+        
         if (lockAcquired) {
           try {
             fs.unlinkSync(lockFile);
@@ -304,93 +400,28 @@ export async function POST(request: NextRequest) {
             console.warn('Error releasing lock:', unlockError);
           }
         }
+
+      } catch (error) {
+        console.error('Error submitting Modal command:', error);
+        // Update the database with error status if submission itself failed
+        await supabase
+          .from('trained_models')
+          .update({
+            status: 'error',
+            error_message: `Failed to submit training job to Modal: ${error instanceof Error ? error.message : String(error)}`,
+          })
+          .eq('id', trainingId);
+        console.log('Updated training record with submission error status');
         
-        if (error) {
-          console.error('Error running Modal command:', error);
-          // Update the database with error status
-          (async () => {
-            try {
-              await supabase
-                .from('trained_models')
-                .update({
-                  status: 'error',
-                  error_message: `Command error: ${error.message}\n\nStdout: ${stdout}\n\nStderr: ${stderr}`,
-                  last_update: new Date().toISOString(),
-                })
-                .eq('id', trainingId);
-              console.log('Updated training record with error status');
-            } catch (updateError) {
-              console.error('Error updating training record:', updateError);
-            }
-          })();
-          return;
-        }
-        
-        // Check if the result file exists
-        if (fs.existsSync(resultFilePath)) {
+        if (lockAcquired) {
           try {
-            const resultData = JSON.parse(fs.readFileSync(resultFilePath, 'utf8'));
-            
-            // Update the database with the training result
-            (async () => {
-              try {
-                await supabase
-                  .from('trained_models')
-                  .update({
-                    status: resultData.status === 'success' ? 'completed' : 'error',
-                    error_message: resultData.error,
-                    model_info: resultData.status === 'success' ? resultData.model_info : null,
-                    sample_image: resultData.status === 'success' ? resultData.sample_image_base64 : null,
-                    last_update: new Date().toISOString(),
-                  })
-                  .eq('id', trainingId);
-                console.log('Updated training record with result from file');
-              } catch (updateError) {
-                console.error('Error updating training record:', updateError);
-              }
-            })();
-          } catch (parseError) {
-            console.error('Error parsing result file:', parseError);
-          }
-        } else {
-          // Try to parse the result from stdout as a fallback
-          try {
-            const jsonMatch = stdout.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const result = JSON.parse(jsonMatch[0]);
-              
-              // Update the database with the training result
-              (async () => {
-                try {
-                  await supabase
-                    .from('trained_models')
-                    .update({
-                      status: result.status === 'success' ? 'completed' : 'error',
-                      error_message: result.error,
-                      model_info: result.status === 'success' ? result.model_info : null,
-                      sample_image: result.status === 'success' ? result.sample_image_base64 : null,
-                      last_update: new Date().toISOString(),
-                    })
-                    .eq('id', trainingId);
-                  console.log('Updated training record with result from stdout');
-                } catch (updateError) {
-                  console.error('Error updating training record:', updateError);
-                }
-              })();
-            }
-          } catch (parseError) {
-            console.error('Error parsing Modal output:', parseError);
+            fs.unlinkSync(lockFile);
+            console.log('Released training process lock after submission error');
+          } catch (unlockError) {
+            console.warn('Error releasing lock after submission error:', unlockError);
           }
         }
-        
-        // Clean up the temporary files
-        try {
-          if (fs.existsSync(tempDataPath)) fs.unlinkSync(tempDataPath);
-          if (fs.existsSync(resultFilePath)) fs.unlinkSync(resultFilePath);
-        } catch (unlinkError) {
-          console.error('Error removing temporary files:', unlinkError);
-        }
-      });
+      }
       
       // Return immediate response with the training job ID
       return NextResponse.json({

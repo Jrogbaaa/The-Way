@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { exec } from 'child_process';
+import { execPromise } from '@/lib/server/utils';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -17,7 +17,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const id = params.id;
+    const id = await Promise.resolve(params.id);
     
     console.log(`Attempting to cancel training for ID: ${id}`);
     
@@ -49,7 +49,7 @@ export async function POST(
     try {
       // This is an optional step, as Modal doesn't directly expose a way to cancel a job from outside
       // We're just trying to stop the Modal process if it's running locally
-      exec('python3 -m modal app stop custom-image-model-trainer');
+      await execPromise('python3 -m modal app stop custom-image-model-trainer');
     } catch (modalError) {
       console.warn('Unable to stop Modal app, will proceed with database update anyway:', modalError);
     }
@@ -60,7 +60,6 @@ export async function POST(
       .update({
         status: 'cancelled',
         error_message: 'Training cancelled by user',
-        last_update: new Date().toISOString(),
       })
       .eq('id', id);
     

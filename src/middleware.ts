@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { ROUTES } from '@/lib/config';
 import { auth } from "./auth";
 
 export default auth((req) => {
@@ -20,7 +19,9 @@ export default auth((req) => {
   const publicApiRoutes = [
     "/api/analyze-social-post",
     "/api/replicate",
-    "/api/image"
+    "/api/image",
+    "/api/upload/training-images",
+    "/api/training/prepare"
   ];
   
   // Check if the current API route is public

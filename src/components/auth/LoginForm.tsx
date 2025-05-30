@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +30,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +55,10 @@ export function LoginForm() {
         callbackUrl,
       });
 
-      if (!result?.ok) {
+      if (result?.ok) {
+        // Login successful - redirect to callback URL
+        router.push(callbackUrl);
+      } else {
         setError(result?.error || "Something went wrong. Please try again.");
       }
     } catch (error) {

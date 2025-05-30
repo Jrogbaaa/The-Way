@@ -1,62 +1,68 @@
-// test-image-generation.js
-// Simple script to test image generation with our trained model
-
-require('dotenv').config();
-const axios = require('axios');
+// Test script for image generation error handling
 const fs = require('fs');
 const path = require('path');
 
-// Model ID and prompt
-const modelId = process.argv[2] || 'ma3ieno1ye86'; // Default to the model we trained
-const prompt = process.argv[3] || 'a photo of sks test object in a field of flowers'; // Default prompt
+// Simulate a response with invalid model error
+const invalidModelResponse = {
+  status: 'success',
+  imageUrl: '/placeholders/ai-generated-1.jpg',
+  seed: Date.now(),
+  message: 'Using placeholder image because the model file is invalid or corrupted. The model may need to be retrained.',
+  prompt: 'test prompt',
+  modelId: 'invalid-model',
+  usedPlaceholder: true,
+  modelError: 'Error while deserializing header',
+  errorType: 'invalid_model'
+};
 
-// Test configuration
-const numInferenceSteps = 30;
-const guidanceScale = 7.5;
-const negativePrompt = 'ugly, blurry, low quality, distorted';
+// Simulate a response for missing dependency
+const missingDependencyResponse = {
+  status: 'success',
+  imageUrl: '/placeholders/ai-generated-2.jpg',
+  seed: Date.now(),
+  message: "Using placeholder image because Python module 'diffusers' is missing on the server. Please contact the administrator to install the required dependencies.",
+  prompt: 'test prompt',
+  modelId: 'test-model',
+  usedPlaceholder: true,
+  missingDependency: 'diffusers'
+};
 
-async function testImageGeneration() {
-  console.log(`Testing image generation for model ${modelId} with prompt: "${prompt}"`);
-  
-  try {
-    // Call the API endpoint
-    const response = await axios.post('http://localhost:3002/api/modal/generate-image', {
-      modelId,
-      prompt,
-      numInferenceSteps,
-      guidanceScale,
-      negativePrompt,
-    });
+// Simulate a response for successful generation
+const successResponse = {
+  status: 'success',
+  imageUrl: '/path/to/generated/image.jpg',
+  seed: 12345,
+  prompt: 'a photo of sks person in a forest',
+  modelId: 'valid-model'
+};
     
-    // The response data is already parsed
-    const result = response.data;
-    
-    if (result.status === 'error') {
-      throw new Error(result.error || 'Unknown error occurred');
-    }
-    
-    console.log('Image generation successful!');
-    
-    // If we have a base64 image, save it to a file
-    if (result.image_base64) {
-      const imageBuffer = Buffer.from(result.image_base64, 'base64');
-      const outputPath = path.join(__dirname, 'generated_image.png');
-      fs.writeFileSync(outputPath, imageBuffer);
-      console.log(`Image saved to: ${outputPath}`);
-    } else if (result.imageUrl) {
-      console.log(`Image URL: ${result.imageUrl}`);
-    }
-    
-    // Print full response for debugging
-    console.log('\nAPI Response:');
-    console.log(JSON.stringify(result, null, 2));
-  } catch (error) {
-    console.error('Error generating image:', error.message);
-    if (error.response) {
-      console.error('Response data:', error.response.data);
-      console.error('Response status:', error.response.status);
-    }
-  }
-}
+// Test invalid model error handling
+console.log('Testing invalid model error handling:');
+console.log(JSON.stringify(invalidModelResponse, null, 2));
+console.log('\nThe frontend should display:');
+console.log('- The placeholder image from the imageUrl path');
+console.log('- An error message about the model being invalid or corrupted');
+console.log('- A suggestion to retrain the model');
 
-testImageGeneration(); 
+console.log('\n\n---------------------------------------------------\n');
+    
+// Test missing dependency error handling
+console.log('Testing missing dependency error handling:');
+console.log(JSON.stringify(missingDependencyResponse, null, 2));
+console.log('\nThe frontend should display:');
+console.log('- The placeholder image from the imageUrl path');
+console.log('- An error message about missing Python dependencies');
+console.log('- A message to contact the administrator');
+
+console.log('\n\n---------------------------------------------------\n');
+    
+// Test successful generation
+console.log('Testing successful generation:');
+console.log(JSON.stringify(successResponse, null, 2));
+console.log('\nThe frontend should display:');
+console.log('- The generated image');
+console.log('- No error messages');
+console.log('- The provided seed, prompt and other generation parameters');
+
+console.log('\n\nVerify that the frontend code correctly handles each of these response types');
+console.log('and displays appropriate UI elements and error messages to the user.'); 

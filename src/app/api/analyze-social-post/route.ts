@@ -382,7 +382,7 @@ function getCategoryAndTips(caption: string): { category: string; tips: string[]
         tips = categoryData[category] ? [...categoryData[category]] : [...categoryData['General']];
     }
     
-    let generalTips = [...categoryData['General']];
+    const generalTips = [...categoryData['General']];
     // Ensure we always have exactly 3 tips
     while (tips.length < 3 && generalTips.length > 0) {
         const fallbackTip = generalTips.shift(); 
