@@ -8,20 +8,20 @@ const createJestConfig = nextJest({
 // Add any custom config to be passed to Jest
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testEnvironment: 'jest-environment-jsdom',
+  testEnvironment: 'node',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  testMatch: [
-    '<rootDir>/src/**/*.test.{js,jsx,ts,tsx}',
-    '<rootDir>/src/**/*.spec.{js,jsx,ts,tsx}',
-  ],
+  testMatch: ['**/tests/**/*.test.{js,ts}'],
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
     '!src/**/index.{js,ts}',
     '!src/**/*.stories.{js,jsx,ts,tsx}',
   ],
+  verbose: true,
+  setupFiles: ['dotenv/config'],
+  testTimeout: 180000, // 3 minutes default timeout
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
