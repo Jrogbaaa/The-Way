@@ -103,9 +103,12 @@ export function WelcomeModal() {
                 asChild 
                 size="sm"
                 className="w-full mt-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white transition-all duration-300 shadow hover:shadow-md group-hover:opacity-95"
-                onClick={handleClose}
               >
-                <Link href={feature.link} className="flex items-center justify-center whitespace-nowrap w-full">
+                <Link 
+                  href={feature.link} 
+                  className="flex items-center justify-center whitespace-nowrap w-full"
+                  onClick={handleClose}
+                >
                   {feature.cta} <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>

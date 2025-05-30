@@ -61,11 +61,53 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
   // Check if user should see welcome modal
   useEffect(() => {
     if (session?.user && status === 'authenticated') {
-      // You could add logic here to check if this is a new user
-      // For example, check localStorage or a user property from session
+      // Don't show welcome modal if user is in a training flow
+      const tempConfigId = localStorage.getItem('tempConfigId');
+      const pendingTrainingState = localStorage.getItem('pendingTrainingState');
       const hasOnboarded = localStorage.getItem('userOnboarded');
-      if (!hasOnboarded) {
-        setShowWelcomeModal(true);
+      const isTrainingFlow = tempConfigId || pendingTrainingState;
+      
+      console.log('AuthProvider welcome modal check:', {
+        hasOnboarded,
+        isTrainingFlow,
+        tempConfigId,
+        pendingTrainingState,
+        userEmail: session.user.email
+      });
+      
+      // Check if this is a fresh page load vs OAuth redirect
+      // If there's a training session ongoing, don't show welcome modal
+      // Also check if user might have existing models (alternative to localStorage)
+      if (!hasOnboarded && !isTrainingFlow) {
+        console.log('Checking if user has existing models...');
+        // Additional check: see if user has models (indicates they're not new)
+        fetch('/api/modal/user-models', {
+          method: 'GET',
+          credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log('User models check result:', data);
+          if (data.status === 'success' && data.models && data.models.length > 0) {
+            // User has existing models, mark as onboarded and don't show modal
+            localStorage.setItem('userOnboarded', 'true');
+            console.log('User has existing models, skipping welcome modal');
+          } else if (data.debug?.possibleModels && data.debug.possibleModels.length > 0) {
+            // Debug found possible models but they weren't in main query - still mark as onboarded
+            localStorage.setItem('userOnboarded', 'true');
+            console.log('Debug found possible models for user, skipping welcome modal');
+          } else {
+            // User is genuinely new, show welcome modal
+            console.log('User is new, showing welcome modal');
+            setShowWelcomeModal(true);
+          }
+        })
+        .catch(error => {
+          console.warn('Could not check user models, showing welcome modal by default:', error);
+          setShowWelcomeModal(true);
+        });
+      } else {
+        console.log('Skipping welcome modal - user onboarded or in training flow');
       }
     }
   }, [session, status]);
