@@ -43,18 +43,17 @@ const checkModelInVolume = async (modelId: string): Promise<boolean> => {
 
 export async function GET(
   request: NextRequest, 
-  context: { params: { id: string } } // Keep context for Next.js to correctly identify it as a dynamic route
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Alternative way to get the dynamic path parameter `id`
-    const pathnameParts = request.nextUrl.pathname.split('/');
-    const id = pathnameParts[pathnameParts.length - 1];
+    // Wait for params to be resolved
+    const { id } = await params;
     
     if (!id) {
       return createErrorResponse('Missing model ID from path', 400);
     }
     
-    console.log(`Fetching model status for (from pathname): ${id}`);
+    console.log(`Fetching model status for: ${id}`);
     
     // Parse query parameters
     const { searchParams } = new URL(request.url);
