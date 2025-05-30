@@ -7,9 +7,11 @@ const replicate = new Replicate({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const predictionId = params.id; 
+  // Wait for params to be resolved
+  const { id } = await params;
+  const predictionId = id;
 
   if (!predictionId) {
     return NextResponse.json({ error: 'Prediction ID is required' }, { status: 400 });
