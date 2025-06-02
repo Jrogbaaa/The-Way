@@ -67,7 +67,8 @@ export async function GET(request: NextRequest) {
 
 /**
  * API Route: POST /api/models
- * Creates a new Replicate model.
+ * Creates a new Replicate model (general model creation).
+ * Note: For AI training, use /api/replicate/train which follows the base model approach.
  */
 export async function POST(request: NextRequest) {
   if (!isConfigured) {

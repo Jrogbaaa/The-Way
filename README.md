@@ -4,6 +4,21 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Recent Updates (January 2025)
 
+- **Fixed SSR/Prerendering Errors** (Latest): Resolved critical deployment failures affecting Gallery functionality:
+  - **Fixed browser environment checks**: Updated `getSupabaseBrowserClient()` usage in Gallery components to prevent SSR errors
+  - **Conditional client initialization**: Modified `src/app/gallery/page.tsx` and `src/components/gallery/GalleryUpload.tsx` to use state-based Supabase client initialization
+  - **Enhanced useEffect handling**: Added proper browser environment checks (`typeof window !== 'undefined'`) before client initialization
+  - **Improved error handling**: Added null checks to ensure functions wait for Supabase client availability
+  - **Successful Vercel deployment**: Fixed "getSupabaseBrowserClient should only be called in browser environment" build errors
+
+- **Replicate Model Architecture Overhaul** (Latest): Implemented Replicate's recommended base model approach for scalability:
+  - **Base model strategy**: Changed from creating individual models to using model versions of a single base model (`flux-lora-base`)
+  - **Scalability solution**: Addresses Replicate's model creation limits and performance concerns highlighted in customer support feedback
+  - **Version-based training**: Each training now creates a new version (e.g., `v1`, `v2`, `v3`) instead of separate models
+  - **Automatic base model creation**: Added `ensureBaseModelExists()` function to create base model if needed
+  - **Backward compatibility**: Existing trained models continue to work while new trainings use the improved architecture
+  - **Production ready**: Follows Replicate's best practices for unlimited user scaling
+
 - **Enhanced Social Media Trend Extraction** (Latest): Major improvements to the real-time trend discovery system:
   - **Intelligent content filtering**: Enhanced extraction algorithm that filters out URLs, navigation elements, and junk content
   - **Priority-based extraction**: Smart prioritization system that focuses on headlines, statistical content, and meaningful insights
@@ -114,6 +129,9 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
     - Text to Image (via Replicate SDXL, accessible at `/generate/image`)
     - Image to Video (via Replicate Wan 2.1)
   - **Custom Trained Models**:
+    - Uses Replicate's recommended base model architecture (`flux-lora-base`)
+    - Each training creates a new model version instead of individual models
+    - Scalable approach that supports unlimited user training sessions
     - Cristina Model (via Replicate)
     - Jaime Model (via Replicate)
   - Bea Generator Model (via Replicate)
