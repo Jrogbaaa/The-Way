@@ -549,7 +549,7 @@ const ModalModelCreation: React.FC<ModalModelCreationProps> = ({
       setPendingTraining(false);
       setShowAuthPrompt(false);
     }
-  }, [user, loading, pendingTraining, tempConfigId]);
+  }, [pendingTraining, user, loading, tempConfigId]);
 
   const handleComplete = () => {
     if (isCompleted && onModelCreated) {

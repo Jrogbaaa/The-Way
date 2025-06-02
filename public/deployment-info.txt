@@ -1,0 +1,14 @@
+DEPLOYMENT INFO
+================
+
+Last deployment attempt: January 30, 2025 at 12:30 PM EST
+Commit: Fix infinite re-render loop and force deployment
+Version: 0.1.1
+
+Issues resolved:
+- Fixed infinite useEffect loop in ModalModelCreation component
+- Improved user guidance for new users
+- Added training file uploads to gitignore
+- Enhanced error messaging and user experience
+
+This file is updated to trigger Vercel deployments when needed. 
