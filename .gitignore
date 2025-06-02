@@ -13,6 +13,7 @@
 # testing
 /coverage
 /test-results
+/.playwright*
 
 # next.js
 /.next/
@@ -71,7 +72,7 @@ next-env.d.ts
 __pycache__/
 *.py[cod]
 
-# large test files
+# large test files and video artifacts
 *.webm
 *.mp4
 test-results/
@@ -81,3 +82,16 @@ test-results/
 /public/uploads/training/
 /uploads/
 *.zip
+
+# video cache and large media files
+/public/video-cache/
+/public/uploads/
+video-cache/
+uploads/
+
+# Large debug files
+debug-*.png
+debug--*/
+
+# Modal environment
+modal-env/
