@@ -10,9 +10,13 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
   - **Real-time web scraping**: Automated scraping from 5 major social media industry sources (HubSpot, Sprout Social, Social Media Examiner, Instagram Creators Blog, Adweek)
   - **Statistical content emphasis**: Prioritizes trends with percentages, multipliers, and quantifiable data
   - **Improved headline detection**: Advanced markdown parsing to extract article headlines and key insights
-  - **Better contextual summaries**: Enhanced summary generation from surrounding content for each trend
-  - **Manual refresh capability**: One-click trend refresh for real-time industry insights
-  - **Professional source attribution**: Clear source tracking and relevance scoring for all discovered trends
+  - **Enhanced manual refresh**: One-click button to get the latest trends with intelligent duplicate filtering
+  
+- **Critical Upload System Fixes** (January 13, 2025): Resolved major file upload issues affecting model training:
+  - **Fixed infinite re-render loop**: Eliminated performance issues causing repeated authentication effects
+  - **Enhanced file upload handling**: Improved error messages and validation for 50MB+ files
+  - **Vercel deployment optimization**: Extended function timeouts and proper CORS configuration
+  - **Better user feedback**: Specific error messages for common upload scenarios (file size, network, server errors)
 
 - **Enhanced Authentication & Training Flow** (Latest): Major improvements to user authentication and model training workflows:
   - **Fixed React Hook errors**: Resolved useReplicateTraining hook issues by updating toast import from 'react-hot-toast' to 'sonner'
