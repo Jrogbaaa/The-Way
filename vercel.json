@@ -47,9 +47,21 @@
   ],
   "functions": {
     "src/app/api/**/*.ts": {
-      "maxDuration": 60
+      "maxDuration": 30
     },
     "src/app/api/upload/**/*.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/models/train*/**/*.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/model/train/**/*.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/replicate/train/**/*.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/modal/train*/**/*.ts": {
       "maxDuration": 60
     }
   },
