@@ -45,17 +45,27 @@ export const authConfig: NextAuthConfig = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }) {
-      // Add user ID to the JWT token if available
+    async jwt({ token, user, account, profile }) {
+      // Add user ID and image to the JWT token if available
       if (user) {
         token.id = user.id;
+        // Capture the image from user object (NextAuth provides this from OAuth providers)
+        token.picture = user.image || token.picture;
       }
+      
+      // For Google OAuth, also capture from profile if available
+      if (account?.provider === 'google' && profile) {
+        token.picture = profile.picture || token.picture;
+      }
+      
       return token;
     },
     async session({ session, token }) {
-      // Add user ID to the session from the JWT token
+      // Add user ID and image to the session from the JWT token
       if (token && session.user) {
         session.user.id = token.id as string;
+        // Make sure the image is available in the session
+        session.user.image = token.picture as string;
       }
       return session;
     },

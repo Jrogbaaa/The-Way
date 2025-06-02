@@ -35,10 +35,15 @@ const Navbar = () => {
   const isInteriorPage = pathname !== ROUTES.home;
 
   // Initialize avatar and display name variables for easier access
-  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || null;
+  const avatarUrl = user?.image || 
+                   profile?.avatar_url || 
+                   user?.user_metadata?.avatar_url || 
+                   user?.user_metadata?.picture ||
+                   null;
   const displayName = profile?.display_name || 
                      user?.user_metadata?.name || 
                      user?.user_metadata?.full_name || 
+                     user?.name ||
                      user?.email?.split('@')[0] ||
                      'User';
                      
