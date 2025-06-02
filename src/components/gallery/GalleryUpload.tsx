@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, Upload, Check, X, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,17 @@ const GalleryUpload: React.FC<GalleryUploadProps> = ({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
-  const supabase = getSupabaseBrowserClient();
+  
+  // Initialize Supabase client conditionally to avoid SSR issues
+  const [supabase, setSupabase] = useState<any>(null);
+
+  // Initialize Supabase client only in browser environment
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const client = getSupabaseBrowserClient();
+      setSupabase(client);
+    }
+  }, []);
 
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
 

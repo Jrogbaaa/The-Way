@@ -259,11 +259,21 @@ const verifyBucket = async (supabase: any, bucketName: string): Promise<boolean>
 export default function GalleryPage() {
   const { user, loading, session } = useAuth();
   const router = useRouter();
-  const supabase = getSupabaseBrowserClient();
+  
+  // Instead of initializing at component level, we'll initialize conditionally in useEffect
+  const [supabase, setSupabase] = useState<any>(null);
+
+  // Initialize Supabase client only in browser environment
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const client = getSupabaseBrowserClient();
+      setSupabase(client);
+    }
+  }, []);
 
   // Debug Auth State
   useEffect(() => {
-    if (!loading) {
+    if (!loading && supabase) {
       console.log('GalleryPage: Auth state check:');
       console.log('- User:', user ? `ID: ${user.id}, Email: ${user.email}` : 'No user');
       console.log('- Session:', session ? 'Available' : 'No session');
@@ -324,6 +334,13 @@ export default function GalleryPage() {
     setItems([]);
 
     console.log(`GalleryPage: Fetching item list for prefix: "${pathPrefix}"`);
+
+    // Check if Supabase client is available
+    if (!supabase) {
+      console.error('GalleryPage: Supabase client not initialized');
+      setIsLoadingItems(false);
+      return null;
+    }
 
     // Check if we have a user from auth context
     if (!user) {
@@ -525,17 +542,18 @@ export default function GalleryPage() {
     }
   }, [user, router, session, supabase]);
 
+  // Fetch items when component mounts or path changes
   useEffect(() => {
-    if (!loading) {
+    if (!loading && supabase) {
       if (!user || !session) {
         console.log("No user/session found after auth check, redirecting to login.");
         router.push(ROUTES.login);
       } else {
-        console.log("User authenticated, fetching initial items for prefix:", currentPathPrefix);
+        console.log("User authenticated and Supabase client ready, fetching initial items for prefix:", currentPathPrefix);
         fetchItems(currentPathPrefix);
       }
     }
-  }, [user, loading, session, router, fetchItems, currentPathPrefix]);
+  }, [user, loading, session, router, fetchItems, currentPathPrefix, supabase]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -990,7 +1008,11 @@ export default function GalleryPage() {
 
     try {
       // Get a fresh Supabase client to ensure we have the latest session
-      const freshSupabase = getSupabaseBrowserClient();
+      const freshSupabase = supabase;
+      
+      if (!freshSupabase) {
+        throw new Error('Supabase client not initialized');
+      }
       
       // Try using a server API endpoint to bypass client-side auth/CORS issues
       if (itemType === 'file') {
