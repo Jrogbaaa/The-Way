@@ -153,3 +153,54 @@ REPLICATE_WEBHOOK_URL=https://your-domain.com/api/webhook/replicate
 ```
 
 The system will use fallback tokens in development, but a valid token is required for production. 
+
+## Model Training Architecture
+
+### Base Model Approach (Recommended by Replicate)
+
+Following Replicate's customer support guidance, our application uses a **base model approach** instead of creating individual models for each training session. This approach:
+
+1. **Avoids Model Limits**: Replicate has strict limits on the number of models you can create
+2. **Improves Performance**: Using versions of a base model is more efficient than creating many individual models
+3. **Scales Better**: Allows unlimited users to train models without hitting platform limits
+
+### How It Works
+
+#### FLUX LoRA Training
+- **Base Model**: `{username}/flux-lora-base`
+- **Training Output**: Creates new versions of the base model (e.g., `v1`, `v2`, `v3`)
+- **Each User Training**: Results in a new version, not a new model
+
+#### SDXL Training  
+- **Base Model**: `{username}/sdxl-base`
+- **Training Output**: Creates new versions of the base model
+- **Each User Training**: Results in a new version, not a new model
+
+### Migration from Individual Models
+
+If you previously had individual models created (like `test-ikeljjw`, `eqd-uhcda0hr`, etc.), these were the old approach. The new implementation:
+
+1. **Creates base models automatically** when first training starts
+2. **Uses model versions** for each subsequent training
+3. **Maintains backward compatibility** - existing trained models continue to work
+
+### Usage in Code
+
+When training completes, you'll get model URLs like:
+```
+{username}/flux-lora-base:abc123def456  // Version ID after colon
+{username}/sdxl-base:xyz789uvw012       // Version ID after colon
+```
+
+### Environment Variables
+
+Ensure you have set:
+```bash
+REPLICATE_USERNAME=your-replicate-username
+```
+
+This username will be used for the base models.
+
+## Previous Model Training Documentation
+
+// ... existing code ... 

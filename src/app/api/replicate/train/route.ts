@@ -28,21 +28,40 @@ if (!REPLICATE_USERNAME) {
   console.error('REPLICATE_USERNAME environment variable is not set');
 }
 
+// Base model name that all trainings will use as versions
+const BASE_MODEL_NAME = "flux-lora-base";
+
 /**
- * Sanitize model name for Replicate (lowercase, no spaces, etc.)
+ * Ensure the base model exists, create it if it doesn't
  */
-function sanitizeModelName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .substring(0, 40); // Replicate has a limit on model name length
+async function ensureBaseModelExists(): Promise<void> {
+  if (!REPLICATE_USERNAME) {
+    throw new Error('REPLICATE_USERNAME not configured');
+  }
+
+  try {
+    // Try to get the base model first
+    await replicate.models.get(REPLICATE_USERNAME, BASE_MODEL_NAME);
+    console.log('Base model already exists');
+  } catch (error: any) {
+    if (error.status === 404) {
+      // Model doesn't exist, create it
+      console.log('Creating base model for all trainings...');
+      await replicate.models.create(REPLICATE_USERNAME, BASE_MODEL_NAME, {
+        visibility: "private",
+        hardware: "gpu-t4",
+        description: "Base model for FLUX LoRA fine-tuning. Each training creates a new version of this model."
+      });
+      console.log('Base model created successfully');
+    } else {
+      throw error;
+    }
+  }
 }
 
 /**
  * POST /api/replicate/train
- * Creates a new model training using Replicate's recommended approach
+ * Creates a new model version using Replicate's recommended approach
  */
 export async function POST(request: NextRequest) {
   console.log('POST /api/replicate/train called');
@@ -104,9 +123,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique training ID and model name
+    // Generate unique training ID
     const trainingId = nanoid();
-    const sanitizedModelName = sanitizeModelName(`${modelName}-${trainingId.slice(-8)}`);
     
     console.log(`Starting Replicate training for user ${session.user.id}, model: ${modelName}`);
 
@@ -117,6 +135,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Ensure base model exists
+    await ensureBaseModelExists();
 
     // Insert training record into database BEFORE starting training
     const { error: insertError } = await supabase
@@ -132,8 +153,8 @@ export async function POST(request: NextRequest) {
           triggerWord,
           trainingImagesZipUrl,
           originalModelName: modelName,
-          sanitizedModelName: sanitizedModelName,
-          replicateModelName: `${REPLICATE_USERNAME}/${sanitizedModelName}`,
+          baseModelName: BASE_MODEL_NAME,
+          replicateModelName: `${REPLICATE_USERNAME}/${BASE_MODEL_NAME}`,
           // Store if this came from temporary storage
           fromTempConfig: !!tempId
         }
@@ -159,27 +180,9 @@ export async function POST(request: NextRequest) {
     
     console.log(`Using trainer version: ${latestVersion.id}`);
     
-    // Create individual model for this training
-    console.log(`Creating individual model: ${REPLICATE_USERNAME}/${sanitizedModelName}`);
-    try {
-      await replicate.models.create(REPLICATE_USERNAME, sanitizedModelName, {
-        visibility: "private",
-        hardware: "gpu-t4",
-        description: `Custom model: ${modelName} (${instancePrompt})`
-      });
-      console.log('Individual model created successfully');
-    } catch (error: any) {
-      if (error.status === 422) {
-        console.log('Model might already exist, proceeding with training...');
-      } else {
-        console.error('Error creating model:', error);
-        throw new Error(`Failed to create model: ${error.message}`);
-      }
-    }
-    
-    // Create training with individual destination model
+    // Create training with base model as destination (creates new version)
     const trainingInput: any = {
-      destination: `${REPLICATE_USERNAME}/${sanitizedModelName}`, // Individual model for this training
+      destination: `${REPLICATE_USERNAME}/${BASE_MODEL_NAME}`, // Use base model - this creates a new version
       input: {
         input_images: trainingImagesZipUrl,
         trigger_word: triggerWord,
@@ -210,6 +213,7 @@ export async function POST(request: NextRequest) {
     );
 
     console.log('Training started:', training.id);
+    console.log('This will create a new version of the base model instead of a new individual model');
 
     // Update database with Replicate training ID
     const { error: updateError } = await supabase
@@ -228,9 +232,10 @@ export async function POST(request: NextRequest) {
       success: true,
       trainingId,
       replicateTrainingId: training.id,
-      modelName: `${REPLICATE_USERNAME}/${sanitizedModelName}`,
+      modelName: `${REPLICATE_USERNAME}/${BASE_MODEL_NAME}`,
+      baseModel: true, // Indicate this uses the base model approach
       status: training.status,
-      message: 'Training started successfully'
+      message: 'Training started successfully - this will create a new version of the base model'
     });
 
   } catch (error: any) {

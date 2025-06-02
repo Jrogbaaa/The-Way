@@ -24,11 +24,39 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Stable Portrait fine-tuning model
 const TRAINER_MODEL = "stability-ai/sdxl-finetuner";
-// Version is now optional according to Replicate's updated API
+
+// Base model configuration to avoid creating many individual models
+const REPLICATE_USERNAME = process.env.REPLICATE_USERNAME || 'defaultuser';
+const BASE_MODEL_NAME = "sdxl-base";
+
+/**
+ * Ensure the base model exists for SDXL training, create it if it doesn't
+ */
+async function ensureSDXLBaseModelExists(): Promise<void> {
+  try {
+    // Try to get the base model first
+    await replicate.models.get(REPLICATE_USERNAME, BASE_MODEL_NAME);
+    console.log('SDXL base model already exists');
+  } catch (error: any) {
+    if (error.status === 404) {
+      // Model doesn't exist, create it
+      console.log('Creating SDXL base model for all trainings...');
+      await replicate.models.create(REPLICATE_USERNAME, BASE_MODEL_NAME, {
+        visibility: "private",
+        hardware: "gpu-t4",
+        description: "Base model for SDXL fine-tuning. Each training creates a new version of this model."
+      });
+      console.log('SDXL base model created successfully');
+    } else {
+      throw error;
+    }
+  }
+}
 
 /**
  * Process and start model training with Replicate SDXL fine-tuner
  * Handles multipart form data with training images or a zip file
+ * Uses a base model approach to avoid hitting Replicate's model limits
  */
 export async function POST(request: NextRequest) {
   console.log('POST /api/models/train called');
@@ -65,9 +93,12 @@ export async function POST(request: NextRequest) {
     const dbModelId = nanoid(); 
     console.log(`Generated DB Model ID: ${dbModelId}`);
 
-    // Destination format: `username/modelname`
-    const destination = `${userId.replace(/\W+/g, '-')}/${modelName.replace(/\W+/g, '-')}`;
-    console.log(`Training destination: ${destination}`);
+    // Ensure base model exists before training
+    await ensureSDXLBaseModelExists();
+
+    // Use base model as destination instead of creating individual models
+    const destination = `${REPLICATE_USERNAME}/${BASE_MODEL_NAME}`;
+    console.log(`Training destination (base model): ${destination}`);
 
     // Insert placeholder into database *before* starting training
     const { error: insertError } = await supabase
@@ -80,7 +111,12 @@ export async function POST(request: NextRequest) {
         version: trainerVersion, // Track trainer version used
         replicate_destination: destination, // Store the target replicate model path
         run_id: null, // Placeholder for Replicate run ID
-        input_data: input, // Store input for reference
+        input_data: {
+          ...input,
+          originalModelName: modelName,
+          baseModelName: BASE_MODEL_NAME,
+          isBaseModelApproach: true
+        }, // Store input for reference
       });
 
     if (insertError) {
@@ -92,14 +128,16 @@ export async function POST(request: NextRequest) {
     }
     console.log(`Initial record inserted into DB for model ID: ${dbModelId}`);
 
-    // Start the training job on Replicate
+    // Start the training job on Replicate using base model approach
     console.log(`Starting Replicate training for ${destination} with version ${trainerVersion}`);
+    console.log('This will create a new version of the base model instead of a new individual model');
+    
     const training = await replicate.trainings.create(
       'replicate', // owner
       'sdxl', // model name (could be dynamic if needed)
       trainerVersion, // specific trainer version
       {
-        destination: destination as `${string}/${string}`, // Required: where the trained model is saved (type assertion)
+        destination: destination as `${string}/${string}`, // Base model destination (creates new version)
         input: input, // Training data and parameters
         webhook: `${webhookUrl}?model_id=${dbModelId}&user_id=${userId}&secret=${process.env.REPLICATE_WEBHOOK_SECRET || ''}`, // Append our internal ID
         webhook_events_filter: ['start', 'output', 'logs', 'completed'] // Specify desired events
@@ -132,21 +170,19 @@ export async function POST(request: NextRequest) {
     console.log(`DB record updated with Replicate Run ID: ${training.id} for model ID: ${dbModelId}`);
 
     // Return the initial training object (including our DB ID)
-    return NextResponse.json({ ...training, dbModelId }, { status: 201 });
+    return NextResponse.json({ 
+      ...training, 
+      dbModelId,
+      baseModel: true,
+      message: 'Training started - this will create a new version of the base model'
+    }, { status: 201 });
 
   } catch (error: any) {
-    console.error('Error in POST /api/models/train:', error);
-    const detail = error.response?.data?.detail || error.message || 'An unknown error occurred';
-    const status = error.response?.status || 500;
-    // Attempt to update status if we have a model ID (might fail if error was before db insertion)
-    const modelIdFromBody = (await request.json()).dbModelId; // Re-parse to get ID if possible
-    if (modelIdFromBody) {
-        await supabase
-            .from('trained_models')
-            .update({ status: 'failed', error_message: detail })
-            .eq('id', modelIdFromBody);
-    }
-    return NextResponse.json({ detail }, { status });
+    console.error('Error starting training:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to start training' },
+      { status: 500 }
+    );
   }
 }
 
