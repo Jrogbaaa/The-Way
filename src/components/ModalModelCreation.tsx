@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { CheckCircle2, AlertTriangle, Loader2, Upload, X, FileIcon, ImageIcon, LogIn, CheckCircle, XCircle } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,12 @@ import { useAuth } from '@/components/AuthProvider';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ReplicateTrainingLive } from '@/components/ReplicateTrainingLive';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 interface ModalModelCreationProps {
   onModelCreated?: (modelInfo: any) => void;
@@ -653,94 +659,94 @@ const ModalModelCreation: React.FC<ModalModelCreationProps> = ({
           </p>
         </div>
 
-        {/* File Upload */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Training Images *
-          </label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*,.zip"
-              onChange={handleFileChange}
-              className="hidden"
-              disabled={isTraining || isUploading}
-            />
-            
-            {uploadedFiles.length === 0 ? (
-              <div>
-                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-lg font-medium mb-2">
-                  Upload Training Images
-                </p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Upload a ZIP file with 10-30 images, or select individual images
-                </p>
-                <Button
+        {/* Training Images Upload Section */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Training Images</h3>
+          
+          {!trainingImagesUrl ? (
+            <div className="border-2 border-dashed border-purple-300 rounded-lg p-8 text-center bg-purple-50">
+              <div className="space-y-3">
+                <div className="w-16 h-16 mx-auto bg-purple-100 rounded-full flex items-center justify-center">
+                  <Upload className="w-8 h-8 text-purple-600" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Upload Training Images</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Upload 10-15 high-quality images of yourself to train your personalized AI model.
+                    {/* Add helpful guidance for new users */}
+                    <br />
+                    <span className="text-purple-600 font-medium">New here?</span> This is perfectly normal - just upload your photos to get started!
+                  </p>
+                  <div className="space-y-2 text-xs text-gray-500">
+                    <p>• Use clear, well-lit photos</p>
+                    <p>• Include variety in poses and expressions</p>
+                    <p>• Avoid sunglasses or heavy filters</p>
+                    <p>• Maximum file size: 50MB per image</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  multiple
+                  accept="image/*,.zip"
+                  className="hidden"
+                  disabled={isUploading}
+                />
+                <button
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isTraining || isUploading}
-                  variant="outline"
+                  disabled={isUploading}
+                  className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isUploading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                       Uploading...
                     </>
                   ) : (
-                    'Select Files'
+                    <>
+                      <Upload className="w-5 h-5 mr-2" />
+                      Choose Files or ZIP
+                    </>
                   )}
-                </Button>
+                </button>
               </div>
-            ) : (
-              <div>
-                <p className="text-sm font-medium mb-3">
-                  {uploadedFiles.length} file(s) uploaded
-                </p>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {uploadedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                      <div className="flex items-center">
-                        {file.type.startsWith('image/') ? (
-                          <ImageIcon className="h-4 w-4 mr-2 text-blue-500" />
-                        ) : (
-                          <FileIcon className="h-4 w-4 mr-2 text-green-500" />
-                        )}
-                        <span className="text-sm truncate max-w-48">
-                          {file.originalName}
-                        </span>
-                        {file.type === 'application/zip' && (
-                          <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                            ZIP
-                          </span>
-                        )}
+            </div>
+          ) : (
+            // Show uploaded files when training images are available
+            <div className="border border-green-300 rounded-lg p-4 bg-green-50">
+              <div className="flex items-center mb-3">
+                <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                <span className="font-medium text-green-800">Training images uploaded successfully!</span>
+              </div>
+              {uploadedFiles.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-sm text-green-700">
+                    {uploadedFiles.length} file(s) ready for training:
+                  </p>
+                  <div className="max-h-24 overflow-y-auto">
+                    {uploadedFiles.map((file, index) => (
+                      <div key={index} className="text-xs text-green-600 truncate">
+                        • {file.name}
                       </div>
-                      <button
-                        onClick={() => removeFile(index)}
-                        disabled={isTraining}
-                        className="p-1 hover:bg-gray-200 rounded"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isTraining || isUploading}
-                  variant="outline"
-                  size="sm"
-                  className="mt-3"
-                >
-                  Add More Files
-                </Button>
-              </div>
-            )}
-          </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Best results: 10-30 high-quality images in a ZIP file. Images should be 1024x1024 or larger.
-          </p>
+              )}
+              <button
+                onClick={() => {
+                  setTrainingImagesUrl('');
+                  setUploadedFiles([]);
+                }}
+                className="mt-3 text-sm text-green-600 hover:text-green-800 underline"
+              >
+                Upload different images
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
