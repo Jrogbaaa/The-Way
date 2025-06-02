@@ -14,6 +14,8 @@ Received: <element(s) not found>
 Call log:
   - expect.toBeDisabled with timeout 5000ms
   - waiting for locator('button:has-text("Generate Image")')
+    3 × locator resolved to <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md hover:ring-2 hover:ring-primary/40 h-10 px-4 py-2 w-full">…</button>
+      - unexpected value "enabled"
 
     at /Users/JackEllis/THE WAY /e2e/complete-user-flow.spec.ts:230:34
 ```
@@ -48,7 +50,7 @@ Call log:
       - /url: /dashboard
       - text: View Trends
       - img
-  - button "Skip for now & Go to Dashboard"
+  - text: Please take a moment to explore your options...
   - button "Close":
     - img
     - text: Close

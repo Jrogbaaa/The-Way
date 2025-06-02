@@ -14,6 +14,8 @@ Received: <element(s) not found>
 Call log:
   - expect.toBeDisabled with timeout 5000ms
   - waiting for locator('button:has-text("Generate Image")')
+    5 × locator resolved to <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md hover:ring-2 hover:ring-primary/40 h-10 px-4 py-2 w-full">…</button>
+      - unexpected value "enabled"
 
     at /Users/JackEllis/THE WAY /e2e/complete-user-flow.spec.ts:230:34
 ```
@@ -48,10 +50,107 @@ Call log:
       - /url: /dashboard
       - text: View Trends
       - img
-  - button "Skip for now & Go to Dashboard"
+  - text: Please take a moment to explore your options...
   - button "Close":
     - img
     - text: Close
+- banner:
+  - link "Go to home page":
+    - /url: /
+    - img
+    - text: optimalpost.ai
+  - navigation:
+    - link "Go to dashboard":
+      - /url: /dashboard
+      - text: A Admin User
+    - button "Sign out":
+      - img
+      - text: Sign Out
+- main:
+  - heading "We know what's best for your social media. We're gonna show you how it's done." [level=1]
+  - paragraph: Our AI-powered platform guides you through content creation, targeting, and distribution in one seamless flow.
+  - button "Try our tools":
+    - text: Create Posts
+    - img
+  - paragraph: No login required • Try instantly
+  - img
+  - text: AI-driven targeting
+  - img
+  - text: Integrated analytics
+  - img
+  - text: Content calendar
+  - img
+  - img
+  - text: AI-Generated
+  - paragraph: Trusted by content creators worldwide
+  - heading "The complete content creation workflow" [level=2]
+  - paragraph: Our streamlined process takes you from idea to publishable content in minutes
+  - img
+  - heading "1. AI-Powered Ideas" [level=3]
+  - paragraph: Tell us your goal and audience, and our AI generates tailored content ideas
+  - button "Try Now"
+  - img
+  - heading "2. Create & Refine" [level=3]
+  - paragraph: Instantly transform ideas into visuals, captions, and engaging content
+  - button "Try Now"
+  - img
+  - heading "3. Target & Optimize" [level=3]
+  - paragraph: Get AI-suggested @mentions and optimize content for maximum engagement
+  - button "Try Now"
+  - heading "Ready to transform your social media content?" [level=2]
+  - paragraph: Join thousands of creators who are saving time and getting better results
+  - button "Try our tools without login": Try Without Login
+  - link "Sign up for a free trial":
+    - /url: /auth/signup
+    - text: Start Free Trial
+  - paragraph: Experience the value first • No login required
+- contentinfo:
+  - img
+  - text: Content AI Agent
+  - paragraph: Empowering content creators with AI-powered tools for better social media content.
+  - heading "Product" [level=3]
+  - list:
+    - listitem:
+      - link "Features":
+        - /url: "#"
+    - listitem:
+      - link "Pricing":
+        - /url: "#"
+    - listitem:
+      - link "Documentation":
+        - /url: "#"
+    - listitem:
+      - link "Roadmap":
+        - /url: "#"
+  - heading "Company" [level=3]
+  - list:
+    - listitem:
+      - link "About":
+        - /url: "#"
+    - listitem:
+      - link "Blog":
+        - /url: "#"
+    - listitem:
+      - link "Careers":
+        - /url: "#"
+    - listitem:
+      - link "Contact":
+        - /url: "#"
+  - heading "Legal" [level=3]
+  - list:
+    - listitem:
+      - link "Privacy":
+        - /url: "#"
+    - listitem:
+      - link "Terms":
+        - /url: "#"
+    - listitem:
+      - link "Cookies":
+        - /url: "#"
+    - listitem:
+      - link "Licenses":
+        - /url: "#"
+  - text: © 2025 Content AI Agent. All rights reserved.
 ```
 
 # Test source

@@ -78,6 +78,8 @@ export default function ImageCreatorPage() {
   const [error, setError] = useState<string | null>(null);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     console.log(`MODELS PAGE Mounted. Loading: ${loading}, User: ${!!user}`);
@@ -426,36 +428,36 @@ export default function ImageCreatorPage() {
         <div className={`container max-w-screen-xl mx-auto px-4 py-8 bg-white rounded-2xl shadow-sm ${animateIn ? 'opacity-100 transition-opacity duration-500' : 'opacity-0'}`}>
           
           {/* Header with title and filters - Reduced bottom margin */}
-          <div className="flex justify-between items-center mb-6 flex-col sm:flex-row gap-6 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-100">
+          <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600" data-testid="page-title">Choose Your Model</h1>
-              <p className="text-gray-600">Create amazing content with our state-of-the-art AI models</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                My Models
+              </h1>
+              <p className="mt-2 text-gray-600 dark:text-gray-400">
+                Manage your trained AI models
+              </p>
             </div>
             
             <div className="flex gap-3">
-              <Button 
-                variant="outline" 
-                className="flex items-center gap-2 bg-white hover:bg-indigo-50 hover:text-indigo-600 transition-colors shadow-sm"
-                onClick={fetchUserModels}
+              {/* Cleanup Button */}
+              <Button
+                onClick={cleanupFailedModels}
+                disabled={isCleaningUp || userModels.length === 0}
+                variant="outline"
+                className="bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
               >
-                <Filter className="h-4 w-4" />
-                Refresh Models
+                {isCleaningUp ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Cleaning...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Cleanup Failed Models
+                  </>
+                )}
               </Button>
-              {user?.email === '11jellis@gmail.com' && (
-                <Button 
-                  variant="outline" 
-                  className="flex items-center gap-2 bg-white hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm"
-                  onClick={cleanupFailedModels}
-                  disabled={isCleaningUp}
-                >
-                  {isCleaningUp ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4" />
-                  )}
-                  {isCleaningUp ? 'Cleaning...' : 'Cleanup Failed Models'}
-                </Button>
-              )}
             </div>
           </div>
           

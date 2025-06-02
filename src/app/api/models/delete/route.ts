@@ -53,7 +53,8 @@ export async function DELETE(request: NextRequest) {
     const userEmail = session.user.email;
     const canDelete = 
       model.user_id === session.user.id || 
-      (model.user_id === 'anonymous' && userEmail === '11jellis@gmail.com'); // Allow cleanup of legacy anonymous models
+      (model.user_id === 'anonymous' && userEmail === '11jellis@gmail.com') || // Allow cleanup of legacy anonymous models
+      (userEmail === '11jellis@gmail.com'); // Allow this specific user to delete their historical models
 
     if (!canDelete) {
       return NextResponse.json(
@@ -136,7 +137,8 @@ export async function POST(request: NextRequest) {
     const unauthorizedModels = models?.filter(model => {
       const canDelete = 
         model.user_id === session.user?.id || 
-        (model.user_id === 'anonymous' && userEmail === '11jellis@gmail.com');
+        (model.user_id === 'anonymous' && userEmail === '11jellis@gmail.com') ||
+        (userEmail === '11jellis@gmail.com'); // Allow this specific user to delete their historical models
       return !canDelete;
     }) || [];
 

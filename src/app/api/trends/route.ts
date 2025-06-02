@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
       
       // Apply limit and sorting
       const { data, error } = await query
-        .order('relevanceScore', { ascending: false })
+        .order('relevance_score', { ascending: false })
         .limit(limit);
         
       if (error) {

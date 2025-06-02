@@ -6,52 +6,142 @@
 # Error details
 
 ```
-Error: page.fill: Test timeout of 30000ms exceeded.
+Error: page.goto: Navigation to "http://localhost:3000/storyboard-creator" is interrupted by another navigation to "http://localhost:3000/"
 Call log:
-  - waiting for locator('textarea[placeholder*="description"]')
+  - navigating to "http://localhost:3000/storyboard-creator", waiting until "load"
 
-    at /Users/JackEllis/THE WAY /e2e/complete-user-flow.spec.ts:139:16
+    at /Users/JackEllis/THE WAY /e2e/complete-user-flow.spec.ts:112:16
 ```
 
 # Page snapshot
 
 ```yaml
-- dialog "Welcome to Your Content AI Agent, Admin User!":
-  - heading "Welcome to Your Content AI Agent, Admin User!" [level=2]
-  - paragraph: "You're all set up! Here's what creators are doing on The Way:"
-  - img
-  - heading "Create Custom Model" [level=3]
-  - paragraph: Create AI-generated images of yourself in various styles and scenarios.
-  - button "Get Started":
-    - link "Get Started":
-      - /url: /models
-      - text: Get Started
-      - img
-  - img
-  - heading "Analyze Your Post" [level=3]
-  - paragraph: Get insights and optimization tips to improve your social media content.
-  - button "Analyze Content":
-    - link "Analyze Content":
-      - /url: /upload-post
-      - text: Analyze Content
-      - img
-  - img
-  - heading "Track Social Trends" [level=3]
-  - paragraph: Monitor what's performing well and stay ahead of trending topics.
-  - button "View Trends":
-    - link "View Trends":
-      - /url: /dashboard
-      - text: View Trends
-      - img
-  - button "Skip for now & Go to Dashboard"
-  - button "Close":
+- banner:
+  - link "Go to home page":
+    - /url: /
     - img
-    - text: Close
+    - text: optimalpost.ai
+  - navigation
+- main:
+  - heading "We know what's best for your social media. We're gonna show you how it's done." [level=1]
+  - paragraph: Our AI-powered platform guides you through content creation, targeting, and distribution in one seamless flow.
+  - button "Try our tools":
+    - text: Create Posts
+    - img
+  - paragraph: No login required • Try instantly
+  - img
+  - text: AI-driven targeting
+  - img
+  - text: Integrated analytics
+  - img
+  - text: Content calendar
+  - img
+  - img
+  - text: AI-Generated
+  - paragraph: Trusted by content creators worldwide
+  - heading "The complete content creation workflow" [level=2]
+  - paragraph: Our streamlined process takes you from idea to publishable content in minutes
+  - img
+  - heading "1. AI-Powered Ideas" [level=3]
+  - paragraph: Tell us your goal and audience, and our AI generates tailored content ideas
+  - button "Try Now"
+  - img
+  - heading "2. Create & Refine" [level=3]
+  - paragraph: Instantly transform ideas into visuals, captions, and engaging content
+  - button "Try Now"
+  - img
+  - heading "3. Target & Optimize" [level=3]
+  - paragraph: Get AI-suggested @mentions and optimize content for maximum engagement
+  - button "Try Now"
+  - heading "Ready to transform your social media content?" [level=2]
+  - paragraph: Join thousands of creators who are saving time and getting better results
+  - button "Try our tools without login": Try Without Login
+  - link "Sign up for a free trial":
+    - /url: /auth/signup
+    - text: Start Free Trial
+  - paragraph: Experience the value first • No login required
+- contentinfo:
+  - img
+  - text: Content AI Agent
+  - paragraph: Empowering content creators with AI-powered tools for better social media content.
+  - heading "Product" [level=3]
+  - list:
+    - listitem:
+      - link "Features":
+        - /url: "#"
+    - listitem:
+      - link "Pricing":
+        - /url: "#"
+    - listitem:
+      - link "Documentation":
+        - /url: "#"
+    - listitem:
+      - link "Roadmap":
+        - /url: "#"
+  - heading "Company" [level=3]
+  - list:
+    - listitem:
+      - link "About":
+        - /url: "#"
+    - listitem:
+      - link "Blog":
+        - /url: "#"
+    - listitem:
+      - link "Careers":
+        - /url: "#"
+    - listitem:
+      - link "Contact":
+        - /url: "#"
+  - heading "Legal" [level=3]
+  - list:
+    - listitem:
+      - link "Privacy":
+        - /url: "#"
+    - listitem:
+      - link "Terms":
+        - /url: "#"
+    - listitem:
+      - link "Cookies":
+        - /url: "#"
+    - listitem:
+      - link "Licenses":
+        - /url: "#"
+  - text: © 2025 Content AI Agent. All rights reserved.
+- button "Open Next.js Dev Tools":
+  - img
+- alert
 ```
 
 # Test source
 
 ```ts
+   12 |
+   13 |   test('User can navigate to models and generate images with Jaime model', async ({ page }) => {
+   14 |     // Navigate to models page
+   15 |     await page.click('text=Models');
+   16 |     await page.waitForURL('**/models');
+   17 |     
+   18 |     // Verify models page loads
+   19 |     await expect(page.locator('h1')).toContainText('AI Models');
+   20 |     
+   21 |     // Find and click on Jaime model
+   22 |     await page.click('text=Jaime Creator');
+   23 |     await page.waitForURL('**/models/jaime');
+   24 |     
+   25 |     // Verify Jaime model page loads
+   26 |     await expect(page.locator('h1')).toContainText('Jaime Creator');
+   27 |     
+   28 |     // Fill in the prompt
+   29 |     const prompt = 'JAIME wearing a professional suit, business portrait, high quality';
+   30 |     await page.fill('textarea[placeholder*="prompt"]', prompt);
+   31 |     
+   32 |     // Click generate button
+   33 |     await page.click('button:has-text("Generate Image")');
+   34 |     
+   35 |     // Wait for generation to start (loading state)
+   36 |     await expect(page.locator('text=Generating')).toBeVisible({ timeout: 5000 });
+   37 |     
+   38 |     // Wait for generation to complete (this might take 15-30 seconds)
    39 |     await expect(page.locator('text=Generated Images')).toBeVisible({ timeout: 45000 });
    40 |     
    41 |     // Verify image was generated
@@ -125,7 +215,8 @@ Call log:
   109 |
   110 |   test('User can create storyboard with character upload', async ({ page }) => {
   111 |     // Navigate to storyboard creation
-  112 |     await page.goto('/storyboard-creator');
+> 112 |     await page.goto('/storyboard-creator');
+      |                ^ Error: page.goto: Navigation to "http://localhost:3000/storyboard-creator" is interrupted by another navigation to "http://localhost:3000/"
   113 |     
   114 |     // Verify storyboard page loads
   115 |     await expect(page.locator('h1')).toContainText('Create Video');
@@ -152,8 +243,7 @@ Call log:
   136 |     
   137 |     // Test storyboard title and description
   138 |     await page.fill('input[placeholder*="title"]', 'My Test Storyboard');
-> 139 |     await page.fill('textarea[placeholder*="description"]', 'A test storyboard for Playwright testing');
-      |                ^ Error: page.fill: Test timeout of 30000ms exceeded.
+  139 |     await page.fill('textarea[placeholder*="description"]', 'A test storyboard for Playwright testing');
   140 |     
   141 |     // Add a scene description
   142 |     await page.fill('textarea[placeholder*="scene description"]', 'Character walking in a park');
@@ -227,31 +317,4 @@ Call log:
   210 |     // Verify generation starts
   211 |     await expect(page.locator('text=Generating')).toBeVisible({ timeout: 5000 });
   212 |     
-  213 |     // Go back to models gallery
-  214 |     await page.click('text=← Back to Models');
-  215 |     await page.waitForURL('**/models');
-  216 |     
-  217 |     // Verify we're back at the gallery
-  218 |     await expect(page.locator('h1')).toContainText('AI Models');
-  219 |   });
-  220 |
-  221 |   test('Error handling: Invalid prompts and network issues', async ({ page }) => {
-  222 |     // Navigate to a model page
-  223 |     await page.goto('/models/jaime');
-  224 |     
-  225 |     // Test empty prompt
-  226 |     await page.click('button:has-text("Generate Image")');
-  227 |     
-  228 |     // Should show some validation or remain disabled
-  229 |     const generateButton = page.locator('button:has-text("Generate Image")');
-  230 |     await expect(generateButton).toBeDisabled();
-  231 |     
-  232 |     // Test with valid prompt
-  233 |     await page.fill('textarea[placeholder*="prompt"]', 'JAIME test prompt');
-  234 |     await expect(generateButton).toBeEnabled();
-  235 |     
-  236 |     // Test network error simulation (if needed)
-  237 |     // This would require intercepting network requests
-  238 |   });
-  239 |
 ```

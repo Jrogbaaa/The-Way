@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, Calendar, Instagram, Twitter, Video, Filter, Search } from 'lucide-react';
+import { TrendingUp, Calendar, Instagram, Twitter, Video, Filter, Search, Loader2, RefreshCw } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 
 // Types for trend data
@@ -28,205 +28,6 @@ type ImplementationOption = {
   estimatedImpact: number; // 1-10
   timeToImplement: string;
 };
-
-// Mock trend data until the API is fully implemented
-const MOCK_TRENDS: TrendItem[] = [
-  {
-    id: 'trend_1',
-    title: 'Carousel Content Outperforming Single Images',
-    summary: 'Instagram carousels are getting 3x more engagement than single image posts for celebrity accounts.',
-    source: 'sproutsocial.com',
-    sourceUrl: 'https://sproutsocial.com/insights/',
-    category: 'instagram',
-    platforms: ['instagram'],
-    contentTypes: ['carousel', 'post'],
-    discoveredAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    relevanceScore: 9,
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    implementationOptions: [
-      {
-        id: 'opt_1_1',
-        title: 'Educational carousel with swipe prompts',
-        description: 'Create a 5-slide carousel explaining a topic related to your niche with clear swipe prompts on each slide',
-        difficulty: 'easy',
-        estimatedImpact: 8,
-        timeToImplement: '1-2 hours'
-      },
-      {
-        id: 'opt_1_2',
-        title: 'Before/after transformation carousel',
-        description: 'Show the progression of your work or transformation with a before-and-after format across 3-4 slides',
-        difficulty: 'medium',
-        estimatedImpact: 9,
-        timeToImplement: '2-3 hours'
-      },
-      {
-        id: 'opt_1_3',
-        title: 'Quote + expanded content carousel',
-        description: 'Start with an attention-grabbing quote slide, then use following slides to expand on the concept with examples or explanation',
-        difficulty: 'easy',
-        estimatedImpact: 7,
-        timeToImplement: '1 hour'
-      }
-    ]
-  },
-  {
-    id: 'trend_2',
-    title: 'Behind-the-Scenes Content Boosts Follower Loyalty',
-    summary: 'Celebrity accounts showing authentic behind-the-scenes content see 27% higher follower retention rates.',
-    source: 'blog.hubspot.com',
-    sourceUrl: 'https://blog.hubspot.com/marketing/',
-    category: 'engagement',
-    platforms: ['instagram', 'tiktok'],
-    contentTypes: ['story', 'reel'],
-    discoveredAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    relevanceScore: 8,
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    implementationOptions: [
-      {
-        id: 'opt_2_1',
-        title: 'Day-in-the-life content series',
-        description: 'Document a typical day in short form content showing the real process behind your public persona',
-        difficulty: 'medium',
-        estimatedImpact: 9,
-        timeToImplement: '4-6 hours'
-      },
-      {
-        id: 'opt_2_2',
-        title: 'Process reveal video clips',
-        description: 'Short 15-30 second clips showing how you create your content or prepare for appearances',
-        difficulty: 'easy',
-        estimatedImpact: 7,
-        timeToImplement: '1-2 hours'
-      },
-      {
-        id: 'opt_2_3',
-        title: 'Candid moments story series',
-        description: 'A series of authentic, unpolished Instagram stories that show the human side of your celebrity status',
-        difficulty: 'easy',
-        estimatedImpact: 8,
-        timeToImplement: '30 minutes'
-      }
-    ]
-  },
-  {
-    id: 'trend_3',
-    title: 'TikTok Algorithm Favoring Longer 2-3 Minute Videos',
-    summary: 'TikTok\'s algorithm is now prioritizing longer 2-3 minute videos as the platform competes with YouTube.',
-    source: 'adweek.com',
-    sourceUrl: 'https://www.adweek.com/',
-    category: 'tiktok',
-    platforms: ['tiktok'],
-    contentTypes: ['video'],
-    discoveredAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    relevanceScore: 10,
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    implementationOptions: [
-      {
-        id: 'opt_3_1',
-        title: 'Multi-part tutorial video',
-        description: 'Create a 2-3 minute tutorial or how-to video that shares your expertise with your audience',
-        difficulty: 'medium',
-        estimatedImpact: 10,
-        timeToImplement: '3-4 hours'
-      },
-      {
-        id: 'opt_3_2',
-        title: 'Extended storytelling format',
-        description: 'Tell a complete story with beginning, middle, and end in a 2-3 minute narrative format',
-        difficulty: 'medium',
-        estimatedImpact: 9,
-        timeToImplement: '2-3 hours'
-      },
-      {
-        id: 'opt_3_3',
-        title: 'Q&A response compilation',
-        description: 'Compile answers to 3-5 popular fan questions into a single longer-form video',
-        difficulty: 'easy',
-        estimatedImpact: 8,
-        timeToImplement: '1-2 hours'
-      }
-    ]
-  },
-  {
-    id: 'trend_4',
-    title: 'Collaborative Content Between Celebrities Increases Cross-Audience Growth',
-    summary: 'Celebrities collaborating on content see an average 40% increase in follower growth from cross-audience exposure.',
-    source: 'hollywoodreporter.com',
-    sourceUrl: 'https://www.hollywoodreporter.com/',
-    category: 'collaboration',
-    platforms: ['instagram', 'tiktok', 'youtube'],
-    contentTypes: ['video', 'reel'],
-    discoveredAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-    relevanceScore: 9,
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    implementationOptions: [
-      {
-        id: 'opt_4_1',
-        title: 'Dual-talent interview format',
-        description: 'Create a short interview-style video where you and another celebrity take turns asking each other questions',
-        difficulty: 'medium',
-        estimatedImpact: 9,
-        timeToImplement: '3-4 hours'
-      },
-      {
-        id: 'opt_4_2',
-        title: 'Challenge or trend duet',
-        description: 'Participate in a popular challenge or trend with another celebrity, each posting on your respective accounts',
-        difficulty: 'easy',
-        estimatedImpact: 8,
-        timeToImplement: '1-2 hours'
-      },
-      {
-        id: 'opt_4_3',
-        title: 'Split-screen skill showcase',
-        description: 'Collaborate on a split-screen video where each of you demonstrates your talents or skills side by side',
-        difficulty: 'medium',
-        estimatedImpact: 10,
-        timeToImplement: '2-3 hours'
-      }
-    ]
-  },
-  {
-    id: 'trend_5',
-    title: 'Morning Posts Getting Higher Engagement',
-    summary: 'Celebrity content posted between 6-9 AM local time is receiving 22% higher engagement rates across platforms.',
-    source: 'socialmediaexaminer.com',
-    sourceUrl: 'https://www.socialmediaexaminer.com/',
-    category: 'timing',
-    platforms: ['instagram', 'tiktok', 'twitter'],
-    contentTypes: ['post', 'story', 'video'],
-    discoveredAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-    relevanceScore: 7,
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    implementationOptions: [
-      {
-        id: 'opt_5_1',
-        title: 'Morning routine video series',
-        description: 'Create a series of morning routine videos scheduled to post during peak morning hours',
-        difficulty: 'medium',
-        estimatedImpact: 8,
-        timeToImplement: '2-3 hours per video'
-      },
-      {
-        id: 'opt_5_2',
-        title: 'Good morning check-in carousel',
-        description: 'Design a carousel post with morning motivation and questions to encourage early engagement',
-        difficulty: 'easy',
-        estimatedImpact: 7,
-        timeToImplement: '1 hour'
-      },
-      {
-        id: 'opt_5_3',
-        title: 'Sunrise content batch scheduling',
-        description: 'Batch create content and schedule it to post at optimal morning times using the platform scheduler',
-        difficulty: 'easy',
-        estimatedImpact: 7,
-        timeToImplement: '30 minutes (scheduling only)'
-      }
-    ]
-  }
-];
 
 // Platform icons mapping
 const PlatformIcon = ({ platform }: { platform: string }) => {
@@ -276,50 +77,91 @@ const SocialMediaTrends = ({
   const [activeFilter, setActiveFilter] = useState(filter);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedTrend, setExpandedTrend] = useState<string | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+  
+  // Manual test trends function
+  const handleTestTrends = async () => {
+    setIsTesting(true);
+    try {
+      const response = await fetch('/api/trends/manual-refresh', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Web scraping result:', result);
+        
+        const message = result.realDataFound > 0 
+          ? `🌐 Real web scraping successful! Found ${result.realDataFound} live trends from ${result.scrapedSources} sources.`
+          : `📊 Scraping attempted from ${result.scrapedSources} sources. Using ${result.trendsFound} realistic examples.`;
+          
+        alert(message);
+        // Refresh trends after scraping
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        console.error('❌ Web scraping error:', error);
+        alert(`❌ Web scraping failed: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('❌ Trend test network error:', error);
+      alert(`❌ Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsTesting(false);
+    }
+  };
   
   // Fetch trends data
   useEffect(() => {
     const fetchTrends = async () => {
       setLoading(true);
       try {
-        // In a real implementation, we would fetch from the API
-        // const response = await fetch(`/api/trends?${new URLSearchParams({
-        //   ...(activeFilter ? { category: activeFilter } : {}),
-        //   ...(searchQuery ? { search: searchQuery } : {}),
-        //   limit: limit.toString()
-        // })}`);
-        // const data = await response.json();
-        // setTrends(data.trends);
+        // Fetch from the real API
+        const response = await fetch(`/api/trends?${new URLSearchParams({
+          ...(activeFilter ? { category: activeFilter } : {}),
+          ...(searchQuery ? { search: searchQuery } : {}),
+          limit: limit.toString()
+        })}`);
         
-        // Use mock data for now
-        // Filter by category if activeFilter is set
-        let filteredTrends = [...MOCK_TRENDS];
-        
-        if (activeFilter) {
-          filteredTrends = filteredTrends.filter(trend => 
-            trend.category === activeFilter || 
-            trend.platforms.includes(activeFilter)
-          );
-        }
-        
-        // Filter by search query if set
-        if (searchQuery) {
-          const query = searchQuery.toLowerCase();
-          filteredTrends = filteredTrends.filter(trend => 
-            trend.title.toLowerCase().includes(query) || 
-            trend.summary.toLowerCase().includes(query)
-          );
-        }
-        
-        // Sort by relevance score and limit
-        filteredTrends = filteredTrends
-          .sort((a, b) => b.relevanceScore - a.relevanceScore)
-          .slice(0, limit);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('🔍 Raw API response:', data);
           
-        setTrends(filteredTrends);
+          if (data && data.trends && Array.isArray(data.trends) && data.trends.length > 0) {
+            // Map API data to our TrendItem format
+            const apiTrends = data.trends.map((trend: any) => ({
+              id: trend.id,
+              title: trend.title,
+              summary: trend.summary,
+              source: trend.source,
+              sourceUrl: trend.source_url,
+              category: trend.category,
+              platforms: trend.platforms || [],
+              contentTypes: trend.content_types || [],
+              discoveredAt: new Date(trend.discovered_at),
+              relevanceScore: trend.relevance_score,
+              expiresAt: new Date(trend.expires_at),
+              implementationOptions: [] // API trends don't have implementation options yet
+            }));
+            
+            setTrends(apiTrends);
+            console.log(`✅ Loaded ${apiTrends.length} trends from API`);
+            return; // Exit early if API data is available
+          } else {
+            console.log('📝 API returned no trends data');
+          }
+        } else {
+          console.log('❌ API request failed:', response.status, response.statusText);
+        }
+        
+        // No data available - show empty state
+        setTrends([]);
+        console.log('📝 No trends data available');
+        
       } catch (error) {
-        console.error('Error fetching trends:', error);
-        setTrends([]); // Empty state on error
+        console.error('❌ Error fetching trends:', error);
+        setTrends([]);
       } finally {
         setLoading(false);
       }
@@ -388,12 +230,31 @@ const SocialMediaTrends = ({
           <TrendingUp className="h-5 w-5 text-indigo-500 mr-2" />
           <h2 className="text-xl font-semibold">Social Media Trends</h2>
         </div>
-        <Tooltip content="Trends updated weekly from industry sources">
-          <div className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium flex items-center">
-            <Calendar className="h-3 w-3 mr-1" />
-            Weekly Updates
-          </div>
-        </Tooltip>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleTestTrends}
+            disabled={isTesting}
+            className="px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-medium flex items-center transition-colors disabled:opacity-50"
+          >
+            {isTesting ? (
+              <>
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                Scraping...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Scrape Real Trends
+              </>
+            )}
+          </button>
+          <Tooltip content="Trends updated weekly from industry sources">
+            <div className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium flex items-center">
+              <Calendar className="h-3 w-3 mr-1" />
+              Weekly Updates
+            </div>
+          </Tooltip>
+        </div>
       </div>
       
       {/* Filters */}

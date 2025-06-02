@@ -31,7 +31,13 @@ CREATE INDEX IF NOT EXISTS trained_models_created_at_idx ON trained_models(creat
 CREATE INDEX IF NOT EXISTS trained_models_category_idx ON trained_models(category);
 CREATE INDEX IF NOT EXISTS trained_models_user_id_idx ON trained_models(user_id);
 
--- Create RLS policies
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Anyone can read public models" ON trained_models;
+DROP POLICY IF EXISTS "Authenticated users can read their own models" ON trained_models;
+DROP POLICY IF EXISTS "Authenticated users can insert their own models" ON trained_models;
+DROP POLICY IF EXISTS "Authenticated users can update their own models" ON trained_models;
+DROP POLICY IF EXISTS "Authenticated users can delete their own models" ON trained_models;
+
 -- Enable RLS
 ALTER TABLE trained_models ENABLE ROW LEVEL SECURITY;
 
@@ -41,29 +47,45 @@ CREATE POLICY "Anyone can read public models"
   FOR SELECT
   USING (is_public = TRUE);
 
--- Create policy for authenticated users to read their own models
-CREATE POLICY "Authenticated users can read their own models"
+-- Create policy for users to read their own models (using user_id match)
+CREATE POLICY "Users can read their own models"
   ON trained_models
   FOR SELECT
-  USING (auth.uid() IS NOT NULL);
+  USING (
+    auth.uid()::text = user_id OR 
+    is_public = TRUE OR
+    -- Allow specific user to access legacy models
+    (auth.jwt() ->> 'email' = '11jellis@gmail.com')
+  );
 
 -- Create policy for authenticated users to insert their own models
-CREATE POLICY "Authenticated users can insert their own models"
+CREATE POLICY "Users can insert their own models"
   ON trained_models
   FOR INSERT
-  WITH CHECK (auth.uid() IS NOT NULL);
+  WITH CHECK (
+    auth.uid() IS NOT NULL AND 
+    auth.uid()::text = user_id
+  );
 
--- Create policy for authenticated users to update their own models
-CREATE POLICY "Authenticated users can update their own models"
+-- Create policy for users to update their own models
+CREATE POLICY "Users can update their own models"
   ON trained_models
   FOR UPDATE
-  USING (auth.uid() IS NOT NULL);
+  USING (
+    auth.uid()::text = user_id OR
+    -- Allow specific user to update legacy models
+    (auth.jwt() ->> 'email' = '11jellis@gmail.com')
+  );
 
--- Create policy for authenticated users to delete their own models
-CREATE POLICY "Authenticated users can delete their own models"
+-- Create policy for users to delete their own models
+CREATE POLICY "Users can delete their own models"
   ON trained_models
   FOR DELETE
-  USING (auth.uid() IS NOT NULL);
+  USING (
+    auth.uid()::text = user_id OR
+    -- Allow specific user to delete legacy models
+    (auth.jwt() ->> 'email' = '11jellis@gmail.com')
+  );
 
 -- Comments for documentation
 COMMENT ON TABLE trained_models IS 'Custom trained models for the application';

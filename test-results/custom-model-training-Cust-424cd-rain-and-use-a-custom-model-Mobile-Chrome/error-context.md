@@ -6,217 +6,52 @@
 # Error details
 
 ```
-Error: locator.click: Test ended.
-Call log:
-  - waiting for locator('button:has-text("Train Your First Model")')
-    - locator resolved to <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 text-primary-foreground hover:shadow-md hover:ring-2 hover:ring-primary/40 h-10 px-4 py-2 bg-indigo-600 hover:bg-indigo-700">…</button>
-  - attempting click action
-    2 × waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <h3 class="text-xl font-semibold mb-2 text-gray-800">Track Social Trends</h3> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-    - retrying click action
-    - waiting 20ms
-    - waiting for element to be visible, enabled and stable
-    - element is visible, enabled and stable
-    - scrolling into view if needed
-    - done scrolling
-    - <line y2="4" x1="12" x2="12" y1="20"></line> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  2 × retrying click action
-      - waiting 100ms
-      - waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110">…</div> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  6 × retrying click action
-      - waiting 500ms
-      - waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <h3 class="text-xl font-semibold mb-2 text-gray-800">Track Social Trends</h3> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-    - retrying click action
-      - waiting 500ms
-      - waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <line y2="4" x1="12" x2="12" y1="20"></line> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-    - retrying click action
-      - waiting 500ms
-      - waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110">…</div> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-    - retrying click action
-      - waiting 500ms
-      - waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110">…</div> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  - retrying click action
-    - waiting 500ms
-    - waiting for element to be visible, enabled and stable
-    - element is visible, enabled and stable
-    - scrolling into view if needed
-    - done scrolling
-    - <h3 class="text-xl font-semibold mb-2 text-gray-800">Track Social Trends</h3> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  - retrying click action
-    - waiting 500ms
-    - waiting for element to be visible, enabled and stable
-    - element is visible, enabled and stable
-    - scrolling into view if needed
-    - done scrolling
-    - <line y2="4" x1="12" x2="12" y1="20"></line> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  - retrying click action
-    - waiting 500ms
-    - waiting for element to be visible, enabled and stable
-  - element was detached from the DOM, retrying
-    - locator resolved to <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 text-primary-foreground hover:shadow-md hover:ring-2 hover:ring-primary/40 h-10 px-4 py-2 bg-indigo-600 hover:bg-indigo-700">…</button>
-  - attempting click action
-    - waiting for element to be visible, enabled and stable
-    - element is visible, enabled and stable
-    - scrolling into view if needed
-    - done scrolling
-    - <line y2="4" x1="12" x2="12" y1="20"></line> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  - retrying click action
-    - waiting for element to be visible, enabled and stable
-    - element is visible, enabled and stable
-    - scrolling into view if needed
-    - done scrolling
-    - <h3 class="text-xl font-semibold mb-2 text-gray-800">Track Social Trends</h3> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  - retrying click action
-    - waiting 20ms
-    - waiting for element to be visible, enabled and stable
-    - element is visible, enabled and stable
-    - scrolling into view if needed
-    - done scrolling
-    - <line y2="4" x1="12" x2="12" y1="20"></line> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  2 × retrying click action
-      - waiting 100ms
-      - waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110">…</div> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  14 × retrying click action
-       - waiting 500ms
-       - waiting for element to be visible, enabled and stable
-       - element is visible, enabled and stable
-       - scrolling into view if needed
-       - done scrolling
-       - <h3 class="text-xl font-semibold mb-2 text-gray-800">Track Social Trends</h3> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-     - retrying click action
-       - waiting 500ms
-       - waiting for element to be visible, enabled and stable
-       - element is visible, enabled and stable
-       - scrolling into view if needed
-       - done scrolling
-       - <line y2="4" x1="12" x2="12" y1="20"></line> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-     - retrying click action
-       - waiting 500ms
-       - waiting for element to be visible, enabled and stable
-       - element is visible, enabled and stable
-       - scrolling into view if needed
-       - done scrolling
-       - <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110">…</div> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-     - retrying click action
-       - waiting 500ms
-       - waiting for element to be visible, enabled and stable
-       - element is visible, enabled and stable
-       - scrolling into view if needed
-       - done scrolling
-       - <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110">…</div> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  - retrying click action
-    - waiting 500ms
-    - waiting for element to be visible, enabled and stable
-    - element is visible, enabled and stable
-    - scrolling into view if needed
-    - done scrolling
-    - <h3 class="text-xl font-semibold mb-2 text-gray-800">Track Social Trends</h3> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  - retrying click action
-    - waiting 500ms
-    - waiting for element to be visible, enabled and stable
-  - element was detached from the DOM, retrying
-    - locator resolved to <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 text-primary-foreground hover:shadow-md hover:ring-2 hover:ring-primary/40 h-10 px-4 py-2 bg-indigo-600 hover:bg-indigo-700">…</button>
-  - attempting click action
-    2 × waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <h3 class="text-xl font-semibold mb-2 text-gray-800">Track Social Trends</h3> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-    - retrying click action
-    - waiting 20ms
-    - waiting for element to be visible, enabled and stable
-    - element is visible, enabled and stable
-    - scrolling into view if needed
-    - done scrolling
-    - <line y2="4" x1="12" x2="12" y1="20"></line> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  2 × retrying click action
-      - waiting 100ms
-      - waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110">…</div> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  5 × retrying click action
-      - waiting 500ms
-      - waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <h3 class="text-xl font-semibold mb-2 text-gray-800">Track Social Trends</h3> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-    - retrying click action
-      - waiting 500ms
-      - waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <line y2="4" x1="12" x2="12" y1="20"></line> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-    - retrying click action
-      - waiting 500ms
-      - waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110">…</div> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-    - retrying click action
-      - waiting 500ms
-      - waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110">…</div> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  - retrying click action
-    - waiting 500ms
-    - waiting for element to be visible, enabled and stable
-    - element is visible, enabled and stable
-    - scrolling into view if needed
-    - done scrolling
-    - <h3 class="text-xl font-semibold mb-2 text-gray-800">Track Social Trends</h3> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  - retrying click action
-    - waiting 500ms
-    - waiting for element to be visible, enabled and stable
-    - element is visible, enabled and stable
-    - scrolling into view if needed
-    - done scrolling
-    - <line y2="4" x1="12" x2="12" y1="20"></line> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  - retrying click action
-    - waiting 500ms
-    - waiting for element to be visible, enabled and stable
-    - element is visible, enabled and stable
-    - scrolling into view if needed
-    - done scrolling
-    - <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110">…</div> from <div role="dialog" tabindex="-1" id="radix-«R1l7»" data-state="open" data-slot="dialog-content" aria-labelledby="radix-«R1l7H1»" aria-describedby="radix-«R1l7H2»" class="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border shadow-l…>…</div> subtree intercepts pointer events
-  - retrying click action
-    - waiting 500ms
-    - waiting for element to be visible, enabled and stable
+Error: Timed out 20000ms waiting for expect(locator).toBeVisible()
 
-    at /Users/JackEllis/THE WAY /e2e/custom-model-training.spec.ts:35:35
+Locator: locator('h2:has-text("Create Model with Modal")')
+Expected: visible
+Received: <element(s) not found>
+Call log:
+  - expect.toBeVisible with timeout 20000ms
+  - waiting for locator('h2:has-text("Create Model with Modal")')
+
+    at /Users/JackEllis/THE WAY /e2e/custom-model-training.spec.ts:50:43
+```
+
+# Page snapshot
+
+```yaml
+- dialog "Welcome to Your Content AI Agent, Admin User!":
+  - heading "Welcome to Your Content AI Agent, Admin User!" [level=2]
+  - paragraph: "You're all set up! Here's what creators are doing on The Way:"
+  - img
+  - heading "Create Custom Model" [level=3]
+  - paragraph: Create AI-generated images of yourself in various styles and scenarios.
+  - button "Get Started":
+    - link "Get Started":
+      - /url: /models
+      - text: Get Started
+      - img
+  - img
+  - heading "Analyze Your Post" [level=3]
+  - paragraph: Get insights and optimization tips to improve your social media content.
+  - button "Analyze Content":
+    - link "Analyze Content":
+      - /url: /upload-post
+      - text: Analyze Content
+      - img
+  - img
+  - heading "Track Social Trends" [level=3]
+  - paragraph: Monitor what's performing well and stay ahead of trending topics.
+  - button "View Trends":
+    - link "View Trends":
+      - /url: /dashboard
+      - text: View Trends
+      - img
+  - button "Skip for now & Go to Dashboard"
+  - button "Close":
+    - img
+    - text: Close
 ```
 
 # Test source
@@ -256,8 +91,7 @@ Call log:
    32 |     const createModelButton = page.locator('button:has-text("Create Model"), button:has-text("New Model"), a[href="/models/create"], button:has-text("Train New Model")').first();
    33 |     
    34 |     if (await trainFirstModelButton.isVisible()) {
->  35 |       await trainFirstModelButton.click();
-      |                                   ^ Error: locator.click: Test ended.
+   35 |       await trainFirstModelButton.click();
    36 |     } else if (await createModelButton.isVisible()) {
    37 |       await createModelButton.click();
    38 |       if (page.url().includes('/models/create')) {
@@ -272,7 +106,8 @@ Call log:
    47 |
    48 |     // Wait for the main model creation modal to appear
    49 |     const modelCreationModalTitle = page.locator('h2:has-text("Create Model with Modal")');
-   50 |     await expect(modelCreationModalTitle).toBeVisible({ timeout: 20000 });
+>  50 |     await expect(modelCreationModalTitle).toBeVisible({ timeout: 20000 });
+      |                                           ^ Error: Timed out 20000ms waiting for expect(locator).toBeVisible()
    51 |
    52 |     // AGGRESSIVELY HANDLE POTENTIAL WELCOME MODAL / OTHER OVERLAYS
    53 |     // Try a few common patterns for close buttons. 
@@ -358,4 +193,19 @@ Call log:
   133 |     const fileInput = page.locator('input[type="file"]#image-upload');
   134 |     // No need to check fileInput.toBeVisible() as it's styled as hidden
   135 |     
+  136 |     try {
+  137 |       // Read files into buffers
+  138 |       const imageFilesToUpload = testImageFiles.map(filePath => {
+  139 |         const buffer = fs.readFileSync(filePath);
+  140 |         return {
+  141 |           name: path.basename(filePath),
+  142 |           mimeType: filePath.endsWith('.png') ? 'image/png' : 'image/jpeg', // Adjust mimeType based on your files
+  143 |           buffer: buffer
+  144 |         };
+  145 |       });
+  146 |
+  147 |       await fileInput.setInputFiles(imageFilesToUpload);
+  148 |       console.log('Attempted to set input files using buffers. Backend will confirm processing.');
+  149 |       // NOTE: The explicit check for "X images selected" text has been removed.
+  150 |       // We now rely on the "Start Training" button becoming enabled as confirmation.
 ```
