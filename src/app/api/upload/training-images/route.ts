@@ -51,9 +51,11 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
     
+    console.log(`Received request with ${files?.length || 0} files`);
+    
     if (!files || files.length === 0) {
       return NextResponse.json(
-        { error: 'No files provided' },
+        { success: false, error: 'No files provided' },
         { status: 400 }
       );
     }
@@ -66,15 +68,17 @@ export async function POST(request: NextRequest) {
 
     const uploadedFiles = [];
     // Use a session-based or anonymous identifier for file organization
-    const uploadSession = nanoid(); // Generate unique session ID for this upload
+    const uploadSession = nanoid();
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       
-      if (!file.size) {
-        console.warn(`Skipping empty file: ${file.name}`);
+      if (!file || !file.size) {
+        console.warn(`Skipping empty or invalid file at index ${i}:`, file?.name || 'unnamed');
         continue;
       }
+
+      console.log(`Processing file ${i + 1}/${files.length}: ${file.name} (${file.size} bytes, ${file.type})`);
 
       // Validate file type
       const isValidImage = file.type.startsWith('image/') && 
@@ -83,8 +87,9 @@ export async function POST(request: NextRequest) {
         file.name.toLowerCase().endsWith('.zip');
 
       if (!isValidImage && !isValidZip) {
+        console.error(`Invalid file type: ${file.type} for file: ${file.name}`);
         return NextResponse.json(
-          { error: `Invalid file type: ${file.type}. Only images and ZIP files are allowed.` },
+          { success: false, error: `Invalid file type: ${file.type}. Only images and ZIP files are allowed.` },
           { status: 400 }
         );
       }
@@ -92,9 +97,10 @@ export async function POST(request: NextRequest) {
       // Validate file size (50MB max)
       const maxSize = 50 * 1024 * 1024; // 50MB
       if (file.size > maxSize) {
+        console.error(`File too large: ${file.name} (${file.size} bytes > ${maxSize} bytes)`);
         return NextResponse.json(
-          { error: `File ${file.name} is too large. Maximum size is 50MB.` },
-          { status: 400 }
+          { success: false, error: `File ${file.name} is too large. Maximum size is 50MB.` },
+          { status: 413 }
         );
       }
 
@@ -104,11 +110,18 @@ export async function POST(request: NextRequest) {
       const filePath = join(uploadsDir, uniqueFilename);
 
       // Write file to disk
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      await writeFile(filePath, buffer);
-
-      console.log(`Uploaded file: ${uniqueFilename} (${file.size} bytes)`);
+      try {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        await writeFile(filePath, buffer);
+        console.log(`Successfully uploaded file: ${uniqueFilename} (${file.size} bytes)`);
+      } catch (writeError) {
+        console.error(`Error writing file ${uniqueFilename}:`, writeError);
+        return NextResponse.json(
+          { success: false, error: `Failed to save file: ${file.name}` },
+          { status: 500 }
+        );
+      }
 
       // Check if we need to upload to public hosting for Replicate access
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -118,6 +131,7 @@ export async function POST(request: NextRequest) {
       // If this is a ZIP file and we're using localhost, upload to temporary public hosting
       if (isLocalhost && (file.type === 'application/zip' || file.name.toLowerCase().endsWith('.zip'))) {
         console.log('Localhost detected, uploading ZIP file to temporary public hosting for Replicate access...');
+        const buffer = Buffer.from(await file.arrayBuffer());
         const tempUrl = await uploadToTempFileHost(buffer, uniqueFilename);
         if (tempUrl) {
           publicUrl = tempUrl;
@@ -139,7 +153,7 @@ export async function POST(request: NextRequest) {
 
     if (uploadedFiles.length === 0) {
       return NextResponse.json(
-        { error: 'No valid files were uploaded' },
+        { success: false, error: 'No valid files were uploaded' },
         { status: 400 }
       );
     }
@@ -170,13 +184,22 @@ export async function POST(request: NextRequest) {
       warning: isLocalhost && !hasPublicZipFiles ? 'Files are stored locally. ZIP files have been uploaded to temporary public hosting for Replicate training.' : null
     };
 
-    console.log('Upload response:', response);
+    console.log('Upload response:', { 
+      success: response.success, 
+      filesCount: response.files.length, 
+      hasZip: !!response.zipFile,
+      warning: response.warning 
+    });
+    
     return NextResponse.json(response);
 
   } catch (error) {
     console.error('Error uploading files:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Upload failed' },
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Upload failed' 
+      },
       { status: 500 }
     );
   }
@@ -189,7 +212,8 @@ export async function OPTIONS(request: NextRequest) {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
     },
   });
 } 

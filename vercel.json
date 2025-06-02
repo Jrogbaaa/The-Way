@@ -26,11 +26,37 @@
           "value": "1; mode=block"
         }
       ]
+    },
+    {
+      "source": "/api/upload/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
     }
   ],
   "functions": {
     "src/app/api/**/*.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/upload/**/*.ts": {
+      "maxDuration": 300
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/upload/training-images",
+      "destination": "/api/upload/training-images"
+    }
+  ]
 } 

@@ -213,35 +213,69 @@ const ModalModelCreation: React.FC<ModalModelCreationProps> = ({
         formData.append('files', file);
       });
 
+      console.log('Starting file upload with files:', files.map(f => ({ name: f.name, size: f.size, type: f.type })));
+
       // File upload doesn't require authentication
       const response = await fetch('/api/upload/training-images', {
         method: 'POST',
         body: formData,
       });
 
+      console.log('Upload response status:', response.status);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
+        let errorMessage = 'Upload failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || `Upload failed with status ${response.status}`;
+        } catch (parseError) {
+          // If we can't parse the error response, use the status text
+          errorMessage = `Upload failed: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const uploadResult = await response.json();
       console.log('Upload result:', uploadResult);
 
-      setUploadedFiles(uploadResult.files);
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || 'Upload was not successful');
+      }
+
+      setUploadedFiles(uploadResult.files || []);
       
       // If a ZIP file was uploaded, use its URL
       if (uploadResult.zipFile) {
         setTrainingImagesUrl(uploadResult.zipFile.publicUrl);
-        toast.success(`ZIP file uploaded: ${uploadResult.zipFile.originalName}`);
-      } else if (uploadResult.imageFiles.length > 0) {
+        toast.success(`✅ ZIP file uploaded: ${uploadResult.zipFile.originalName}`);
+      } else if (uploadResult.imageFiles && uploadResult.imageFiles.length > 0) {
         // For individual images, we need to create a ZIP (for now, just show them)
-        toast.success(`Uploaded ${uploadResult.imageFiles.length} images`);
+        toast.success(`✅ Uploaded ${uploadResult.imageFiles.length} images`);
         // Note: In production, you might want to auto-create a ZIP from individual images
       }
       
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error(error instanceof Error ? error.message : 'Upload failed');
+      
+      // Provide specific error messages based on common issues
+      let userFriendlyMessage = 'Upload failed';
+      if (error instanceof Error) {
+        if (error.message.includes('too large')) {
+          userFriendlyMessage = 'File is too large. Maximum size is 50MB.';
+        } else if (error.message.includes('Invalid file type')) {
+          userFriendlyMessage = 'Invalid file type. Only images and ZIP files are allowed.';
+        } else if (error.message.includes('Network Error') || error.message.includes('Failed to fetch')) {
+          userFriendlyMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message.includes('413')) {
+          userFriendlyMessage = 'File is too large for upload. Try compressing your images.';
+        } else if (error.message.includes('500')) {
+          userFriendlyMessage = 'Server error. Please try again in a few moments.';
+        } else {
+          userFriendlyMessage = error.message;
+        }
+      }
+      
+      toast.error(`❌ ${userFriendlyMessage}`);
     } finally {
       setIsUploading(false);
     }
@@ -407,109 +441,109 @@ const ModalModelCreation: React.FC<ModalModelCreationProps> = ({
       hasTrainingImages: !!trainingImagesUrl 
     });
     
-    if (pendingTraining && user && !loading) {
+    if (pendingTraining && user && !loading && tempConfigId) {
       // User just signed in and we have pending training
       setPendingTraining(false);
       setShowAuthPrompt(false);
       
-      if (tempConfigId) {
-        console.log('Auto-starting training with stored config ID:', tempConfigId);
-        
-        // Start training using the stored configuration directly
-        const startStoredTraining = async () => {
+      console.log('Auto-starting training with stored config ID:', tempConfigId);
+      
+      // Start training using the stored configuration directly
+      const startStoredTraining = async () => {
+        try {
+          let configData = null;
+          
+          // Try to fetch the stored config first
           try {
-            let configData = null;
-            
-            // Try to fetch the stored config first
-            try {
-              const configResponse = await fetch(`/api/training/prepare/${tempConfigId}`);
-              if (configResponse.ok) {
-                const response = await configResponse.json();
-                if (response.success && response.config) {
-                  configData = response;
-                }
+            const configResponse = await fetch(`/api/training/prepare/${tempConfigId}`);
+            if (configResponse.ok) {
+              const response = await configResponse.json();
+              if (response.success && response.config) {
+                configData = response;
               }
-            } catch (error) {
-              console.warn('Could not fetch stored config from API, trying backup localStorage data:', error);
             }
-            
-            // Fallback to backup localStorage data if API config is missing
-            const backupModelName = localStorage.getItem('pendingModelName');
-            const backupInstancePrompt = localStorage.getItem('pendingInstancePrompt');
-            const backupTriggerWord = localStorage.getItem('pendingTriggerWord');
-            const backupTrainingImagesUrl = localStorage.getItem('pendingTrainingImagesUrl');
-            
-            if (!configData && backupModelName && backupInstancePrompt && backupTriggerWord && backupTrainingImagesUrl) {
-              console.log('Using backup localStorage data for auth effect training');
-              configData = {
-                success: true,
-                config: {
-                  modelName: backupModelName,
-                  instancePrompt: backupInstancePrompt,
-                  triggerWord: backupTriggerWord,
-                  trainingImagesZipUrl: backupTrainingImagesUrl
-                }
-              };
-            }
-            
-            if (!configData) {
-              throw new Error('No training configuration found');
-            }
-            
-            // Use the actual stored config data
-            const trainingId = await startTraining({
-              modelName: configData.config.modelName,
-              instancePrompt: configData.config.instancePrompt,
-              triggerWord: configData.config.triggerWord,
-              trainingImagesZipUrl: configData.config.trainingImagesZipUrl,
-              tempId: tempConfigId
-            });
-
-            console.log('Training started with stored config, ID:', trainingId);
-            
-            // Mark user as onboarded since they've completed training setup
-            localStorage.setItem('userOnboarded', 'true');
-            
-            // Clean up any remaining training state
-            localStorage.removeItem('tempConfigId');
-            localStorage.removeItem('pendingTrainingState');
-            localStorage.removeItem('pendingTrainingConfigId');
-            localStorage.removeItem('pendingModelName');
-            localStorage.removeItem('pendingInstancePrompt');
-            localStorage.removeItem('pendingTriggerWord');
-            localStorage.removeItem('pendingTrainingImagesUrl');
-            localStorage.removeItem('TRAINING_CONFIG_BACKUP');
-            
-            // Call the callback if provided
-            if (onModelCreated) {
-              onModelCreated({
-                id: trainingId,
-                model_id: trainingId,
-                name: configData.config.modelName || 'Custom Model',
-                status: 'training'
-              });
-            }
-            
-            // Auto-redirect to models page to see training progress  
-            toast.success('Training started! Redirecting to your models...');
-            setTimeout(() => {
-              onClose();
-              router.push('/models');
-            }, 1500);
           } catch (error) {
-            console.error('Auto-training failed:', error);
-            toast.error('Failed to start training automatically. Please try again.');
+            console.warn('Could not fetch stored config from API, trying backup localStorage data:', error);
           }
-        };
-        
-        startStoredTraining();
-      } else {
-        // No tempConfigId available - might be lost during OAuth redirect
-        console.warn('No tempConfigId found after sign-in. User may need to reconfigure.');
-        toast.success('Please review your settings and click "Start Training" again.');
-      }
+          
+          // Fallback to backup localStorage data if API config is missing
+          const backupModelName = localStorage.getItem('pendingModelName');
+          const backupInstancePrompt = localStorage.getItem('pendingInstancePrompt');
+          const backupTriggerWord = localStorage.getItem('pendingTriggerWord');
+          const backupTrainingImagesUrl = localStorage.getItem('pendingTrainingImagesUrl');
+          
+          if (!configData && backupModelName && backupInstancePrompt && backupTriggerWord && backupTrainingImagesUrl) {
+            console.log('Using backup localStorage data for auth effect training');
+            configData = {
+              success: true,
+              config: {
+                modelName: backupModelName,
+                instancePrompt: backupInstancePrompt,
+                triggerWord: backupTriggerWord,
+                trainingImagesZipUrl: backupTrainingImagesUrl
+              }
+            };
+          }
+          
+          if (!configData) {
+            throw new Error('No training configuration found');
+          }
+          
+          // Use the actual stored config data
+          const trainingId = await startTraining({
+            modelName: configData.config.modelName,
+            instancePrompt: configData.config.instancePrompt,
+            triggerWord: configData.config.triggerWord,
+            trainingImagesZipUrl: configData.config.trainingImagesZipUrl,
+            tempId: tempConfigId
+          });
+
+          console.log('Training started with stored config, ID:', trainingId);
+          
+          // Mark user as onboarded since they've completed training setup
+          localStorage.setItem('userOnboarded', 'true');
+          
+          // Clean up any remaining training state
+          localStorage.removeItem('tempConfigId');
+          localStorage.removeItem('pendingTrainingState');
+          localStorage.removeItem('pendingTrainingConfigId');
+          localStorage.removeItem('pendingModelName');
+          localStorage.removeItem('pendingInstancePrompt');
+          localStorage.removeItem('pendingTriggerWord');
+          localStorage.removeItem('pendingTrainingImagesUrl');
+          localStorage.removeItem('TRAINING_CONFIG_BACKUP');
+          
+          // Call the callback if provided
+          if (onModelCreated) {
+            onModelCreated({
+              id: trainingId,
+              model_id: trainingId,
+              name: configData.config.modelName || 'Custom Model',
+              status: 'training'
+            });
+          }
+          
+          // Auto-redirect to models page to see training progress  
+          toast.success('Training started! Redirecting to your models...');
+          setTimeout(() => {
+            onClose();
+            router.push('/models');
+          }, 1500);
+        } catch (error) {
+          console.error('Auto-training failed:', error);
+          toast.error('Failed to start training automatically. Please try again.');
+        }
+      };
+      
+      startStoredTraining();
+    } else if (pendingTraining && user && !loading && !tempConfigId) {
+      // No tempConfigId available - might be lost during OAuth redirect
+      console.warn('No tempConfigId found after sign-in. User may need to reconfigure.');
+      toast.success('Please review your settings and click "Start Training" again.');
+      setPendingTraining(false);
+      setShowAuthPrompt(false);
     }
-  }, [user, loading, pendingTraining, tempConfigId, startTraining, onModelCreated, modelName, trainingImagesUrl]);
+  }, [user, loading, pendingTraining, tempConfigId]);
 
   const handleComplete = () => {
     if (isCompleted && onModelCreated) {

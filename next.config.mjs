@@ -38,8 +38,21 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'tmpfiles.org',
+        port: '',
+        pathname: '/**',
+      },
       // Add other domains here if needed in the future
     ],
+  },
+  // Configure API routes for larger file uploads
+  api: {
+    bodyParser: {
+      sizeLimit: '100mb',
+    },
+    responseLimit: '100mb',
   },
   // Enable source maps in development
   webpack: (config, { isServer, dev }) => {
@@ -58,6 +71,17 @@ const nextConfig = {
       }
     }
 
+    // Add file size limits for file uploads
+    config.module.rules.push({
+      test: /\.(zip|rar|7z)$/,
+      use: {
+        loader: 'file-loader',
+        options: {
+          limit: 100 * 1024 * 1024, // 100MB limit
+        },
+      },
+    });
+
     return config;
   },
   // Ensure we have fallback environment variables
@@ -74,6 +98,32 @@ const nextConfig = {
   },
   // Fix for Vercel deployment with Next.js 15
   output: 'standalone',
+  // Configure headers for file uploads
+  async headers() {
+    return [
+      {
+        source: '/api/upload/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'POST, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization',
+          },
+          {
+            key: 'Access-Control-Max-Age',
+            value: '86400',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig; 
