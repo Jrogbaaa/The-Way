@@ -11,7 +11,9 @@ import {
   Filter,
   CheckCircle,
   Loader2,
-  Plus
+  Plus,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -24,6 +26,7 @@ import ModalModelCreation from '@/components/ModalModelCreation';
 import ModalTrainingRetry from '@/components/ModalTrainingRetry';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'react-hot-toast';
 
 // Define a model type for type safety
 type Model = {
@@ -73,6 +76,8 @@ export default function ImageCreatorPage() {
   const [userModels, setUserModels] = useState<Model[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
 
   useEffect(() => {
     console.log(`MODELS PAGE Mounted. Loading: ${loading}, User: ${!!user}`);
@@ -339,6 +344,73 @@ export default function ImageCreatorPage() {
     router.push(`/models/custom/${modelId}`);
   };
 
+  // Add function to delete a single model
+  const deleteModel = async (modelId: string, modelName: string) => {
+    if (!confirm(`Are you sure you want to delete "${modelName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingModelId(modelId);
+    try {
+      const response = await fetch(`/api/models/delete?id=${modelId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete model');
+      }
+
+      const result = await response.json();
+      toast.success(`Successfully deleted "${modelName}"`);
+      
+      // Remove the model from the local state
+      setUserModels(prev => prev.filter(model => model.id !== modelId));
+      
+    } catch (error) {
+      console.error('Error deleting model:', error);
+      toast.error(`Failed to delete model: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setDeletingModelId(null);
+    }
+  };
+
+  // Add function for bulk cleanup of failed models
+  const cleanupFailedModels = async () => {
+    if (!confirm('This will delete all failed and pending models except important ones like "edd". Are you sure?')) {
+      return;
+    }
+
+    setIsCleaningUp(true);
+    try {
+      const response = await fetch('/api/models/cleanup-user', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to cleanup models');
+      }
+
+      const result = await response.json();
+      toast.success(`Successfully cleaned up ${result.stats.modelsDeleted} failed models`);
+      
+      // Refresh the models list
+      await fetchUserModels();
+      
+    } catch (error) {
+      console.error('Error cleaning up models:', error);
+      toast.error(`Failed to cleanup models: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsCleaningUp(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh]">
@@ -369,6 +441,21 @@ export default function ImageCreatorPage() {
                 <Filter className="h-4 w-4" />
                 Refresh Models
               </Button>
+              {user?.email === '11jellis@gmail.com' && (
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2 bg-white hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm"
+                  onClick={cleanupFailedModels}
+                  disabled={isCleaningUp}
+                >
+                  {isCleaningUp ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4" />
+                  )}
+                  {isCleaningUp ? 'Cleaning...' : 'Cleanup Failed Models'}
+                </Button>
+              )}
             </div>
           </div>
           
@@ -424,45 +511,66 @@ export default function ImageCreatorPage() {
                   {userModels.map((model) => (
                     <Card
                       key={model.id}
-                      className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => handleModelClick(model.id)}
+                      className="overflow-hidden hover:shadow-md transition-shadow"
                       data-testid="model-card"
                     >
-                      <div className="relative aspect-square bg-muted">
-                        {model.imageUrl ? (
-                          <Image
-                            src={model.imageUrl}
-                            alt={model.name}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <p className="text-sm text-muted-foreground">No sample image</p>
-                          </div>
-                        )}
-                        <Badge
-                          className={
-                            model.status === 'ready'
-                              ? 'bg-green-500 absolute top-2 right-2'
-                              : model.status === 'failed'
-                              ? 'bg-red-500 absolute top-2 right-2'
-                              : 'absolute top-2 right-2'
-                          }
-                        >
-                          {model.status}
-                        </Badge>
+                      <div 
+                        className="cursor-pointer"
+                        onClick={() => handleModelClick(model.id)}
+                      >
+                        <div className="relative aspect-square bg-muted">
+                          {model.imageUrl ? (
+                            <Image
+                              src={model.imageUrl}
+                              alt={model.name}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <p className="text-sm text-muted-foreground">No sample image</p>
+                            </div>
+                          )}
+                          <Badge
+                            className={
+                              model.status === 'ready'
+                                ? 'bg-green-500 absolute top-2 right-2'
+                                : model.status === 'failed'
+                                ? 'bg-red-500 absolute top-2 right-2'
+                                : 'absolute top-2 right-2'
+                            }
+                          >
+                            {model.status}
+                          </Badge>
+                        </div>
+                        <CardContent className="pt-4">
+                          <h3 className="font-medium truncate">{model.name}</h3>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {model.model_info?.instance_prompt || 'No prompt specified'}
+                          </p>
+                        </CardContent>
                       </div>
-                      <CardContent className="pt-4">
-                        <h3 className="font-medium truncate">{model.name}</h3>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {model.model_info?.instance_prompt || 'No prompt specified'}
-                        </p>
-                      </CardContent>
-                      <CardFooter className="pt-0 pb-4">
+                      <CardFooter className="pt-0 pb-4 flex justify-between items-center">
                         <p className="text-xs text-muted-foreground">
                           Created {new Date(model.created_at).toLocaleDateString()}
                         </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 h-auto"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteModel(model.id, model.name);
+                          }}
+                          disabled={deletingModelId === model.id}
+                          title="Delete model"
+                        >
+                          {deletingModelId === model.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
                       </CardFooter>
                     </Card>
                   ))}
