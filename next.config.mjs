@@ -47,13 +47,6 @@ const nextConfig = {
       // Add other domains here if needed in the future
     ],
   },
-  // Configure API routes for larger file uploads
-  api: {
-    bodyParser: {
-      sizeLimit: '100mb',
-    },
-    responseLimit: '100mb',
-  },
   // Enable source maps in development
   webpack: (config, { isServer, dev }) => {
     // Handle CSS imports better
