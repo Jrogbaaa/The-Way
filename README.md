@@ -4,6 +4,16 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Recent Updates (January 2025)
 
+- **Enhanced Social Media Trend Extraction** (Latest): Major improvements to the real-time trend discovery system:
+  - **Intelligent content filtering**: Enhanced extraction algorithm that filters out URLs, navigation elements, and junk content
+  - **Priority-based extraction**: Smart prioritization system that focuses on headlines, statistical content, and meaningful insights
+  - **Real-time web scraping**: Automated scraping from 5 major social media industry sources (HubSpot, Sprout Social, Social Media Examiner, Instagram Creators Blog, Adweek)
+  - **Statistical content emphasis**: Prioritizes trends with percentages, multipliers, and quantifiable data
+  - **Improved headline detection**: Advanced markdown parsing to extract article headlines and key insights
+  - **Better contextual summaries**: Enhanced summary generation from surrounding content for each trend
+  - **Manual refresh capability**: One-click trend refresh for real-time industry insights
+  - **Professional source attribution**: Clear source tracking and relevance scoring for all discovered trends
+
 - **Enhanced Authentication & Training Flow** (Latest): Major improvements to user authentication and model training workflows:
   - **Fixed React Hook errors**: Resolved useReplicateTraining hook issues by updating toast import from 'react-hot-toast' to 'sonner'
   - **Enhanced authentication flow**: Added smart welcome modal skipping during training flows to prevent interruption

@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Enhanced Social Media Trend Extraction System**: Major improvements to real-time industry trend discovery
+  - Intelligent content filtering algorithm that automatically removes URLs, navigation elements, copyright notices, and junk content
+  - Priority-based extraction system: headlines (highest priority) → statistical content → general insights
+  - Advanced markdown parsing to extract article headlines (H1, H2, H3) and key section titles
+  - Statistical content emphasis: prioritizes trends containing percentages, multipliers, and quantifiable data
+  - Enhanced contextual summary generation from surrounding content for each discovered trend
+  - Real-time web scraping from 5 major industry sources: HubSpot Marketing Blog, Sprout Social Insights, Social Media Examiner, Instagram Creators Blog, and Adweek Social Media
+  - Professional source attribution with clear hostname tracking and relevance scoring (6-10 scale)
+  - Manual refresh capability via "Scrape Real Trends" button for on-demand industry insights
+  - Improved trend quality: now extracts meaningful headlines like "AI-Generated Content Reaches 40% of Instagram Posts" instead of random links or poorly formatted text
+  - Better content validation with length checks and formatting requirements
+  - Enhanced link cleaning that preserves text content while removing markdown link syntax
+
 - **Replicate Image Generation Improvements**: Major fixes and enhancements for custom model image generation
   - Implemented Replicate predictions API for reliable custom model inference instead of streaming run() method
   - Added comprehensive ReadableStream handling for streaming responses from Replicate API  
