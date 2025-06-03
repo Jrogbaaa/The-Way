@@ -4,6 +4,16 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Recent Updates (January 2025)
 
+- **Simplified Image Generation UI** (Latest): Major UX improvements to make image generation more accessible and user-friendly:
+  - **Streamlined interface**: Removed technical controls (inference steps, guidance scale) that confused casual users
+  - **Enhanced prompt input**: Upgraded from single-line to multi-line textarea with helpful placeholder text and tips
+  - **Consistent navigation**: Added unified back buttons to all model detail pages (bea, cristina, jaime, custom models)
+  - **Improved prompt templates**: Better categorization and descriptions for Professional, Lifestyle, Fashion, and Travel templates
+  - **Prominent generate buttons**: Made generation buttons larger and more visually prominent for better UX
+  - **Generation time estimates**: Added helpful time estimates (10-15 seconds) to set user expectations
+  - **Fixed image domain configuration**: Added `picsum.photos` to Next.js image configuration to resolve loading errors
+  - **Simplified generation process**: Focus on prompt input and template selection for easier content creation
+
 - **Fixed SSR/Prerendering Errors** (Latest): Resolved critical deployment failures affecting Gallery functionality:
   - **Fixed browser environment checks**: Updated `getSupabaseBrowserClient()` usage in Gallery components to prevent SSR errors
   - **Conditional client initialization**: Modified `src/app/gallery/page.tsx` and `src/components/gallery/GalleryUpload.tsx` to use state-based Supabase client initialization
@@ -52,6 +62,7 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
   - **Playwright e2e tests**: End-to-end testing for authentication and complete user flows
   - **Enhanced test coverage**: Tests for model creation, training workflows, and error handling
   - **Validation scripts**: Automated checks ensuring code quality before deployment
+  - **Note**: Some Playwright tests require updates to match recent UI simplifications (e.g., button text changes, model page updates)
 
 - **Improved Replicate API Integration**: Enhanced reliability and error handling:
   - **Conditional webhook URLs**: Fixed 422 errors by making webhooks conditional for development vs production
