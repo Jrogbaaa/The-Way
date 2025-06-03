@@ -62,21 +62,9 @@ export async function GET(req: NextRequest) {
     
     // Enhanced user filtering to handle different authentication scenarios
     if (userId !== 'anonymous') {
-      // Handle known Google OAuth users with their specific UUIDs
-      if (userEmail === '11jellis@gmail.com' || userId === '11fbbde8-3e75-4a7a-8ee7-70947796f0ec') {
-        console.log('🔍 Detected Google OAuth user 11jellis@gmail.com, using specific UUID filter');
-        query = query.eq('user_id', '11fbbde8-3e75-4a7a-8ee7-70947796f0ec');
-      } else if (userEmail === 'johnbanks8888@gmail.com') {
-        console.log('🔍 Detected Google OAuth user johnbanks8888@gmail.com, checking all possible user IDs');
-        // We need to find what user_id this user's models are stored under
-        // Let's check both the session ID and also do a broader search
-        console.log('Session user ID for johnbanks8888@gmail.com:', userId);
-        query = query.eq('user_id', userId);
-      } else {
-        // Standard user ID filtering
-        console.log('🔍 Using standard user ID filter:', userId);
-        query = query.eq('user_id', userId);
-      }
+      // Use the actual session user ID for all authenticated users
+      console.log('🔍 Using actual session user ID filter:', userId);
+      query = query.eq('user_id', userId);
     } else {
       console.log('🔍 Anonymous user, checking session-based models');
       // For anonymous users, don't apply user_id filter to see all models (for debugging)
@@ -85,10 +73,7 @@ export async function GET(req: NextRequest) {
     console.log('🔍 Query conditions:', {
       userId,
       userEmail,
-      isGoogleUser: userEmail === '11jellis@gmail.com',
-      queryFilter: userId !== 'anonymous' ? 
-        (userEmail === '11jellis@gmail.com' ? '11fbbde8-3e75-4a7a-8ee7-70947796f0ec' : userId) : 
-        'none (anonymous)'
+      queryFilter: userId !== 'anonymous' ? userId : 'none (anonymous)'
     });
     
     const { data, error } = await query;

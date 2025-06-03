@@ -4,6 +4,13 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Recent Updates (January 2025)
 
+- **Fixed Training Upload API RLS Issues** (Latest): Resolved critical 400/500 errors affecting training image uploads on Vercel:
+  - **Root cause**: Training upload API was using regular Supabase client with RLS restrictions, blocking anonymous uploads
+  - **Solution**: Changed to use Supabase admin client (`createAdminClient`) which bypasses RLS for uploads
+  - **Benefits**: Allows anonymous users to upload training images before authentication, fixing the training workflow
+  - **Security**: Files are organized by session ID and stored securely in Supabase cloud storage
+  - **Backward compatibility**: Existing upload functionality preserved while fixing deployment issues
+
 - **Fixed Vercel Upload Issues** (Latest): Resolved critical 500 errors affecting file uploads on Vercel deployment:
   - **Root cause**: Training upload API was using filesystem operations which don't work on Vercel's serverless functions
   - **Solution**: Migrated from filesystem storage to Supabase cloud storage for training image uploads
