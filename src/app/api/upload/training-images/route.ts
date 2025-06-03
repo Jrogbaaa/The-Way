@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 
 // Training images bucket name
 const TRAINING_BUCKET_NAME = 'training-uploads';
@@ -45,12 +45,11 @@ export async function POST(request: NextRequest) {
   console.log('POST /api/upload/training-images called');
   
   try {
-    // Initialize Supabase client
-    const supabase = await createClient('TrainingUpload');
+    // Initialize Supabase admin client to bypass RLS for anonymous uploads
+    const supabase = createAdminClient('TrainingUpload');
     
-    // Note: Authentication is not required for file uploads
-    // This allows unauthenticated users to upload files before signing in
-    // We'll use anonymous session-based file organization
+    // Note: Using admin client allows unauthenticated users to upload files
+    // This is necessary for anonymous training image uploads
     
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
