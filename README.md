@@ -129,9 +129,11 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
     - Text to Image (via Replicate SDXL, accessible at `/generate/image`)
     - Image to Video (via Replicate Wan 2.1)
   - **Custom Trained Models**:
-    - Uses Replicate's recommended base model architecture (`flux-lora-base`)
-    - Each training creates a new model version instead of individual models
-    - Scalable approach that supports unlimited user training sessions
+    - Uses Replicate's recommended individual model approach for FLUX training
+    - Each training creates a unique, private model for optimal organization and security
+    - Follows FLUX.1 fine-tuning best practices with `ostris/flux-dev-lora-trainer`
+    - Supports unlimited user training sessions with proper model naming and isolation
+    - Model names are automatically sanitized to comply with Replicate's requirements
     - Cristina Model (via Replicate)
     - Jaime Model (via Replicate)
   - Bea Generator Model (via Replicate)

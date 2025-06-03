@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Replicate from 'replicate';
-import { createClient } from '@supabase/supabase-js';
 import { nanoid } from 'nanoid';
+import { createAdminClient } from '@/lib/supabase';
 import { auth } from '@/auth';
 
 // Initialize Replicate client
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
 });
-
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Supabase URL or service key is missing.');
-}
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // The trainer model we'll use (FLUX LoRA trainer)
 const TRAINER_MODEL = "ostris/flux-dev-lora-trainer";
@@ -28,40 +19,9 @@ if (!REPLICATE_USERNAME) {
   console.error('REPLICATE_USERNAME environment variable is not set');
 }
 
-// Base model name that all trainings will use as versions
-const BASE_MODEL_NAME = "flux-lora-base";
-
-/**
- * Ensure the base model exists, create it if it doesn't
- */
-async function ensureBaseModelExists(): Promise<void> {
-  if (!REPLICATE_USERNAME) {
-    throw new Error('REPLICATE_USERNAME not configured');
-  }
-
-  try {
-    // Try to get the base model first
-    await replicate.models.get(REPLICATE_USERNAME, BASE_MODEL_NAME);
-    console.log('Base model already exists');
-  } catch (error: any) {
-    if (error.status === 404) {
-      // Model doesn't exist, create it
-      console.log('Creating base model for all trainings...');
-      await replicate.models.create(REPLICATE_USERNAME, BASE_MODEL_NAME, {
-        visibility: "private",
-        hardware: "gpu-t4",
-        description: "Base model for FLUX LoRA fine-tuning. Each training creates a new version of this model."
-      });
-      console.log('Base model created successfully');
-    } else {
-      throw error;
-    }
-  }
-}
-
 /**
  * POST /api/replicate/train
- * Creates a new model version using Replicate's recommended approach
+ * Creates a new model and trains it using Replicate's standard approach
  */
 export async function POST(request: NextRequest) {
   console.log('POST /api/replicate/train called');
@@ -136,11 +96,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure base model exists
-    await ensureBaseModelExists();
+    // Create a unique model name for this training (following Replicate's best practices)
+    const sanitizedModelName = modelName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const sanitizedTrainingId = trainingId.toLowerCase().slice(0, 8);
+    
+    // Ensure model name doesn't start or end with invalid characters
+    const cleanModelName = sanitizedModelName.replace(/^[-_.]+|[-_.]+$/g, '');
+    const finalModelName = cleanModelName || 'model'; // fallback if name becomes empty
+    
+    const uniqueModelName = `${finalModelName}-${sanitizedTrainingId}`;
+    const fullModelName = `${REPLICATE_USERNAME}/${uniqueModelName}`;
+    
+    console.log(`Creating unique model: ${fullModelName}`);
+
+    // Create the model first (following Replicate's standard approach)
+    try {
+      await replicate.models.create(
+        REPLICATE_USERNAME,
+        uniqueModelName,
+        {
+          visibility: "private",
+          hardware: "gpu-t4", // Replicate will override this for training
+          description: `FLUX LoRA model: ${modelName} (trigger: ${triggerWord})`
+        }
+      );
+      console.log('Model created successfully:', uniqueModelName);
+    } catch (createError: any) {
+      console.error('Error creating model:', createError);
+      return NextResponse.json(
+        { error: `Failed to create model: ${createError.message}` },
+        { status: 500 }
+      );
+    }
 
     // Insert training record into database BEFORE starting training
-    const { error: insertError } = await supabase
+    // Use service role client to bypass RLS policies for server-side operations
+    const serviceRoleClient = createAdminClient();
+    
+    const { error: insertError } = await serviceRoleClient
       .from('trained_models')
       .insert({
         id: trainingId,
@@ -153,8 +146,7 @@ export async function POST(request: NextRequest) {
           triggerWord,
           trainingImagesZipUrl,
           originalModelName: modelName,
-          baseModelName: BASE_MODEL_NAME,
-          replicateModelName: `${REPLICATE_USERNAME}/${BASE_MODEL_NAME}`,
+          replicateModelName: fullModelName,
           // Store if this came from temporary storage
           fromTempConfig: !!tempId
         }
@@ -171,8 +163,8 @@ export async function POST(request: NextRequest) {
     // Start the training on Replicate
     // First, let's get the latest version of the trainer model
     console.log('Getting latest version of flux trainer...');
-    const model = await replicate.models.get("ostris", "flux-dev-lora-trainer");
-    const latestVersion = model.latest_version;
+    const trainerModel = await replicate.models.get("ostris", "flux-dev-lora-trainer");
+    const latestVersion = trainerModel.latest_version;
     
     if (!latestVersion) {
       throw new Error('Could not find latest version of flux trainer');
@@ -180,9 +172,9 @@ export async function POST(request: NextRequest) {
     
     console.log(`Using trainer version: ${latestVersion.id}`);
     
-    // Create training with base model as destination (creates new version)
+    // Create training with the unique model as destination
     const trainingInput: any = {
-      destination: `${REPLICATE_USERNAME}/${BASE_MODEL_NAME}`, // Use base model - this creates a new version
+      destination: fullModelName, // Use the unique model as destination
       input: {
         input_images: trainingImagesZipUrl,
         trigger_word: triggerWord,
@@ -213,13 +205,13 @@ export async function POST(request: NextRequest) {
     );
 
     console.log('Training started:', training.id);
-    console.log('This will create a new version of the base model instead of a new individual model');
+    console.log('This will create the trained model:', fullModelName);
 
     // Update database with Replicate training ID
-    const { error: updateError } = await supabase
+    const { error: updateError } = await serviceRoleClient
       .from('trained_models')
       .update({ 
-        replicate_training_id: training.id,
+        replicate_id: training.id,
         status: training.status || 'starting'
       })
       .eq('id', trainingId);
@@ -232,10 +224,9 @@ export async function POST(request: NextRequest) {
       success: true,
       trainingId,
       replicateTrainingId: training.id,
-      modelName: `${REPLICATE_USERNAME}/${BASE_MODEL_NAME}`,
-      baseModel: true, // Indicate this uses the base model approach
+      modelName: fullModelName,
       status: training.status,
-      message: 'Training started successfully - this will create a new version of the base model'
+      message: 'Training started successfully - creating new trained model'
     });
 
   } catch (error: any) {

@@ -233,13 +233,20 @@ export default function CristinaModelPage() {
 
   return (
     <div className="space-y-6">
+      {/* Back Button */}
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => router.push('/models')}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to My Models
+        </Button>
+      </div>
+
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/models" className="whitespace-nowrap">
-              ← Back to Models
-            </Link>
-          </Button>
           <h2 className="text-2xl font-bold">Cristina Model</h2>
         </div>
         <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-medium">

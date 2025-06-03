@@ -5,11 +5,10 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Download, Share2, Settings, HelpCircle, Info } from 'lucide-react';
+import { Loader2, Download, Share2, Settings, Info, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { 
   Select, 
@@ -34,21 +33,21 @@ const promptTemplates: PromptTemplate[] = [
   {
     id: 'studio-portrait',
     name: 'Studio Portrait',
-    prompt: 'a professional studio portrait of sks person with perfect lighting, high quality, 4k',
+    prompt: 'a professional studio portrait with perfect lighting, high quality, 4k',
     description: 'Classic professional headshot with studio lighting',
     category: 'Professional'
   },
   {
     id: 'business-profile',
     name: 'Business Profile',
-    prompt: 'a professional corporate portrait of sks person in business attire, neutral background, professional lighting, linkedin profile',
+    prompt: 'a professional corporate portrait in business attire, neutral background, professional lighting, linkedin profile',
     description: 'Perfect for professional profiles and business cards',
     category: 'Professional'
   },
   {
     id: 'product-ad',
     name: 'Product Advertisement',
-    prompt: 'a photo of sks person holding a product, commercial photography, professional lighting, advertisement style',
+    prompt: 'a photo holding a product, commercial photography, professional lighting, advertisement style',
     description: 'Perfect for product promotions and advertisements',
     category: 'Professional'
   },
@@ -57,21 +56,21 @@ const promptTemplates: PromptTemplate[] = [
   {
     id: 'outdoor-casual',
     name: 'Outdoor Casual',
-    prompt: 'a candid photo of sks person outdoors in natural lighting, casual pose, lifestyle photography',
+    prompt: 'a candid photo outdoors in natural lighting, casual pose, lifestyle photography',
     description: 'Natural, casual look in outdoor settings',
     category: 'Lifestyle'
   },
   {
     id: 'urban-street',
     name: 'Urban Street',
-    prompt: 'a photo of sks person in an urban environment, street photography, city background, authentic style',
+    prompt: 'a photo in an urban environment, street photography, city background, authentic style',
     description: 'Modern street style photography in city settings',
     category: 'Lifestyle'
   },
   {
     id: 'cafe-scene',
     name: 'Cafe Scene',
-    prompt: 'a photo of sks person sitting in a cozy cafe, soft ambient lighting, lifestyle photography, candid moment',
+    prompt: 'a photo sitting in a cozy cafe, soft ambient lighting, lifestyle photography, candid moment',
     description: 'Warm, inviting cafe setting perfect for social media',
     category: 'Lifestyle'
   },
@@ -80,21 +79,21 @@ const promptTemplates: PromptTemplate[] = [
   {
     id: 'fashion',
     name: 'Fashion Editorial',
-    prompt: 'a fashion editorial photo of sks person wearing stylish clothes, magazine quality, professional photoshoot',
+    prompt: 'a fashion editorial photo wearing stylish clothes, magazine quality, professional photoshoot',
     description: 'High-fashion magazine style photography',
     category: 'Fashion'
   },
   {
     id: 'vintage-style',
     name: 'Vintage Style',
-    prompt: 'a vintage film photograph of sks person, retro style, analog film look, 1970s aesthetic',
+    prompt: 'a vintage film photograph, retro style, analog film look, 1970s aesthetic',
     description: 'Retro-inspired photography with vintage effects',
     category: 'Fashion'
   },
   {
     id: 'artistic-portrait',
     name: 'Artistic Portrait',
-    prompt: 'an artistic portrait of sks person with creative lighting, dramatic shadows, cinematic mood, high contrast',
+    prompt: 'an artistic portrait with creative lighting, dramatic shadows, cinematic mood, high contrast',
     description: 'Artistic, dramatic portrait with unique lighting',
     category: 'Fashion'
   },
@@ -103,21 +102,21 @@ const promptTemplates: PromptTemplate[] = [
   {
     id: 'travel',
     name: 'Travel',
-    prompt: 'a photo of sks person traveling in an exotic location, travel photography, exploring, adventure',
+    prompt: 'a photo traveling in an exotic location, travel photography, exploring, adventure',
     description: 'Perfect for travel content and location shots',
     category: 'Travel'
   },
   {
     id: 'nature-explorer',
     name: 'Nature Explorer',
-    prompt: 'a photo of sks person hiking in nature, outdoor adventure photography, mountains, wilderness, golden hour lighting',
+    prompt: 'a photo hiking in nature, outdoor adventure photography, mountains, wilderness, golden hour lighting',
     description: 'Outdoor adventure in beautiful natural settings',
     category: 'Travel'
   },
   {
     id: 'beach-vacation',
     name: 'Beach Vacation',
-    prompt: 'a photo of sks person on a tropical beach, summer vibes, crystal clear water, vacation photography, sunny day',
+    prompt: 'a photo on a tropical beach, summer vibes, crystal clear water, vacation photography, sunny day',
     description: 'Sun-soaked beach scenes perfect for vacation content',
     category: 'Travel'
   }
@@ -153,6 +152,8 @@ interface ModelInfo {
   };
   error_message?: string;
   last_update?: string;
+  model_url?: string;
+  replicate_id?: string;
 }
 
 export default function ModelDetailPage() {
@@ -166,43 +167,56 @@ export default function ModelDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [modelValidationError, setModelValidationError] = useState<string | null>(null);
 
+  // Check if this is a built-in model that should use its dedicated page
+  const isBuiltInModel = typeof modelId === 'string' && ['bea', 'cristina', 'jaime'].includes(modelId);
+
   // Generation parameters
   const [prompt, setPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [inferenceSteps, setInferenceSteps] = useState(30);
-  const [guidanceScale, setGuidanceScale] = useState(7.5);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
 
   // Fetch model info on mount
   useEffect(() => {
+    // Skip fetching for built-in models
+    if (isBuiltInModel) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchModelInfo() {
+      if (!modelId) return;
+      
+      setLoading(true);
+      setError(null);
+      
       try {
-        setLoading(true);
-        const response = await fetch(`/api/modal/model-status?id=${modelId}`);
+        // Use the new models API endpoint for better data consistency
+        const response = await fetch(`/api/models/${modelId}`);
         
         if (!response.ok) {
-          throw new Error(`Error fetching model: ${response.status}`);
+          if (response.status === 404) {
+            throw new Error('Model not found');
+          } else if (response.status === 401) {
+            throw new Error('Authentication required');
+          } else {
+            throw new Error(`Failed to fetch model: ${response.status}`);
+          }
         }
         
         const data = await response.json();
-        
-        if (data.status === 'error') {
-          throw new Error(data.error || 'Failed to fetch model information');
-        }
-        
+        console.log('Fetched model data:', data);
         setModel(data);
+        
       } catch (err) {
-        console.error('Error fetching model info:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error occurred');
+        console.error('Error fetching model:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load model');
       } finally {
         setLoading(false);
       }
     }
-    
-    if (modelId) {
-      fetchModelInfo();
-    }
+
+    fetchModelInfo();
   }, [modelId]);
 
   // Generate model default prompt
@@ -216,13 +230,10 @@ export default function ModelDetailPage() {
   const handleTemplateChange = (value: string) => {
     setSelectedTemplate(value);
     
-    if (value && model?.model_info?.instance_prompt) {
+    if (value) {
       const template = promptTemplates.find(t => t.id === value);
       if (template) {
-        // Replace 'sks person' with the model's instance prompt
-        const instanceText = model.model_info.instance_prompt.replace('a photo of ', '');
-        const newPrompt = template.prompt.replace('sks person', instanceText);
-        setPrompt(newPrompt);
+        setPrompt(template.prompt);
       }
     }
   };
@@ -237,23 +248,51 @@ export default function ModelDetailPage() {
       });
       return;
     }
+
+    if (!model) {
+      toast({
+        title: "Model not found",
+        description: "Model information is not available",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setGenerating(true);
     setGeneratedImage(null);
     setModelValidationError(null); // Clear any previous validation errors
     
     try {
-      const response = await fetch('/api/modal/generate-image', {
+      // Determine which API to use based on model properties
+      let apiEndpoint = '/api/modal/generate-image'; // Default to Modal
+      let requestBody: any = {
+        modelId,
+        prompt,
+        numInferenceSteps: 30, // Use default value
+        guidanceScale: 7.5, // Use default value
+      };
+
+      // If the model has a model_url (Replicate-trained model), use Replicate API
+      if (model.model_url || model.replicate_id) {
+        apiEndpoint = '/api/replicate/generate';
+        requestBody = {
+          model: model.model_url || model.replicate_id,
+          input: {
+            prompt: prompt,
+            num_inference_steps: 30, // Use default value
+            guidance_scale: 7.5, // Use default value
+          }
+        };
+      }
+
+      console.log(`Using ${apiEndpoint} for model generation with model:`, model.model_url || model.replicate_id || modelId);
+      
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          modelId,
-          prompt,
-          numInferenceSteps: inferenceSteps,
-          guidanceScale: guidanceScale,
-        }),
+        body: JSON.stringify(requestBody),
       });
       
       const data = await response.json();
@@ -262,11 +301,12 @@ export default function ModelDetailPage() {
         throw new Error(data.error || 'Failed to generate image');
       }
       
-      // Check for model validation warnings 
+      // Check for model validation warnings (Modal API)
       if (data.usedPlaceholder && data.errorType === 'invalid_model') {
         setModelValidationError(data.modelError || 'The model file appears to be invalid or corrupted. You may need to train a new model.');
       }
       
+      // Handle different response formats
       if (data.image_base64) {
         setGeneratedImage(`data:image/png;base64,${data.image_base64}`);
       } else if (data.imageUrl) {
@@ -309,6 +349,39 @@ export default function ModelDetailPage() {
     );
   }
 
+  // Handle built-in models that ended up on the wrong route
+  if (isBuiltInModel) {
+    return (
+      <div className="container py-10 max-w-4xl mx-auto">
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle>Redirecting to {modelId} Model</CardTitle>
+            <CardDescription>
+              This model has its own dedicated page with enhanced features
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4">
+              The {modelId} model has a specialized interface with additional features. 
+              You'll be redirected to the proper page.
+            </p>
+          </CardContent>
+          <CardFooter className="flex gap-2">
+            <Button 
+              onClick={() => router.push(`/models/${modelId}`)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Go to {modelId} Model Page
+            </Button>
+            <Button variant="outline" onClick={() => router.push('/models')}>
+              Back to Models
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
   if (error || !model) {
     return (
       <div className="container py-10 max-w-4xl mx-auto">
@@ -334,6 +407,18 @@ export default function ModelDetailPage() {
 
   return (
     <div className="container py-10 max-w-6xl mx-auto">
+      {/* Back Button */}
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => router.push('/models')}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to My Models
+        </Button>
+      </div>
+
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-2">{model.model_name}</h1>
@@ -376,15 +461,15 @@ export default function ModelDetailPage() {
           <CardHeader>
             <CardTitle>Generate Images</CardTitle>
             <CardDescription>
-              Enter a prompt to generate images with your trained model
+              Create amazing images with your custom model. Choose a template or write your own prompt.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Prompt Template Selector */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Prompt Template</label>
-                <Tooltip content="Choose a pre-defined prompt style to get started quickly.">
+                <label className="text-sm font-medium">Quick Start Templates</label>
+                <Tooltip content="Choose a pre-made template to get started quickly, then customize it to your liking.">
                   <div className="cursor-help">
                     <Info className="h-4 w-4 text-muted-foreground" />
                   </div>
@@ -392,7 +477,7 @@ export default function ModelDetailPage() {
               </div>
               <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a template" />
+                  <SelectValue placeholder="Choose a style template (optional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {/* Group templates by category */}
@@ -420,146 +505,139 @@ export default function ModelDetailPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Prompt</label>
+                <label className="text-sm font-medium">Your Prompt</label>
                 <Tooltip content="Describe what you want to see in the generated image. Be specific about details, style, and lighting.">
                   <div className="cursor-help">
                     <Info className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </Tooltip>
               </div>
-              <Input
-                placeholder="Enter your prompt here..."
+              <textarea
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                placeholder="Describe the image you want to generate... (e.g., 'a photo of bea with a red shirt in a coffee shop')"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={generating}
+                rows={3}
               />
-              
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">Steps: {inferenceSteps}</p>
-                    <Tooltip content="Higher values create more detailed images but take longer to generate. 30 is a good balance.">
-                      <div className="cursor-help">
-                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </Tooltip>
-                  </div>
-                  <Slider
-                    min={20}
-                    max={50}
-                    step={1}
-                    value={[inferenceSteps]}
-                    onValueChange={(value) => setInferenceSteps(value[0])}
-                    disabled={generating}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">Guidance Scale: {guidanceScale}</p>
-                    <Tooltip content="Controls how closely the image follows your prompt. Higher values (7-10) give more precise results, lower values are more creative.">
-                      <div className="cursor-help">
-                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </Tooltip>
-                  </div>
-                  <Slider
-                    min={5}
-                    max={15}
-                    step={0.1}
-                    value={[guidanceScale]}
-                    onValueChange={(value) => setGuidanceScale(value[0])}
-                    disabled={generating}
-                  />
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Tip: Be specific about details like clothing, location, lighting, and style for better results
+              </p>
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col space-y-2">
             <Button 
               onClick={generateImage} 
-              disabled={generating || !prompt.trim() || model.status !== 'completed'}
-              className="w-full"
+              disabled={generating || !prompt.trim() || (model.status !== 'completed' && model.status !== 'ready')}
+              className="w-full h-12 text-base font-semibold"
+              size="lg"
             >
               {generating ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Generating your image...
                 </>
               ) : (
                 'Generate Image'
               )}
             </Button>
+            {!generating && (
+              <p className="text-xs text-muted-foreground text-center">
+                ⚡ Generation typically takes 10-15 seconds
+              </p>
+            )}
           </CardFooter>
         </Card>
 
         <div className="space-y-4">
-          <Tabs defaultValue="generated" className="w-full">
-            <TabsList className="w-full grid grid-cols-2">
-              <TabsTrigger value="generated">Generated</TabsTrigger>
-              <TabsTrigger value="sample">Sample</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="generated" className="mt-4">
-              <Card className="border-dashed">
-                <CardContent className="p-0">
-                  <div className="relative aspect-square rounded-md overflow-hidden bg-muted flex items-center justify-center">
-                    {generatedImage ? (
-                      <>
+          {/* Show generation interface for ready models */}
+          {(model.status === 'completed' || model.status === 'ready') ? (
+            <Tabs defaultValue="generated" className="w-full">
+              <TabsList className="w-full grid grid-cols-2">
+                <TabsTrigger value="generated">Generated</TabsTrigger>
+                <TabsTrigger value="sample">Sample</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="generated" className="mt-4">
+                <Card className="border-dashed">
+                  <CardContent className="p-0">
+                    <div className="relative aspect-square rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                      {generatedImage ? (
+                        <>
+                          <Image
+                            src={generatedImage}
+                            alt="Generated image"
+                            fill
+                            className="object-contain"
+                          />
+                          <div className="absolute bottom-2 right-2 flex gap-2">
+                            <Button size="icon" variant="secondary" onClick={downloadImage}>
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="secondary">
+                              <Share2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center p-4">
+                          <p className="text-muted-foreground">
+                            {generating 
+                              ? 'Generating your image...' 
+                              : 'Generate an image using your custom model'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="sample" className="mt-4">
+                <Card className="border-dashed">
+                  <CardContent className="p-0">
+                    <div className="relative aspect-square rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                      {model.sample_image ? (
                         <Image
-                          src={generatedImage}
-                          alt="Generated image"
+                          src={`data:image/png;base64,${model.sample_image}`}
+                          alt="Sample image"
                           fill
                           className="object-contain"
                         />
-                        <div className="absolute bottom-2 right-2 flex gap-2">
-                          <Button size="icon" variant="secondary" onClick={downloadImage}>
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="secondary">
-                            <Share2 className="h-4 w-4" />
-                          </Button>
+                      ) : (
+                        <div className="text-center p-4">
+                          <p className="text-muted-foreground">No sample image available</p>
                         </div>
-                      </>
-                    ) : (
-                      <div className="text-center p-4">
-                        <p className="text-muted-foreground">
-                          {generating 
-                            ? 'Generating your image...' 
-                            : model.status === 'completed' 
-                              ? 'Generate an image using your custom model'
-                              : model.status === 'failed'
-                              ? 'This model failed during training and cannot generate images'
-                              : `Model is ${model.status}. Cannot generate images yet.`}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="sample" className="mt-4">
-              <Card className="border-dashed">
-                <CardContent className="p-0">
-                  <div className="relative aspect-square rounded-md overflow-hidden bg-muted flex items-center justify-center">
-                    {model.sample_image ? (
-                      <Image
-                        src={`data:image/png;base64,${model.sample_image}`}
-                        alt="Sample image"
-                        fill
-                        className="object-contain"
-                      />
-                    ) : (
-                      <div className="text-center p-4">
-                        <p className="text-muted-foreground">No sample image available</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            /* Show not ready message for models that aren't ready */
+            <Card className="border-orange-200 bg-orange-50">
+              <CardContent className="p-6 text-center">
+                <h3 className="text-lg font-semibold text-orange-800 mb-2">
+                  Model Not Ready for Generation
+                </h3>
+                <p className="text-orange-700 mb-4">
+                  {model.status === 'failed' 
+                    ? 'This model failed during training and cannot generate images.'
+                    : model.status === 'training' || model.status === 'processing' || model.status === 'starting'
+                    ? 'This model is still in training or processing. Please wait until it\'s complete to generate images.'
+                    : `Model status: ${model.status}. Cannot generate images in this state.`}
+                </p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.location.reload()}
+                  className="border-orange-300 text-orange-700 hover:bg-orange-100"
+                >
+                  Check Status
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

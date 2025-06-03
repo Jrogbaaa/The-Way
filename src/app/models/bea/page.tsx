@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import { getProxiedImageUrl } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
@@ -14,8 +14,6 @@ export default function BeaModelPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [prompt, setPrompt] = useState('');
-  const [negativePrompt, setNegativePrompt] = useState('');
-  const [numOutputs, setNumOutputs] = useState(1);
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +38,8 @@ export default function BeaModelPage() {
         },
         body: JSON.stringify({
           prompt,
-          negative_prompt: negativePrompt,
-          num_outputs: numOutputs,
+          negative_prompt: 'male, man, masculine, boy, male features, beard, mustache', // Use default
+          num_outputs: 1, // Always generate 1 image for simplicity
         }),
       });
 
@@ -67,71 +65,64 @@ export default function BeaModelPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Back Button */}
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => router.push('/models')}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to My Models
+        </Button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <h1 className="text-2xl font-bold mb-4">Bea Image Generator</h1>
           <p className="text-gray-600 mb-6">
-            Generate images of Bea with your custom prompts. This model was specifically trained to create realistic images of Bea.
+            Create amazing images of Bea! Just describe what you want to see and let the AI do the rest.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="prompt" className="block text-sm font-medium text-gray-700 mb-1">
-                Prompt
+                Your Prompt
               </label>
               <textarea
                 id="prompt"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe what you want to generate..."
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 min-h-[100px]"
+                placeholder="Describe what you want to generate... (e.g., 'a photo of bea with a red shirt in a coffee shop')"
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-none"
                 required
+                rows={4}
               />
-            </div>
-
-            <div>
-              <label htmlFor="negativePrompt" className="block text-sm font-medium text-gray-700 mb-1">
-                Negative Prompt (Optional)
-              </label>
-              <textarea
-                id="negativePrompt"
-                value={negativePrompt}
-                onChange={(e) => setNegativePrompt(e.target.value)}
-                placeholder="Describe what you want to avoid in the image..."
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 min-h-[80px]"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="numOutputs" className="block text-sm font-medium text-gray-700 mb-1">
-                Number of Images
-              </label>
-              <select
-                id="numOutputs"
-                value={numOutputs}
-                onChange={(e) => setNumOutputs(Number(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value={1}>1</option>
-                <option value={2}>2</option>
-                <option value={4}>4</option>
-              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Tip: Be specific about details like clothing, location, lighting, and style for better results
+              </p>
             </div>
 
             <Button
               type="submit"
               disabled={loading || !prompt}
-              className="w-full"
+              className="w-full h-12 text-base font-semibold"
+              size="lg"
               variant="default"
             >
               {loading ? (
                 <span className="flex items-center justify-center">
-                  <Loader2 className="animate-spin mr-2 h-4 w-4" /> Generating...
+                  <Loader2 className="animate-spin mr-2 h-5 w-5" /> Generating your image...
                 </span>
               ) : (
-                'Generate Images'
+                'Generate Image'
               )}
             </Button>
+            {!loading && (
+              <p className="text-xs text-gray-500 text-center">
+                ⚡ Generation typically takes 15-30 seconds
+              </p>
+            )}
           </form>
 
           {error && (
@@ -142,32 +133,33 @@ export default function BeaModelPage() {
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h2 className="text-xl font-semibold mb-4">Generated Images</h2>
+          <h2 className="text-xl font-semibold mb-4">Your Generated Image</h2>
           
           {loading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-              <p className="mt-4 text-gray-600">Generating amazing images...</p>
+              <p className="mt-4 text-gray-600">Creating your amazing image...</p>
               <p className="text-sm text-gray-500 mt-2">This may take 15-30 seconds</p>
             </div>
           ) : images.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex justify-center">
               {images.map((image, index) => (
-                <div key={index} className="border rounded-md overflow-hidden">
+                <div key={index} className="border rounded-lg overflow-hidden max-w-md shadow-sm">
                   <a href={image} target="_blank" rel="noopener noreferrer">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img 
                       src={getProxiedImageUrl(image)} 
-                      alt={`Generated image ${index + 1}`}
-                      className="w-full h-auto object-contain"
+                      alt={`Generated image of Bea`}
+                      className="w-full h-auto object-contain hover:scale-105 transition-transform duration-200"
                     />
                   </a>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-              <p>Your generated images will appear here</p>
+            <div className="flex flex-col items-center justify-center h-64 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+              <p className="text-lg">Your generated image will appear here</p>
+              <p className="text-sm mt-2">Enter a prompt and click generate to get started!</p>
             </div>
           )}
         </div>

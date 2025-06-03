@@ -82,6 +82,8 @@ export const useReplicateTraining = () => {
         requestBody.tempId = config.tempId;
       }
       
+      console.log('Sending training request with body:', requestBody);
+      
       const response = await fetch('/api/replicate/train', {
         method: 'POST',
         headers: {
@@ -90,12 +92,22 @@ export const useReplicateTraining = () => {
         body: JSON.stringify(requestBody),
       });
 
+      console.log('Training API response status:', response.status);
+
       if (!response.ok) {
+        let errorMessage = 'Failed to start training';
+        try {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to start training');
+          errorMessage = errorData.error || errorMessage;
+          console.error('Training API error data:', errorData);
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
+      console.log('Training API success result:', result);
       
       if (result.success) {
         setTrainingId(result.trainingId);
@@ -115,6 +127,7 @@ export const useReplicateTraining = () => {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('Training error details:', err);
       setError(errorMessage);
       setIsTraining(false);
       toast.error(`Training failed: ${errorMessage}`);
@@ -125,7 +138,8 @@ export const useReplicateTraining = () => {
   // Check training status
   const checkStatus = useCallback(async (id: string) => {
     try {
-      const response = await fetch(`/api/replicate/status/${id}`);
+      // Use the training-logs endpoint for real-time progress
+      const response = await fetch(`/api/replicate/training-logs/${id}`);
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -133,7 +147,19 @@ export const useReplicateTraining = () => {
       }
 
       const statusData = await response.json();
-      setStatus(statusData);
+      
+      // Update the status with enhanced training data
+      setStatus({
+        id: statusData.id,
+        status: statusData.status,
+        progress: statusData.progress,
+        error: statusData.error,
+        modelVersion: statusData.modelUrl,
+        logs: statusData.logs,
+        replicateId: statusData.replicateId,
+        progressStage: statusData.stage,
+        estimatedTimeRemaining: statusData.estimatedTimeRemaining
+      });
 
       // If training completed or failed, stop the training state
       if (statusData.status === 'succeeded' || statusData.status === 'failed') {
@@ -167,7 +193,7 @@ export const useReplicateTraining = () => {
         console.error('Status polling failed:', err);
         // Don't stop polling on single failures, just log them
       }
-    }, 10000); // Poll every 10 seconds
+    }, 5000); // Poll every 5 seconds for more responsive progress updates
 
     return () => clearInterval(pollInterval);
   }, [trainingId, isTraining, checkStatus]);

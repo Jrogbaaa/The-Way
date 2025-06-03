@@ -67,7 +67,7 @@ const mockSuggestionGroups: SuggestionGroup[] = [
         hashtags: ['sustainablefashion', 'newcollection', 'ecofriendly'],
         predictedEngagement: 87,
         targetPlatforms: ['instagram', 'facebook'],
-        imageUrl: 'https://images.unsplash.com/photo-1526947425960-945c6e72858f?q=80&w=600&auto=format&fit=crop',
+        imageUrl: 'https://picsum.photos/600/400?random=product1',
         trend: 'Minimalist product photography'
       },
       {
@@ -79,7 +79,7 @@ const mockSuggestionGroups: SuggestionGroup[] = [
         hashtags: ['sustainablestyle', 'ecofashion', 'recycledmaterials'],
         predictedEngagement: 82,
         targetPlatforms: ['instagram', 'facebook'],
-        imageUrl: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?q=80&w=600&auto=format&fit=crop',
+        imageUrl: 'https://picsum.photos/600/400?random=product2',
         trend: 'Educational carousels'
       },
       {
@@ -91,7 +91,7 @@ const mockSuggestionGroups: SuggestionGroup[] = [
         hashtags: ['sustainableliving', 'ecofriendly', 'lifestylevideo'],
         predictedEngagement: 91,
         targetPlatforms: ['instagram', 'tiktok'],
-        imageUrl: 'https://images.unsplash.com/photo-1556740772-1a741367b93e?q=80&w=600&auto=format&fit=crop',
+        imageUrl: 'https://picsum.photos/600/400?random=product3',
         trend: 'Day-in-the-life content'
       }
     ]
@@ -112,7 +112,7 @@ const mockSuggestionGroups: SuggestionGroup[] = [
         hashtags: ['fashionrevolution', 'sustainablefashion', 'fashionfuture'],
         predictedEngagement: 78,
         targetPlatforms: ['instagram', 'twitter'],
-        imageUrl: 'https://images.unsplash.com/photo-1588675646184-f5b0b0b0b2de?q=80&w=600&auto=format&fit=crop',
+        imageUrl: 'https://picsum.photos/600/400?random=engagement1',
         trend: 'Conversation starters'
       },
       {
@@ -124,7 +124,7 @@ const mockSuggestionGroups: SuggestionGroup[] = [
         hashtags: ['thisorthat', 'fashionpoll', 'stylecheck'],
         predictedEngagement: 85,
         targetPlatforms: ['instagram', 'facebook'],
-        imageUrl: 'https://images.unsplash.com/photo-1556740738-b6a63e2775df?q=80&w=600&auto=format&fit=crop',
+        imageUrl: 'https://picsum.photos/600/400?random=engagement2',
         trend: 'Interactive polls'
       },
       {
@@ -136,7 +136,7 @@ const mockSuggestionGroups: SuggestionGroup[] = [
         hashtags: ['hottakes', 'sustainablefashion', 'unpopularopinion'],
         predictedEngagement: 89,
         targetPlatforms: ['instagram', 'linkedin'],
-        imageUrl: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=600&auto=format&fit=crop',
+        imageUrl: 'https://picsum.photos/600/400?random=engagement3',
         trend: 'Controversial statements'
       }
     ]

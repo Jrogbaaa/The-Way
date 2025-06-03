@@ -40,16 +40,21 @@ export async function GET(
     }
 
     // Get Replicate training ID if we have one
-    const replicateTrainingId = dbRecord.replicate_training_id;
+    const replicateTrainingId = dbRecord.replicate_id;
     
     if (!replicateTrainingId) {
       return NextResponse.json({
         id: id,
+        modelName: dbRecord.model_name,
+        instancePrompt: dbRecord.input_data?.instancePrompt,
+        triggerWord: dbRecord.input_data?.triggerWord,
         status: dbRecord.status,
         progress: dbRecord.progress || 0,
         logs: 'Training starting... No Replicate training ID yet.',
         estimatedTimeRemaining: null,
-        stage: 'initializing'
+        stage: 'initializing',
+        createdAt: dbRecord.created_at,
+        modelUrl: dbRecord.model_url
       });
     }
 
@@ -82,7 +87,12 @@ export async function GET(
             
             // Estimate time remaining based on progress rate
             if (replicateProgress > 0) {
-              estimatedTimeRemaining = Math.max(1, Math.round((100 - replicateProgress) / 3)); // ~3% per minute
+              // Calculate ETA based on elapsed time and current progress
+              const createdAt = new Date(training.created_at).getTime();
+              const elapsed = (Date.now() - createdAt) / 1000 / 60; // minutes elapsed
+              const progressRate = replicateProgress / elapsed; // progress per minute
+              const remainingProgress = 100 - replicateProgress;
+              estimatedTimeRemaining = progressRate > 0 ? Math.max(1, Math.round(remainingProgress / progressRate)) : null;
             }
           }
         }
@@ -100,7 +110,11 @@ export async function GET(
             stage = `training (${current}/${total} steps)`;
             
             const remainingSteps = total - current;
-            estimatedTimeRemaining = Math.max(1, Math.round(remainingSteps / 20)); // ~20 steps per minute
+            // Calculate ETA based on elapsed time and step rate
+            const createdAt = new Date(training.created_at).getTime();
+            const elapsed = (Date.now() - createdAt) / 1000 / 60; // minutes elapsed
+            const stepRate = current / elapsed; // steps per minute
+            estimatedTimeRemaining = stepRate > 0 ? Math.max(1, Math.round(remainingSteps / stepRate)) : null;
           }
         }
       }
@@ -109,8 +123,14 @@ export async function GET(
       else {
         const createdAt = new Date(training.created_at).getTime();
         const elapsed = (Date.now() - createdAt) / 1000 / 60; // minutes
-        progress = Math.min(90, 10 + elapsed * 2); // 2% per minute
-        estimatedTimeRemaining = Math.max(1, Math.round((100 - progress) / 2));
+        // More conservative progress estimation: 1.5% per minute for first 20 minutes, then 1% per minute
+        const estimatedProgress = elapsed <= 20 ? elapsed * 1.5 : 30 + (elapsed - 20) * 1;
+        progress = Math.min(90, 10 + estimatedProgress);
+        
+        // Base ETA on typical training time (30-45 minutes total)
+        const typicalTotalTime = 40; // minutes
+        const remainingTime = Math.max(0, typicalTotalTime - elapsed);
+        estimatedTimeRemaining = Math.max(1, Math.round(remainingTime));
       }
       
     } else if (training.status === 'succeeded') {
@@ -175,7 +195,10 @@ export async function GET(
       modelUrl: training.output?.version ? `${dbRecord.input_data?.replicateModelName}:${training.output.version}` : null,
       webhook: training.webhook,
       // Parse recent log lines for display
-      recentLogs: logs ? logs.split('\n').slice(-10).filter(line => line.trim()) : []
+      recentLogs: logs ? logs.split('\n').slice(-10).filter(line => line.trim()) : [],
+      modelName: dbRecord.model_name,
+      instancePrompt: dbRecord.input_data?.instancePrompt,
+      triggerWord: dbRecord.input_data?.triggerWord
     });
 
   } catch (error: any) {

@@ -50,6 +50,15 @@ const ModalModelCreation: React.FC<ModalModelCreationProps> = ({
     tempConfigId
   } = useReplicateTraining();
 
+  // Auto-populate instance prompt based on trigger word
+  useEffect(() => {
+    if (triggerWord.trim()) {
+      setInstancePrompt(`a photo of ${triggerWord.trim()}`);
+    } else {
+      setInstancePrompt('');
+    }
+  }, [triggerWord]);
+
   // Check for pending training from localStorage on component mount
   React.useEffect(() => {
     const storedTempId = localStorage.getItem('tempConfigId'); // Primary key that AuthProvider checks
@@ -564,7 +573,7 @@ const ModalModelCreation: React.FC<ModalModelCreationProps> = ({
     onClose();
   };
 
-  const isFormValid = modelName && triggerWord && instancePrompt && trainingImagesUrl;
+  const isFormValid = modelName && triggerWord && trainingImagesUrl;
 
   return (
     <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-auto p-6 space-y-6">
@@ -627,35 +636,36 @@ const ModalModelCreation: React.FC<ModalModelCreationProps> = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Trigger Word *
+            Who are you training this model on? *
           </label>
           <input
             type="text"
             value={triggerWord}
             onChange={(e) => setTriggerWord(e.target.value)}
-            placeholder="e.g., john_doe (unique identifier for your model)"
+            placeholder="e.g., John, Sarah, Mike (first name works best)"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             disabled={isTraining}
           />
           <p className="text-xs text-gray-500 mt-1">
-            A unique word to activate your model in prompts
+            Enter the name of the person you want to create images of
           </p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Instance Prompt *
+            Training Description
+            <span className="text-xs text-gray-400 ml-1">(Auto-generated)</span>
           </label>
           <textarea
             value={instancePrompt}
-            onChange={(e) => setInstancePrompt(e.target.value)}
-            placeholder="e.g., a photo of john_doe person"
-            rows={3}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            disabled={isTraining}
+            readOnly
+            placeholder="This will be automatically filled based on the name above"
+            rows={2}
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+            disabled={true}
           />
           <p className="text-xs text-gray-500 mt-1">
-            How to describe your subject during training (include the trigger word)
+            This describes how the AI will learn about your subject (automatically created from the name above)
           </p>
         </div>
 
@@ -672,10 +682,10 @@ const ModalModelCreation: React.FC<ModalModelCreationProps> = ({
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Upload Training Images</h4>
                   <p className="text-sm text-gray-600 mb-4">
-                    Upload 10-15 high-quality images of yourself to train your personalized AI model.
+                    Upload 10-15 high-quality images of the person you want to train the model on.
                     {/* Add helpful guidance for new users */}
                     <br />
-                    <span className="text-purple-600 font-medium">New here?</span> This is perfectly normal - just upload your photos to get started!
+                    <span className="text-purple-600 font-medium">New here?</span> This is perfectly normal - just upload the photos to get started!
                   </p>
                   <div className="space-y-2 text-xs text-gray-500">
                     <p>• Use clear, well-lit photos</p>

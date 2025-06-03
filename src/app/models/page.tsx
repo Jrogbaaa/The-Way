@@ -13,7 +13,8 @@ import {
   Loader2,
   Plus,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -26,6 +27,7 @@ import ModalModelCreation from '@/components/ModalModelCreation';
 import ModalTrainingRetry from '@/components/ModalTrainingRetry';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'react-hot-toast';
 
 // Define a model type for type safety
@@ -34,7 +36,7 @@ type Model = {
   name: string;
   description?: string;
   imageUrl: string;
-  status: 'ready' | 'training' | 'failed' | 'error' | 'starting' | 'external';
+  status: 'ready' | 'training' | 'failed' | 'error' | 'starting' | 'external' | 'processing' | 'completed';
   routeParam?: string;
   baseModel?: string;
   lastUsed?: string;
@@ -48,12 +50,15 @@ type Model = {
     instance_prompt?: string;
     image_count?: number;
   };
+  estimatedTimeRemaining?: number;
+  replicate_id?: string;
+  model_url?: string;
 };
 
-// Helper function to get the correct route for each model
-const getModelRoute = (modelId: string) => {
-  // Default routes for built-in models
-  switch (modelId) {
+// Add this function to get the correct route for each model
+const getModelRoute = (model: Model) => {
+  // Handle standard built-in models first
+  switch (model.id) {
     case 'image-to-video':
       return '/models/image-to-video';
     case 'text-to-image':
@@ -65,7 +70,19 @@ const getModelRoute = (modelId: string) => {
     case 'bea':
       return '/models/bea';
     default:
-      return '/models/sdxl';
+      // For custom models, route based on status
+      // If it's a completed custom model, use the model detail page for generation
+      if (model.status === 'completed' || model.status === 'ready') {
+        return `/models/${model.id}`;
+      }
+      // If it's still training, go to training status page
+      else if (model.status === 'training' || model.status === 'processing' || model.status === 'starting') {
+        return `/models/custom/${model.id}`;
+      }
+      // For failed models, go to detail page to see error
+      else {
+        return `/models/${model.id}`;
+      }
   }
 };
 
@@ -80,6 +97,54 @@ export default function ImageCreatorPage() {
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Add this function to fetch real-time ETA from the training logs API
+  const fetchModelETA = async (modelId: string) => {
+    try {
+      const response = await fetch(`/api/replicate/training-logs/${modelId}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.estimatedTimeRemaining || null;
+      }
+    } catch (error) {
+      console.error('Error fetching ETA:', error);
+    }
+    return null;
+  };
+
+  // Add state for tracking ETAs
+  const [modelETAs, setModelETAs] = useState<Record<string, number | null>>({});
+
+  // Add effect to periodically fetch ETAs for training models
+  useEffect(() => {
+    const trainingModels = userModels.filter(model => 
+      model.status === 'training' || model.status === 'processing' || model.status === 'starting'
+    );
+
+    if (trainingModels.length === 0) return;
+
+    const fetchETAs = async () => {
+      const etaPromises = trainingModels.map(async (model) => {
+        const eta = await fetchModelETA(model.id);
+        return { modelId: model.id, eta };
+      });
+
+      const etaResults = await Promise.all(etaPromises);
+      const newETAs: Record<string, number | null> = {};
+      
+      etaResults.forEach(({ modelId, eta }) => {
+        newETAs[modelId] = eta;
+      });
+
+      setModelETAs(prev => ({ ...prev, ...newETAs }));
+    };
+
+    // Fetch immediately and then every 30 seconds
+    fetchETAs();
+    const interval = setInterval(fetchETAs, 30000);
+
+    return () => clearInterval(interval);
+  }, [userModels]);
 
   useEffect(() => {
     console.log(`MODELS PAGE Mounted. Loading: ${loading}, User: ${!!user}`);
@@ -205,7 +270,7 @@ export default function ImageCreatorPage() {
         id: model.id,
         name: model.model_name || model.name || `Model ${model.id.slice(-8)}`,
         description: model.input_data?.instancePrompt || model.description || 'Custom trained model',
-        imageUrl: model.sample_image || model.thumbnail_url || '/placeholder-model.jpg',
+        imageUrl: model.sample_image || model.thumbnail_url || 'https://picsum.photos/400/300?random=fallback',
         status: model.status === 'completed' ? 'ready' : model.status,
         lastUsed: model.last_used ? new Date(model.last_used).toLocaleDateString() : 
                   model.updated_at ? new Date(model.updated_at).toLocaleDateString() : 'New',
@@ -276,6 +341,49 @@ export default function ImageCreatorPage() {
   // Get categories for filter - replace with simple array 
   const categories = ['All']; // Simplified filter options
   
+  // Define built-in models that are always available
+  const builtInModels: Model[] = [
+    {
+      id: 'bea',
+      name: 'Bea Model',
+      description: 'Generate realistic images of Bea in various settings',
+      imageUrl: 'https://picsum.photos/400/300?random=1',
+      status: 'ready',
+      lastUsed: 'Ready to use',
+      isNew: false,
+      isFeatured: true,
+      created_at: '2024-01-01T00:00:00Z',
+      user_id: 'built-in',
+      baseModel: 'FLUX'
+    },
+    {
+      id: 'cristina',
+      name: 'Cristina Model',
+      description: 'Generate realistic images of Cristina in various settings',
+      imageUrl: 'https://picsum.photos/400/300?random=2',
+      status: 'ready',
+      lastUsed: 'Ready to use',
+      isNew: false,
+      isFeatured: true,
+      created_at: '2024-01-01T00:00:00Z',
+      user_id: 'built-in',
+      baseModel: 'FLUX'
+    },
+    {
+      id: 'jaime',
+      name: 'Jaime Model',
+      description: 'Generate realistic images of Jaime in various settings',
+      imageUrl: 'https://picsum.photos/400/300?random=3',
+      status: 'ready',
+      lastUsed: 'Ready to use',
+      isNew: false,
+      isFeatured: true,
+      created_at: '2024-01-01T00:00:00Z',
+      user_id: 'built-in',
+      baseModel: 'FLUX'
+    }
+  ];
+  
   // Filter models based on selected category
   const filteredModels = userModels; // Show all models, filtering removed
 
@@ -283,17 +391,25 @@ export default function ImageCreatorPage() {
   const standardModels = filteredModels.filter(model => 
     ['text-to-image', 'image-to-video'].includes(model.id)
   );
-  const customModels = filteredModels.filter(model => 
-    ['cristina', 'jaime', 'bea'].includes(model.id)
-  );
+  // Custom models are built-in models plus user-trained models
+  const customModels = [
+    ...builtInModels,
+    ...filteredModels.filter(model => 
+      !['text-to-image', 'image-to-video', 'cristina', 'jaime', 'bea'].includes(model.id)
+    )
+  ];
   // --- END ADDED SECTION ---
 
-  // Add this function to the component to handle showing error details
+  // Add this function to render the status with ETA
   const renderModelStatus = (model: Model) => {
     // Check for error state
-    if (model.status === 'error' || model.error) {
+    if (model.status === 'error' || model.status === 'failed' || model.error) {
       return (
-        <div className="mt-4">
+        <div className="mt-3">
+          <div className="flex items-center text-red-600 text-sm mb-2">
+            <AlertTriangle className="h-4 w-4 mr-1" />
+            <span>Training Failed</span>
+          </div>
           <ModalTrainingRetry 
             modelId={model.id} 
             errorMessage={model.error || "An error occurred during model training"}
@@ -303,47 +419,55 @@ export default function ImageCreatorPage() {
     }
     
     // Check for in-progress training
-    if (model.status === 'training' || model.status === 'starting') {
+    if (model.status === 'training' || model.status === 'starting' || model.status === 'processing') {
       const progress = model.progress || 0;
+      const eta = modelETAs[model.id];
       
       return (
-        <div className="mt-4">
-          <div className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-            Training in progress: {progress}%
+        <div className="mt-3 space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-700">Training Progress</span>
+            <span className="text-sm text-gray-600">{progress}%</span>
           </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div 
-              className="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            {progress === 0 ? (
-              'Initializing...'
-            ) : progress < 50 ? (
-              'Training model...'
-            ) : progress < 90 ? (
-              'Fine-tuning parameters...'
-            ) : (
-              'Almost complete...'
+          <Progress value={progress} className="w-full h-2" />
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500">
+              {progress === 0 ? (
+                'Initializing training...'
+              ) : progress < 30 ? (
+                'Training in progress...'
+              ) : progress < 70 ? (
+                'Fine-tuning parameters...'
+              ) : progress < 95 ? (
+                'Almost complete...'
+              ) : (
+                'Finalizing model...'
+              )}
+            </p>
+            {eta && eta > 0 && (
+              <div className="flex items-center text-xs text-blue-600">
+                <Clock className="h-3 w-3 mr-1" />
+                <span>{eta === 1 ? '1 min' : `${eta} mins`} left</span>
+              </div>
             )}
-          </p>
+          </div>
         </div>
       );
     }
-    
-    // Default complete state
-    return (
-      <div className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center">
-        <CheckCircle className="h-4 w-4 mr-1" />
-        Ready to use
-      </div>
-    );
-  };
 
-  const handleModelClick = (modelId: string) => {
-    // Route to custom model detail page for user-created models
-    router.push(`/models/custom/${modelId}`);
+    // For completed models, show completion status
+    if (model.status === 'completed' || model.status === 'ready') {
+      return (
+        <div className="mt-3">
+          <div className="flex items-center text-green-600 text-sm">
+            <CheckCircle className="h-4 w-4 mr-1" />
+            <span>Ready for generation</span>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   // Add function to delete a single model
@@ -511,15 +635,13 @@ export default function ImageCreatorPage() {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {userModels.map((model) => (
-                    <Card
+                    <Link
+                      href={getModelRoute(model)}
                       key={model.id}
-                      className="overflow-hidden hover:shadow-md transition-shadow"
+                      className="no-underline"
                       data-testid="model-card"
                     >
-                      <div 
-                        className="cursor-pointer"
-                        onClick={() => handleModelClick(model.id)}
-                      >
+                      <Card className="overflow-hidden hover:shadow-md transition-shadow">
                         <div className="relative aspect-square bg-muted">
                           {model.imageUrl ? (
                             <Image
@@ -527,54 +649,115 @@ export default function ImageCreatorPage() {
                               alt={model.name}
                               fill
                               className="object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.onerror = null; 
+                                target.src = "https://picsum.photos/400/300?random=999";
+                              }}
                             />
                           ) : (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <p className="text-sm text-muted-foreground">No sample image</p>
-                            </div>
+                            <Image
+                              src="https://picsum.photos/400/300?random=999"
+                              alt="AI Model"
+                              fill
+                              className="object-cover"
+                            />
                           )}
-                          <Badge
-                            className={
-                              model.status === 'ready'
-                                ? 'bg-green-500 absolute top-2 right-2'
-                                : model.status === 'failed'
-                                ? 'bg-red-500 absolute top-2 right-2'
-                                : 'absolute top-2 right-2'
-                            }
-                          >
-                            {model.status}
-                          </Badge>
+                          
+                          {/* Status Badge */}
+                          <div className="absolute top-2 right-2 space-y-1">
+                            <Badge
+                              className={
+                                model.status === 'ready' || model.status === 'completed'
+                                  ? 'bg-green-500 text-white border-0'
+                                  : model.status === 'failed' || model.status === 'error'
+                                  ? 'bg-red-500 text-white border-0'
+                                  : model.status === 'training' || model.status === 'processing' || model.status === 'starting'
+                                  ? 'bg-blue-500 text-white border-0'
+                                  : 'bg-gray-500 text-white border-0'
+                              }
+                            >
+                              {model.status === 'training' || model.status === 'processing' 
+                                ? `${model.progress || 0}%` 
+                                : model.status}
+                            </Badge>
+                            
+                            {/* Training Progress Indicator */}
+                            {(model.status === 'training' || model.status === 'processing' || model.status === 'starting') && (
+                              <div className="bg-black/50 backdrop-blur-sm rounded p-1 text-white text-xs">
+                                <div className="flex items-center space-x-1">
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  <span>Training</span>
+                                  {modelETAs[model.id] && modelETAs[model.id]! > 0 && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{modelETAs[model.id] === 1 ? '1 min' : `${modelETAs[model.id]} mins`}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <CardContent className="pt-4">
                           <h3 className="font-medium truncate">{model.name}</h3>
                           <p className="text-sm text-muted-foreground truncate">
                             {model.model_info?.instance_prompt || 'No prompt specified'}
                           </p>
-                        </CardContent>
-                      </div>
-                      <CardFooter className="pt-0 pb-4 flex justify-between items-center">
-                        <p className="text-xs text-muted-foreground">
-                          Created {new Date(model.created_at).toLocaleDateString()}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 h-auto"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteModel(model.id, model.name);
-                          }}
-                          disabled={deletingModelId === model.id}
-                          title="Delete model"
-                        >
-                          {deletingModelId === model.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
+                          
+                          {/* Progress bar for training models */}
+                          {(model.status === 'training' || model.status === 'processing' || model.status === 'starting') && (
+                            <div className="mt-2 space-y-1">
+                              <Progress value={model.progress || 0} className="w-full h-1.5" />
+                              <div className="flex justify-between items-center">
+                                <p className="text-xs text-gray-500">
+                                  {model.progress === 0 || !model.progress ? (
+                                    'Starting training...'
+                                  ) : model.progress < 30 ? (
+                                    'Training in progress...'
+                                  ) : model.progress < 70 ? (
+                                    'Fine-tuning...'
+                                  ) : model.progress < 95 ? (
+                                    'Almost done...'
+                                  ) : (
+                                    'Finalizing...'
+                                  )}
+                                </p>
+                                {modelETAs[model.id] && modelETAs[model.id]! > 0 && (
+                                  <div className="flex items-center text-xs text-blue-600">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    <span>{modelETAs[model.id] === 1 ? '1 min' : `${modelETAs[model.id]} mins`}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           )}
-                        </Button>
-                      </CardFooter>
-                    </Card>
+                        </CardContent>
+                        <CardFooter className="pt-0 pb-4 flex justify-between items-center">
+                          <p className="text-xs text-muted-foreground">
+                            Created {new Date(model.created_at).toLocaleDateString()}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 h-auto"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              deleteModel(model.id, model.name);
+                            }}
+                            disabled={deletingModelId === model.id}
+                            title="Delete model"
+                          >
+                            {deletingModelId === model.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    </Link>
                   ))}
                 </div>
               </section>
@@ -624,7 +807,7 @@ export default function ImageCreatorPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                   {standardModels.map((model) => (
                     <Link
-                      href={getModelRoute(model.id)}
+                      href={getModelRoute(model)}
                       key={model.id}
                       className="no-underline"
                       data-testid="model-card"
@@ -641,7 +824,7 @@ export default function ImageCreatorPage() {
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.onerror = null; 
-                                target.src = "/placeholder-model.jpg";
+                                target.src = "https://picsum.photos/300/200?random=fallback1";
                               }}
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70"></div>
@@ -680,12 +863,12 @@ export default function ImageCreatorPage() {
             {customModels.length > 0 && (
               <section>
                 <h2 className="text-xl font-semibold mb-6 border-b pb-2 border-gray-200 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-                  Custom Trained Models
+                  AI Models & Custom Training
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                   {customModels.map((model) => (
                     <Link
-                      href={getModelRoute(model.id)}
+                      href={getModelRoute(model)}
                       key={model.id}
                       className="no-underline"
                     >
@@ -701,7 +884,7 @@ export default function ImageCreatorPage() {
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.onerror = null; 
-                                target.src = "/placeholder-model.jpg";
+                                target.src = "https://picsum.photos/300/200?random=fallback1";
                               }}
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70"></div>
