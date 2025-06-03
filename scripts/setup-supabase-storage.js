@@ -13,12 +13,24 @@ const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
 // Configuration
-const BUCKET_NAME = 'gallery-uploads';
-const BUCKET_CONFIG = {
-  public: true,          // Public bucket (publicly accessible files)
-  fileSizeLimit: 10485760, // 10MB limit for uploads
-  allowedMimeTypes: ['image/*'] // Allow only images
-};
+const BUCKETS = [
+  {
+    name: 'gallery-uploads',
+    config: {
+      public: true,
+      fileSizeLimit: 10485760, // 10MB limit for uploads
+      allowedMimeTypes: ['image/*'] // Allow only images
+    }
+  },
+  {
+    name: 'training-uploads',
+    config: {
+      public: true,
+      fileSizeLimit: 52428800, // 50MB limit for training files
+      allowedMimeTypes: ['image/*', 'application/zip'] // Allow images and ZIP files
+    }
+  }
+];
 
 // Initialize Supabase client with service role key
 // IMPORTANT: Use of service role key enables admin privileges
@@ -177,24 +189,31 @@ const main = async () => {
     console.log('Starting Supabase storage setup...');
     const supabase = initSupabase();
     
-    // Check if the bucket exists, create if not
-    const bucketExists = await checkBucket(supabase, BUCKET_NAME);
-    if (!bucketExists) {
-      const created = await createBucket(supabase, BUCKET_NAME, BUCKET_CONFIG);
-      if (!created) {
-        console.error(`Failed to create bucket '${BUCKET_NAME}'. Exiting.`);
+    // Process each bucket
+    for (const bucket of BUCKETS) {
+      console.log(`\n--- Setting up bucket: ${bucket.name} ---`);
+      
+      // Check if the bucket exists, create if not
+      const bucketExists = await checkBucket(supabase, bucket.name);
+      if (!bucketExists) {
+        const created = await createBucket(supabase, bucket.name, bucket.config);
+        if (!created) {
+          console.error(`Failed to create bucket '${bucket.name}'. Exiting.`);
+          process.exit(1);
+        }
+      }
+      
+      // Set up bucket policies
+      const success = await setupBucketPolicies(supabase, bucket.name);
+      if (!success) {
+        console.error(`Failed to set up policies for bucket '${bucket.name}'. Please check your Supabase permissions.`);
         process.exit(1);
       }
+      
+      console.log(`Bucket '${bucket.name}' setup completed successfully!`);
     }
     
-    // Set up bucket policies
-    const success = await setupBucketPolicies(supabase, BUCKET_NAME);
-    if (!success) {
-      console.error(`Failed to set up policies for bucket '${BUCKET_NAME}'. Please check your Supabase permissions.`);
-      process.exit(1);
-    }
-    
-    console.log('Supabase storage setup completed successfully!');
+    console.log('\n🎉 All Supabase storage buckets setup completed successfully!');
     process.exit(0);
   } catch (error) {
     console.error('An unexpected error occurred:', error.message);

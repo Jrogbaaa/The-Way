@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { auth } from '@/auth';
 import { nanoid } from 'nanoid';
+import { createClient } from '@/lib/supabase/server';
 
-// Function to upload file to temporary public hosting
+// Training images bucket name
+const TRAINING_BUCKET_NAME = 'training-uploads';
+
+// Function to upload file to temporary public hosting (keep for localhost)
 async function uploadToTempFileHost(file: Buffer, filename: string): Promise<string | null> {
   try {
     // Use tmpfiles.org as a simple temporary file host
@@ -44,9 +45,12 @@ export async function POST(request: NextRequest) {
   console.log('POST /api/upload/training-images called');
   
   try {
+    // Initialize Supabase client
+    const supabase = await createClient('TrainingUpload');
+    
     // Note: Authentication is not required for file uploads
     // This allows unauthenticated users to upload files before signing in
-    // The actual training will require authentication later
+    // We'll use anonymous session-based file organization
     
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
@@ -62,12 +66,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`Received ${files.length} files for upload`);
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'training');
-    await mkdir(uploadsDir, { recursive: true });
-
     const uploadedFiles = [];
-    // Use a session-based or anonymous identifier for file organization
+    // Use a session-based identifier for file organization
     const uploadSession = nanoid();
 
     for (let i = 0; i < files.length; i++) {
@@ -104,51 +104,59 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Generate unique filename using upload session instead of user ID
+      // Generate unique filename using upload session
       const fileExtension = file.name.split('.').pop();
       const uniqueFilename = `session-${uploadSession}-${i}-${Date.now()}.${fileExtension}`;
-      const filePath = join(uploadsDir, uniqueFilename);
+      const storagePath = `training/${uploadSession}/${uniqueFilename}`;
 
-      // Write file to disk
+      // Upload to Supabase storage
       try {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        await writeFile(filePath, buffer);
-        console.log(`Successfully uploaded file: ${uniqueFilename} (${file.size} bytes)`);
-      } catch (writeError) {
-        console.error(`Error writing file ${uniqueFilename}:`, writeError);
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from(TRAINING_BUCKET_NAME)
+          .upload(storagePath, buffer, {
+            contentType: file.type,
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error(`Error uploading file ${uniqueFilename} to Supabase:`, uploadError);
+          return NextResponse.json(
+            { success: false, error: `Failed to upload file: ${file.name}. ${uploadError.message}` },
+            { status: 500 }
+          );
+        }
+
+        console.log(`Successfully uploaded file to Supabase: ${storagePath} (${file.size} bytes)`);
+        
+        // Get public URL for the uploaded file
+        const { data: publicUrlData } = supabase.storage
+          .from(TRAINING_BUCKET_NAME)
+          .getPublicUrl(storagePath);
+
+        const publicUrl = publicUrlData.publicUrl;
+        console.log(`File accessible at public URL: ${publicUrl}`);
+
+        uploadedFiles.push({
+          originalName: file.name,
+          filename: uniqueFilename,
+          size: file.size,
+          type: file.type,
+          url: publicUrl,
+          publicUrl: publicUrl,
+          storagePath: storagePath
+        });
+
+      } catch (error) {
+        console.error(`Error processing file ${file.name}:`, error);
         return NextResponse.json(
-          { success: false, error: `Failed to save file: ${file.name}` },
+          { success: false, error: `Failed to process file: ${file.name}` },
           { status: 500 }
         );
       }
-
-      // Check if we need to upload to public hosting for Replicate access
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const isLocalhost = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
-      let publicUrl = `${baseUrl}/uploads/training/${uniqueFilename}`;
-      
-      // If this is a ZIP file and we're using localhost, upload to temporary public hosting
-      if (isLocalhost && (file.type === 'application/zip' || file.name.toLowerCase().endsWith('.zip'))) {
-        console.log('Localhost detected, uploading ZIP file to temporary public hosting for Replicate access...');
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const tempUrl = await uploadToTempFileHost(buffer, uniqueFilename);
-        if (tempUrl) {
-          publicUrl = tempUrl;
-          console.log(`ZIP file available at public URL: ${publicUrl}`);
-        } else {
-          console.warn('Failed to upload to temporary hosting, using localhost URL (training may fail)');
-        }
-      }
-
-      uploadedFiles.push({
-        originalName: file.name,
-        filename: uniqueFilename,
-        size: file.size,
-        type: file.type,
-        url: `/uploads/training/${uniqueFilename}`,
-        publicUrl: publicUrl
-      });
     }
 
     if (uploadedFiles.length === 0) {
@@ -162,33 +170,23 @@ export async function POST(request: NextRequest) {
     const zipFile = uploadedFiles.find(file => 
       file.type === 'application/zip' || file.originalName.toLowerCase().endsWith('.zip')
     );
-
-    // Check if we're using localhost and warn about Replicate accessibility
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const isLocalhost = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
-    
-    // Check if any ZIP files were uploaded to public hosting
-    const hasPublicZipFiles = uploadedFiles.some(file => 
-      (file.type === 'application/zip' || file.originalName.toLowerCase().endsWith('.zip')) &&
-      !file.publicUrl.includes('localhost')
-    );
     
     const response = {
       success: true,
-      uploadSession, // Return the session ID instead of user ID
+      uploadSession,
       files: uploadedFiles,
       trainingImagesUrl: zipFile ? zipFile.publicUrl : null,
       imageFiles: uploadedFiles.filter(file => file.type.startsWith('image/')),
       zipFile: zipFile || null,
       message: `Successfully uploaded ${uploadedFiles.length} files`,
-      warning: isLocalhost && !hasPublicZipFiles ? 'Files are stored locally. ZIP files have been uploaded to temporary public hosting for Replicate training.' : null
+      storage: 'supabase'
     };
 
     console.log('Upload response:', { 
       success: response.success, 
       filesCount: response.files.length, 
       hasZip: !!response.zipFile,
-      warning: response.warning 
+      storage: response.storage
     });
     
     return NextResponse.json(response);
