@@ -4,6 +4,14 @@ A cutting-edge platform that empowers content creators with AI-powered tools to 
 
 ## Recent Updates (January 2025)
 
+- **Fixed Vercel Upload Issues** (Latest): Resolved critical 500 errors affecting file uploads on Vercel deployment:
+  - **Root cause**: Training upload API was using filesystem operations which don't work on Vercel's serverless functions
+  - **Solution**: Migrated from filesystem storage to Supabase cloud storage for training image uploads
+  - **Benefits**: Reliable uploads on both localhost and Vercel, with public URLs accessible to Replicate for training
+  - **New bucket**: Created `training-uploads` bucket in Supabase for training-related file storage
+  - **Backward compatibility**: Existing functionality preserved while fixing deployment issues
+  - **Storage scripts**: Added helper scripts for bucket creation and testing upload functionality
+
 - **Simplified Image Generation UI** (Latest): Major UX improvements to make image generation more accessible and user-friendly:
   - **Streamlined interface**: Removed technical controls (inference steps, guidance scale) that confused casual users
   - **Enhanced prompt input**: Upgraded from single-line to multi-line textarea with helpful placeholder text and tips
