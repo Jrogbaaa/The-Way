@@ -388,6 +388,44 @@ export async function POST(req: NextRequest) {
             if (insertError) {
               console.error('Error inserting generation record:', insertError);
             }
+
+            // Auto-save to gallery if user is authenticated
+            if (userId && userId !== 'anonymous' && result.image_base64) {
+              try {
+                console.log('Auto-saving generated image to gallery for user:', userId);
+                
+                // Convert base64 to buffer
+                const imageBuffer = Buffer.from(result.image_base64, 'base64');
+                
+                // Generate filename with prompt and timestamp
+                const timestamp = Date.now();
+                const sanitizedPrompt = prompt.substring(0, 50).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-');
+                const fileName = `generated-${sanitizedPrompt}-${timestamp}.png`;
+                const filePath = `${userId}/generated/${fileName}`;
+                
+                // Upload to gallery storage bucket
+                const { error: uploadError } = await supabase.storage
+                  .from('gallery-uploads')
+                  .upload(filePath, imageBuffer, {
+                    contentType: 'image/png',
+                    cacheControl: '3600',
+                    upsert: false
+                  });
+                
+                if (uploadError) {
+                  console.error('Error saving generated image to gallery:', uploadError);
+                } else {
+                  console.log('Generated image successfully saved to gallery:', filePath);
+                  
+                  // Add gallery save notification to result
+                  result.gallery_saved = true;
+                  result.gallery_path = filePath;
+                }
+              } catch (gallerySaveError) {
+                console.error('Gallery save error:', gallerySaveError);
+                // Don't fail the generation if gallery save fails
+              }
+            }
           } catch (dbError) {
             console.error('Database error:', dbError);
           }

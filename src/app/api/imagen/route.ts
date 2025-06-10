@@ -276,11 +276,78 @@ export async function POST(request: Request) {
         }, { status: 500 });
       }
       
+      // Auto-save to gallery for authenticated users
+      let gallerySaved = false;
+      let galleryPath = null;
+      
+      try {
+        // Check if user is authenticated by attempting to get session
+        const authHeaders = request.headers;
+        const cookieHeader = authHeaders.get('cookie');
+        
+        if (cookieHeader) {
+          // Try to extract session info from cookie
+          const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/auth/session`, {
+            headers: { cookie: cookieHeader }
+          });
+          
+          if (response.ok) {
+            const session = await response.json();
+            const userId = session?.user?.id || session?.user?.sub;
+            
+            if (userId && imageUrls.length > 0) {
+              console.log('Auto-saving generated image to gallery for user:', userId);
+              
+              // Fetch the first image and save to gallery
+              const imageResponse = await fetch(imageUrls[0]);
+              if (imageResponse.ok) {
+                const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+                
+                // Generate filename with prompt and timestamp  
+                const timestamp = Date.now();
+                const sanitizedPrompt = prompt.substring(0, 50).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-');
+                const fileName = `generated-${sanitizedPrompt}-${timestamp}.png`;
+                const filePath = `${userId}/generated/${fileName}`;
+                
+                // Import supabase client
+                const { createClient } = await import('@supabase/supabase-js');
+                const supabase = createClient(
+                  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                  process.env.SUPABASE_SERVICE_ROLE_KEY!
+                );
+                
+                // Upload to gallery storage bucket
+                const { error: uploadError } = await supabase.storage
+                  .from('gallery-uploads')
+                  .upload(filePath, imageBuffer, {
+                    contentType: 'image/png',
+                    cacheControl: '3600',
+                    upsert: false
+                  });
+                
+                if (!uploadError) {
+                  console.log('Generated image successfully saved to gallery:', filePath);
+                  gallerySaved = true;
+                  galleryPath = filePath;
+                } else {
+                  console.error('Error saving generated image to gallery:', uploadError);
+                }
+              }
+            }
+          }
+        }
+      } catch (galleryError) {
+        console.error('Gallery save error (non-critical):', galleryError);
+        // Don't fail the generation if gallery save fails
+      }
+
       return NextResponse.json({
         output: imageUrls,
         message: "Image generated successfully with SDXL",
         predictionId: prediction.id,
         status: 'succeeded',
+        gallery_saved: gallerySaved,
+        gallery_path: galleryPath,
         debug: {
           promptUsed: prompt,
           numOutputs,

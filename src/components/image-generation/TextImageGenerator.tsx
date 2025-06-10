@@ -6,14 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Image as ImageIcon, AlertCircle, LogIn } from 'lucide-react';
+import { Loader2, Image as ImageIcon, AlertCircle, LogIn, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
 import { ROUTES } from '@/lib/config';
 import Link from 'next/link';
 
 // Default Replicate model ID (e.g., SDXL)
-const DEFAULT_MODEL_ID = 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b';
+const DEFAULT_MODEL_ID = 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2589f5b1c712de7dfea535525255b1aa35c5565e08b';
 
 // Demo image URLs for unauthenticated users
 const DEMO_IMAGES = [
@@ -26,11 +26,76 @@ export const TextImageGenerator: React.FC = () => {
   const [prompt, setPrompt] = useState<string>('');
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState<boolean>(false);
   const { user, loading: authLoading } = useAuth();
   
   const isAuthenticated = !!user;
+
+  // Function to save generated image to gallery
+  const saveImageToGallery = async (imageUrl: string, prompt: string): Promise<boolean> => {
+    try {
+      setIsSaving(true);
+      console.log('Saving image to gallery:', imageUrl);
+
+      // Fetch the image data
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error('Failed to fetch image for saving');
+      }
+
+      const imageBlob = await imageResponse.blob();
+      
+      // Convert blob to File object
+      const timestamp = new Date().getTime();
+      const sanitizedPrompt = prompt.substring(0, 50).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-');
+      const fileName = `generated-${sanitizedPrompt}-${timestamp}.png`;
+      
+      const imageFile = new File([imageBlob], fileName, { type: imageBlob.type || 'image/png' });
+
+      // Create form data
+      const formData = new FormData();
+      formData.append('file', imageFile);
+      formData.append('userId', user?.id || user?.sub || '');
+      formData.append('path', 'generated/');
+      formData.append('fileName', fileName);
+      formData.append('bucketName', 'gallery-uploads');
+
+      // Call the server-side API endpoint to save to gallery
+      const response = await fetch('/api/gallery/upload-file', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Failed to save to gallery:', errorData);
+        return false;
+      }
+
+      const result = await response.json();
+      console.log('Image saved to gallery successfully:', result);
+      
+      toast.success('Image saved to your gallery!', {
+        description: 'You can find it in the "generated" folder',
+        action: {
+          label: 'View Gallery',
+          onClick: () => window.open('/gallery', '_blank')
+        }
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error saving image to gallery:', error);
+      toast.error('Failed to save image to gallery', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleGenerateImage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -55,43 +120,56 @@ export const TextImageGenerator: React.FC = () => {
         toast.success('Demo image generated! Sign in to save and create more.', { id: 'generation-toast' });
       } else {
         // For authenticated users, use the actual API
-      const response = await fetch('/api/replicate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          modelId: DEFAULT_MODEL_ID,
-          input: {
-            prompt: prompt,
-            width: 1024,
-            height: 1024,
-            num_outputs: 1,
-            // Add other relevant default parameters for the chosen model if needed
-            // e.g., guidance_scale: 7.5, num_inference_steps: 25
-          },
-        }),
-      });
+        const response = await fetch('/api/replicate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            modelId: DEFAULT_MODEL_ID,
+            input: {
+              prompt: prompt,
+              width: 1024,
+              height: 1024,
+              num_outputs: 1,
+              // Add other relevant default parameters for the chosen model if needed
+              // e.g., guidance_scale: 7.5, num_inference_steps: 25
+            },
+          }),
+        });
 
-      const responseData = await response.json();
+        const responseData = await response.json();
 
-      if (!response.ok) {
-        console.error('API Error Response:', responseData);
-        throw new Error(responseData.error || `Request failed with status ${response.status}`);
-      }
+        if (!response.ok) {
+          console.error('API Error Response:', responseData);
+          throw new Error(responseData.error || `Request failed with status ${response.status}`);
+        }
 
-      // Handle direct output vs. polling needed
-      if (response.status === 201 && responseData.id) {
-         // Basic Polling Implementation (can be improved with backoff, max retries)
-         console.log(`Polling needed for prediction ID: ${responseData.id}`);
-         toast.info('Image generation started. This may take a moment...', { id: 'generation-toast' });
-         const pollResult = await pollForResult(responseData.id);
-         setGeneratedImageUrl(pollResult);
-      } else if (response.status === 200 && responseData.output && Array.isArray(responseData.output) && responseData.output.length > 0) {
-         setGeneratedImageUrl(responseData.output[0]);
-         toast.success('Image generated successfully!', { id: 'generation-toast' });
-      } else {
-         console.error('Unexpected API Response:', responseData);
-         throw new Error('Unexpected response from image generation service.');
-      }
+        let finalImageUrl: string | null = null;
+
+        // Handle direct output vs. polling needed
+        if (response.status === 201 && responseData.id) {
+           // Basic Polling Implementation (can be improved with backoff, max retries)
+           console.log(`Polling needed for prediction ID: ${responseData.id}`);
+           toast.info('Image generation started. This may take a moment...', { id: 'generation-toast' });
+           finalImageUrl = await pollForResult(responseData.id);
+        } else if (response.status === 200 && responseData.output && Array.isArray(responseData.output) && responseData.output.length > 0) {
+           finalImageUrl = responseData.output[0];
+           toast.success('Image generated successfully!', { id: 'generation-toast' });
+        } else {
+           console.error('Unexpected API Response:', responseData);
+           throw new Error('Unexpected response from image generation service.');
+        }
+
+        if (finalImageUrl) {
+          setGeneratedImageUrl(finalImageUrl);
+          
+          // Automatically save to gallery for authenticated users
+          try {
+            await saveImageToGallery(finalImageUrl, prompt);
+          } catch (saveError) {
+            console.warn('Failed to auto-save to gallery, but image was generated successfully:', saveError);
+            // Don't fail the generation if gallery save fails
+          }
+        }
       }
     } catch (err: any) {
       console.error('Image Generation Failed:', err);
@@ -157,6 +235,11 @@ export const TextImageGenerator: React.FC = () => {
       return resultUrl;
   };
 
+  const handleManualSave = async () => {
+    if (!generatedImageUrl || !isAuthenticated) return;
+    await saveImageToGallery(generatedImageUrl, prompt);
+  };
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -207,7 +290,30 @@ export const TextImageGenerator: React.FC = () => {
 
         {generatedImageUrl && !isLoading && (
           <div className="mt-6 space-y-2">
-            <h3 className="text-lg font-medium">Generated Image:</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Generated Image:</h3>
+              {isAuthenticated && (
+                <Button
+                  onClick={handleManualSave}
+                  disabled={isSaving}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save to Gallery
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
              <div className="relative aspect-square w-full overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
                <Image
                  src={generatedImageUrl}
@@ -247,6 +353,16 @@ export const TextImageGenerator: React.FC = () => {
                      </Link>
                    </Button>
                  </div>
+               </div>
+             )}
+
+             {/* Show auto-save notification for authenticated users */}
+             {isAuthenticated && (
+               <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                 <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+                   <Save className="h-4 w-4" />
+                   Images are automatically saved to your gallery in the "generated" folder
+                 </p>
                </div>
              )}
           </div>

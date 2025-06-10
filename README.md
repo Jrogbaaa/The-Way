@@ -479,7 +479,7 @@ For detailed documentation, see [Post Analysis Documentation](./docs/post-analys
 
 ### Gallery Management with Supabase Storage
 
-We've implemented a comprehensive gallery system for users to upload, view, and manage their content. This feature uses Supabase Storage for secure, authenticated image management.
+We've implemented a comprehensive gallery system for users to upload, view, and manage their content. This feature uses Supabase Storage for secure, authenticated image management, with automatic saving of generated images.
 
 **How to Access:**
 1. Click on "Gallery" in the sidebar navigation
@@ -488,6 +488,7 @@ We've implemented a comprehensive gallery system for users to upload, view, and 
 4. Organize and filter content by categories
 
 **Features:**
+- **Automatic Image Saving**: Generated images are automatically saved to your gallery in the "generated" folder
 - Secure image uploads to user-specific storage locations
 - Automatic gallery refresh after successful uploads
 - Manual refresh functionality with loading indicator
@@ -496,14 +497,23 @@ We've implemented a comprehensive gallery system for users to upload, view, and 
 - Image categorization and filtering options
 - Visual feedback during upload and processing
 - Bearer token and cookie-based authentication
+- Manual save options for generated images with custom naming
+
+**Auto-Save Functionality:**
+- All images created through the platform are automatically saved to the user's gallery
+- Generated images are stored in a dedicated "generated" folder for easy organization
+- Files are named with the prompt and timestamp for easy identification
+- Non-intrusive notifications inform users when images are saved
+- Fallback manual save option available if auto-save fails
 
 **Technical Implementation:**
 - Utilizes Supabase Storage for secure, scalable image hosting
 - Implements row-level security policies for data protection
-- User-specific storage paths (`user_id/filename`) for proper organization
+- User-specific storage paths (`user_id/generated/filename`) for proper organization
 - Real-time UI updates following successful uploads
 - Optimized image loading and display
 - Comprehensive error handling with user-friendly messages
+- Server-side image fetching and storage for seamless auto-save functionality
 
 For detailed documentation on managing your content, see [Gallery Documentation](./the-way/docs/gallery.md).
 For information on setting up Supabase storage, see [Storage Setup Guide](./the-way/docs/storage-setup.md).

@@ -12,11 +12,28 @@ You can access the Gallery in two ways:
 
 The Gallery provides the following features:
 
+- **Automatic Image Saving**: Generated images are automatically saved to your gallery
 - **Image Upload**: Upload images directly from your device
 - **Content Management**: View, filter, and organize your uploaded content
 - **Content Categorization**: Filter content by tags and categories
 - **Visual Feedback**: Get real-time status updates during uploads
 - **Security**: All content is securely stored with proper authentication
+
+## Auto-Saved Generated Images
+
+When you create images using the platform's generation tools, they are automatically saved to your gallery:
+
+1. Generate an image using any of the text-to-image tools
+2. The image is automatically saved to your gallery in the "generated" folder
+3. Files are named with your prompt and timestamp for easy identification
+4. You'll receive a notification when the image is successfully saved
+5. Access your generated images by navigating to the "generated" folder in your gallery
+
+**Benefits:**
+- Never lose your generated creations
+- Organized storage in a dedicated "generated" folder
+- Descriptive filenames based on your prompts
+- No additional steps required - it's completely automatic
 
 ## Uploading Images
 
@@ -73,7 +90,8 @@ If you don't see your recently uploaded images:
 The Gallery uses Supabase Storage for secure, scalable image hosting:
 - Files are stored in a `gallery-uploads` bucket
 - Each user's files are stored in their own directory using their unique user ID
-- Path structure: `user_id/timestamp-filename.extension`
+- Generated images are automatically saved to: `user_id/generated/generated-prompt-timestamp.extension`
+- Uploaded images are stored in: `user_id/timestamp-filename.extension`
 - Row-level security policies ensure users can only access their own files
 
 ### Authentication Methods
