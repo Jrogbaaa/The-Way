@@ -160,12 +160,16 @@ export async function POST(req: NextRequest) {
   let body: any;
   
   try {
-    // Get user session (optional)
+    // Get user session with improved detection
     let userId = 'anonymous';
     try {
-      const session = await auth();
-      if (session && session.user && session.user.id) {
-        userId = session.user.id;
+      const { detectUserSession } = await import('@/lib/auth-utils');
+      const { userId: detectedUserId, method } = await detectUserSession(req);
+      if (detectedUserId) {
+        userId = detectedUserId;
+        console.log(`User session detected: ${userId} (via ${method})`);
+      } else {
+        console.log('No user session detected, proceeding anonymously');
       }
     } catch (authError) {
       console.error('Auth error:', authError);

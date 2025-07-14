@@ -35,6 +35,74 @@ When you create images using the platform's generation tools, they are automatic
 - Descriptive filenames based on your prompts
 - No additional steps required - it's completely automatic
 
+### Auto-Save Requirements
+
+For auto-save to work properly, you need:
+
+1. **Authentication**: You must be signed in with your Google account
+2. **Proper Configuration**: All environment variables must be set correctly
+3. **Supabase Storage**: The gallery-uploads bucket must exist with proper permissions
+
+### How Auto-Save Works
+
+The auto-save process works as follows:
+
+1. **Image Generation**: When you generate an image, the system detects your user session
+2. **Authentication Check**: The system verifies you're logged in using multiple detection methods
+3. **File Processing**: The generated image is converted to the appropriate format
+4. **Storage Upload**: The image is uploaded to Supabase Storage in your user folder
+5. **Notification**: You receive a confirmation that the image was saved
+6. **Gallery Integration**: The image appears in your gallery's "generated" folder
+
+### Auto-Save Troubleshooting
+
+If images aren't saving automatically:
+
+#### Check Your Authentication Status
+- Ensure you're signed in with Google
+- Look for the "Images are automatically saved to your gallery" message
+- If you see "Sign in to save images," you need to authenticate
+
+#### Verify Environment Configuration
+Run the validation script to check your setup:
+```bash
+node scripts/validate-auto-save-env.js
+```
+
+#### Common Issues and Solutions
+
+1. **"Session not detected" in logs:**
+   - Check that `NEXTAUTH_URL` and `NEXT_PUBLIC_APP_URL` are set correctly
+   - Verify Google OAuth credentials are configured
+   - Ensure you're signed in to the application
+
+2. **"Storage bucket not found" errors:**
+   - Verify Supabase environment variables are set
+   - Check that the `gallery-uploads` bucket exists in Supabase
+   - Ensure RLS (Row Level Security) policies are configured
+
+3. **Images generate but don't save:**
+   - Check browser console for error messages
+   - Verify `SUPABASE_SERVICE_ROLE_KEY` has proper permissions
+   - Check Vercel function logs if deployed
+
+4. **Intermittent saving issues:**
+   - This may indicate network connectivity issues
+   - Check Supabase service status
+   - Verify API rate limits aren't being exceeded
+
+#### Development vs Production
+
+**Local Development:**
+- Auto-save uses the NextAuth session directly
+- Errors are logged to the console
+- Easier to debug with direct access to logs
+
+**Production (Vercel):**
+- Auto-save uses improved session detection methods
+- Check Vercel function logs for debugging
+- Ensure all environment variables are set in Vercel dashboard
+
 ## Uploading Images
 
 To upload an image to your gallery:
@@ -46,98 +114,101 @@ To upload an image to your gallery:
 5. Wait for the upload to complete
 6. Your image will automatically appear in your gallery
 
-**Note**: Maximum file size is 10MB. Only image files are accepted.
+## File Organization
 
-## Managing Your Content
+### Folder Structure
 
-### Viewing Your Gallery
+Your gallery uses the following folder structure:
+```
+gallery-uploads/
+├── [user-id]/
+│   ├── generated/          # Auto-saved generated images
+│   ├── uploads/            # Manually uploaded images
+│   └── [custom-folders]/   # User-created folders
+```
 
-Your gallery displays your uploaded images in a responsive grid layout. Each image card shows:
-- The image itself
-- Title derived from the filename
-- Upload date/time
-- Author information
-- Tags for categorization
+### File Naming Convention
 
-### Organizing Your Content
+**Generated Images:**
+- Format: `generated-[prompt]-[timestamp].png`
+- Example: `generated-beautiful-sunset-1699123456789.png`
 
-You can organize your gallery content using folders:
+**Uploaded Images:**
+- Preserves original filename with timestamp if needed
+- Example: `vacation-photo-1699123456789.jpg`
 
-1. **Create Folders**: Click "New Folder" to create organizational folders
-2. **Move Images**: Hover over any image and click the move icon to relocate it
-3. **Drag and Drop**: Drag images directly onto folder cards to quickly move them
-4. **Return to Gallery Home**: Use the "Gallery Home" option or home icon to move items back to the root gallery
+## Security and Privacy
 
-When moving images, a dropdown will display all available folders as destinations, with "Gallery Home" always available as an option.
+### Access Control
 
-### Filtering Content
+- All images are private to your account
+- Row Level Security (RLS) policies ensure data isolation
+- Only authenticated users can access their own files
 
-You can filter your gallery content by:
-1. Clicking on the filter buttons at the top of the gallery
-2. Clicking on tags within individual image cards
-3. Using the "All" filter to view all content
+### Data Storage
 
-### Refreshing Your Gallery
+- Images are stored in Supabase Storage
+- Files are encrypted in transit and at rest
+- Automatic backups ensure data durability
 
-If you don't see your recently uploaded images:
-1. Click the refresh button in the top-right corner
-2. Wait for the gallery to reload with the latest content
+### Privacy Considerations
+
+- Generated images are automatically saved to help preserve your work
+- You can delete any image from your gallery at any time
+- No image data is shared with third parties
+
+## Performance Optimization
+
+### Image Loading
+
+- Images are loaded progressively for better performance
+- Thumbnails are generated for faster gallery browsing
+- Lazy loading reduces initial page load time
+
+### Storage Efficiency
+
+- Duplicate detection prevents unnecessary storage usage
+- Image compression maintains quality while reducing file size
+- Automatic cleanup of temporary files
+
+## API Integration
+
+The gallery integrates with various image generation APIs:
+
+- **Replicate**: SDXL and custom models
+- **Modal**: Custom LoRA models
+- **Google Vertex AI**: Imagen models
+
+All generated images from these services are automatically saved to your gallery when you're authenticated.
+
+## Best Practices
+
+1. **Regular Organization**: Create folders to organize your images
+2. **Descriptive Prompts**: Use clear prompts for better auto-generated filenames
+3. **Storage Management**: Periodically review and clean up old images
+4. **Backup Important Images**: Download important images for local backup
 
 ## Technical Details
 
-### Storage Implementation
+### Supported Formats
+- **Input**: JPEG, PNG, GIF, WebP
+- **Output**: PNG (for generated images), preserves original format for uploads
 
-The Gallery uses Supabase Storage for secure, scalable image hosting:
-- Files are stored in a `gallery-uploads` bucket
-- Each user's files are stored in their own directory using their unique user ID
-- Generated images are automatically saved to: `user_id/generated/generated-prompt-timestamp.extension`
-- Uploaded images are stored in: `user_id/timestamp-filename.extension`
-- Row-level security policies ensure users can only access their own files
+### File Size Limits
+- Maximum file size: 10MB per image
+- Recommended size: Under 5MB for optimal performance
 
-### Authentication Methods
+### Browser Compatibility
+- Modern browsers with HTML5 support
+- JavaScript enabled for full functionality
+- Cookies enabled for authentication
 
-The Gallery implements two authentication approaches:
+## Getting Help
 
-1. **Cookie-based Authentication**: Primary method using Supabase session cookies
-2. **Bearer Token Authentication**: Fallback method using Authorization headers
+If you experience issues with the gallery:
 
-This dual approach ensures reliable authentication across different environments.
-
-### Security Considerations
-
-- All uploads require authentication
-- Files are stored in user-specific directories
-- Row-level security policies enforce access control
-- File types are validated both client-side and server-side
-- File size limits are enforced (10MB max)
-
-## Troubleshooting
-
-### Common Issues
-
-**Images Not Appearing After Upload**
-- Try clicking the refresh button in the top-right corner
-- Check your internet connection
-- Verify you're logged in with the correct account
-
-**Upload Errors**
-- Ensure your file is under 10MB
-- Verify you're using a supported image format
-- Check that you're properly authenticated
-- Try logging out and back in if authentication errors persist
-
-**Empty Gallery**
-- If you're a new user, you'll need to upload your first image
-- Click the "Upload First Image" button in the empty state
-
-## Future Enhancements
-
-We're continuously improving the Gallery experience. Planned enhancements include:
-
-- Advanced image editing capabilities
-- Folder organization for better content management
-- Bulk upload functionality
-- Sharing options for collaboration
-- AI-powered image tagging and categorization
-
-For any issues or suggestions regarding the Gallery feature, please contact our support team. 
+1. Check the troubleshooting section above
+2. Run the environment validation script
+3. Check browser console for error messages
+4. Verify your authentication status
+5. Contact support with specific error details 

@@ -11,7 +11,7 @@
  * For detailed information, see the README.md
  */
 
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import Replicate from 'replicate';
 import { API_CONFIG, AI_MODELS } from '@/lib/config';
 
@@ -145,7 +145,7 @@ function extractImageUrlsFromResult(result: any): string[] {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { prompt, negativePrompt, numOutputs = 1, waitForResult = false } = body;
@@ -281,60 +281,52 @@ export async function POST(request: Request) {
       let galleryPath = null;
       
       try {
-        // Check if user is authenticated by attempting to get session
-        const authHeaders = request.headers;
-        const cookieHeader = authHeaders.get('cookie');
+        // Use improved session detection
+        const { detectUserSession } = await import('@/lib/auth-utils');
+        const { userId, method } = await detectUserSession(request);
         
-        if (cookieHeader) {
-          // Try to extract session info from cookie
-          const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/auth/session`, {
-            headers: { cookie: cookieHeader }
-          });
+        if (userId && imageUrls.length > 0) {
+          console.log(`Auto-saving generated image to gallery for user: ${userId} (detected via ${method})`);
           
-          if (response.ok) {
-            const session = await response.json();
-            const userId = session?.user?.id || session?.user?.sub;
+          // Fetch the first image and save to gallery
+          const imageResponse = await fetch(imageUrls[0]);
+          if (imageResponse.ok) {
+            const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
             
-            if (userId && imageUrls.length > 0) {
-              console.log('Auto-saving generated image to gallery for user:', userId);
-              
-              // Fetch the first image and save to gallery
-              const imageResponse = await fetch(imageUrls[0]);
-              if (imageResponse.ok) {
-                const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-                
-                // Generate filename with prompt and timestamp  
-                const timestamp = Date.now();
-                const sanitizedPrompt = prompt.substring(0, 50).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-');
-                const fileName = `generated-${sanitizedPrompt}-${timestamp}.png`;
-                const filePath = `${userId}/generated/${fileName}`;
-                
-                // Import supabase client
-                const { createClient } = await import('@supabase/supabase-js');
-                const supabase = createClient(
-                  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                  process.env.SUPABASE_SERVICE_ROLE_KEY!
-                );
-                
-                // Upload to gallery storage bucket
-                const { error: uploadError } = await supabase.storage
-                  .from('gallery-uploads')
-                  .upload(filePath, imageBuffer, {
-                    contentType: 'image/png',
-                    cacheControl: '3600',
-                    upsert: false
-                  });
-                
-                if (!uploadError) {
-                  console.log('Generated image successfully saved to gallery:', filePath);
-                  gallerySaved = true;
-                  galleryPath = filePath;
-                } else {
-                  console.error('Error saving generated image to gallery:', uploadError);
-                }
-              }
+            // Generate filename with prompt and timestamp  
+            const timestamp = Date.now();
+            const sanitizedPrompt = prompt.substring(0, 50).replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-');
+            const fileName = `generated-${sanitizedPrompt}-${timestamp}.png`;
+            const filePath = `${userId}/generated/${fileName}`;
+            
+            // Import supabase client
+            const { createClient } = await import('@supabase/supabase-js');
+            const supabase = createClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL!,
+              process.env.SUPABASE_SERVICE_ROLE_KEY!
+            );
+            
+            // Upload to gallery storage bucket
+            const { error: uploadError } = await supabase.storage
+              .from('gallery-uploads')
+              .upload(filePath, imageBuffer, {
+                contentType: 'image/png',
+                cacheControl: '3600',
+                upsert: false
+              });
+            
+            if (!uploadError) {
+              console.log('Generated image successfully saved to gallery:', filePath);
+              gallerySaved = true;
+              galleryPath = filePath;
+            } else {
+              console.error('Error saving generated image to gallery:', uploadError);
             }
+          } else {
+            console.error('Failed to fetch image for auto-save:', imageResponse.status);
           }
+        } else {
+          console.log(`Auto-save skipped: ${userId ? 'No images generated' : `No authenticated user found (method: ${method})`}`);
         }
       } catch (galleryError) {
         console.error('Gallery save error (non-critical):', galleryError);

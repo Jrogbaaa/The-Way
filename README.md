@@ -241,20 +241,26 @@ The application is configured to use NextAuth.js for authentication with the fol
 
 ### Environment Variables
 
-To configure authentication, you need to set up the following environment variables in your `.env.local` file:
+To configure authentication and auto-save functionality, you need to set up the following environment variables in your `.env.local` file:
 
 ```
-# NextAuth.js Configuration
+# NextAuth.js Configuration (Required for auto-save)
 NEXTAUTH_URL=http://localhost:3000                # Use your deployment URL in production
 NEXTAUTH_SECRET=your-strong-secret-key-here       # Generate with: openssl rand -base64 32
+NEXT_PUBLIC_APP_URL=http://localhost:3000         # Should match NEXTAUTH_URL
 
-# Google OAuth Provider
+# Google OAuth Provider (Required for auto-save)
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Supabase Configuration (Required for auto-save)
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 ```
 
 **For Vercel deployment:**
-Make sure to add these environment variables in your Vercel project settings.
+Make sure to add these environment variables in your Vercel project settings. See `docs/VERCEL_DEPLOYMENT.md` for detailed instructions.
 
 ### Google OAuth Setup
 
@@ -937,6 +943,30 @@ If you encounter issues:
 3. Verify API keys and service account credentials are valid
 4. Run the environment check script: `node -r dotenv/config scripts/check-env.js`
 5. See documentation in the `docs/` directory for specific services
+
+### Auto-Save Issues
+
+If generated images aren't saving to your gallery automatically:
+
+1. **Validate your environment configuration:**
+   ```bash
+   node scripts/validate-auto-save-env.js
+   ```
+
+2. **Check authentication:**
+   - Ensure you're signed in with Google
+   - Verify `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET` are set
+   - For production: set `NEXTAUTH_URL` to your deployment URL
+
+3. **Check Supabase configuration:**
+   - Verify `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are set
+   - Ensure the `gallery-uploads` bucket exists in Supabase
+   - Check that RLS policies are configured correctly
+
+4. **For Vercel deployment:**
+   - See detailed troubleshooting in `docs/VERCEL_DEPLOYMENT.md`
+   - Check Vercel function logs for specific error messages
+   - Ensure all environment variables are set in Vercel dashboard
 
 ### Authentication Bypass for Development
 
