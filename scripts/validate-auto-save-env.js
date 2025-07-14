@@ -9,6 +9,7 @@
 const chalk = require('chalk');
 
 console.log(chalk.blue('\n🔍 Validating Environment Configuration for Auto-Save Functionality\n'));
+console.log(chalk.yellow('ℹ️  This application uses NextAuth.js for authentication and Supabase for storage only.\n'));
 
 // Required environment variables for auto-save
 const requiredVars = [

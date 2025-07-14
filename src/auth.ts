@@ -31,6 +31,13 @@ export const authConfig: NextAuthConfig = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
     }),
     CredentialsProvider({
       name: "Credentials",
@@ -59,9 +66,24 @@ export const authConfig: NextAuthConfig = {
   ],
   pages: {
     signIn: '/auth/login',
+    error: '/auth/error',
   },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' 
+        ? '__Secure-next-auth.session-token' 
+        : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
   },
   callbacks: {
     async jwt({ token, user, account, profile }) {
@@ -100,8 +122,11 @@ export const authConfig: NextAuthConfig = {
       return true;
     },
   },
-  // Debug logging for production issues
+  // Configure trust host for Vercel deployment
+  trustHost: true,
+  // Enable debug only in development
   debug: process.env.NODE_ENV === "development",
+  // Simplified logger to avoid conflicts
   logger: {
     error: (error: Error) => {
       console.error(`NextAuth Error:`, error);
@@ -115,8 +140,6 @@ export const authConfig: NextAuthConfig = {
       }
     },
   },
-  // Configure trust host for Vercel deployment
-  trustHost: true,
 };
 
 // Log auth configuration for debugging

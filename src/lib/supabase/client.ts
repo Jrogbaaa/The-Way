@@ -58,11 +58,10 @@ const getFirefoxCompatibleSettings = () => {
       domain: isLocalDevelopment() ? undefined : getCookieDomain()
     },
     authSettings: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce' as const,
-      storageKey: 'the-way-auth'
+      persistSession: false, // Disable for NextAuth compatibility
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: 'supabase-auth'
     }
   };
 };
@@ -96,11 +95,10 @@ function initializeClient() {
       };
       
       const authOptions = firefoxSettings.authSettings || {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        flowType: 'pkce' as const, // Explicit PKCE for OAuth security
-        storageKey: 'the-way-auth', // Custom storage key to avoid conflicts
+        persistSession: false, // Disable Supabase auth persistence since we use NextAuth
+        autoRefreshToken: false, // Disable auto refresh to avoid conflicts
+        detectSessionInUrl: false, // Disable URL detection to avoid PKCE conflicts
+        storageKey: 'supabase-auth', // Use default storage key
       };
       
       // Log cookie settings for debugging
@@ -122,21 +120,8 @@ function initializeClient() {
         }
       );
       
-      // Set up cross-tab auth state sync
-      if (supabaseClient) {
-        window.addEventListener('storage', (event) => {
-          if (event.key === 'the-way-auth') {
-            supabaseClient?.auth.refreshSession();
-          }
-        });
-        
-        // Force session refresh immediately after creation
-        // This helps with ensuring the session is properly initialized
-        setTimeout(() => {
-          console.log('Attempting initial session refresh');
-          supabaseClient?.auth.refreshSession();
-        }, 100);
-      }
+              // Note: Auth state sync disabled since we use NextAuth.js for authentication
+        // Supabase is only used for storage operations
     }
     
     return supabaseClient;
